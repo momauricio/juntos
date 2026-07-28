@@ -70,16 +70,16 @@ async function createItem(formData: FormData) {
 
 export default function NewItemPage() {
   return (
-    <main className="px-4 py-8">
+    <main className="px-4 pb-24 pt-8 sm:pb-12">
       <section className="mx-auto w-full max-w-2xl space-y-6">
         <div className="space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
             Nova ideia
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             Adicionar à lista
           </h1>
-          <p className="text-sm leading-6 text-stone-600">
+          <p className="text-base leading-7 text-foreground/70">
             Escolha o tipo, dê um título e salve como algo que vocês querem
             fazer.
           </p>

@@ -253,45 +253,45 @@ export default async function ItemPage({ params }: ItemPageProps) {
   }
 
   return (
-    <main className="px-4 py-8">
+    <main className="px-4 pb-24 pt-8 sm:pb-12">
       <section className="mx-auto w-full max-w-2xl space-y-6">
         <Link
           href="/"
-          className="text-sm font-semibold text-rose-600 transition hover:text-rose-700"
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-strong transition hover:text-accent"
         >
           Voltar para a lista
         </Link>
 
         <div className="space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
             {TYPE_LABELS[item.type]} · {STATUS_LABELS[item.status]}
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             {item.title}
           </h1>
-          <p className="text-sm leading-6 text-stone-600">
+          <p className="text-base leading-7 text-foreground/70">
             Marque como feito, salve a nota compartilhada e ajuste título, URL
             ou notas quando precisarem.
           </p>
         </div>
 
-        <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+        <div className="rounded-3xl bg-surface p-6 ring-1 ring-border">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
             Nota atual
           </p>
           {currentRatingLabel ? (
             <div className="mt-3 space-y-2">
-              <p className="text-2xl font-semibold tracking-tight">
+              <p className="font-serif text-2xl font-semibold tracking-tight">
                 {currentRatingLabel}
               </p>
               {currentRestaurantDetails ? (
-                <p className="text-sm leading-6 text-stone-600">
+                <p className="text-sm leading-6 text-foreground/70">
                   {currentRestaurantDetails}
                 </p>
               ) : null}
             </div>
           ) : (
-            <p className="mt-3 text-sm leading-6 text-stone-600">
+            <p className="mt-3 text-sm leading-6 text-foreground/70">
               Ainda sem nota. Salvem a primeira avaliação quando fizerem esta
               ideia.
             </p>

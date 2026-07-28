@@ -85,18 +85,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const items = (data ?? []) as ItemWithRatings[];
 
   return (
-    <main className="px-4 py-8">
+    <main className="px-4 pb-24 pt-8 sm:pb-12">
       <section className="mx-auto w-full max-w-4xl space-y-6">
         <div className="space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
             Lista
           </p>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
                 Ideias para vocês
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
+              <p className="mt-3 max-w-2xl text-base leading-7 text-foreground/70">
                 Filtre a lista compartilhada por tipo ou status e mantenha os
                 próximos planos fáceis de encontrar.
               </p>

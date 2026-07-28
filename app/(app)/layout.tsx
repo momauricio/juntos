@@ -28,12 +28,12 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="min-h-dvh bg-stone-50 text-stone-950">
-      <header className="border-b border-stone-200 bg-white/90 px-4 py-4">
+    <div className="min-h-dvh text-foreground">
+      <header className="sticky top-0 z-20 border-b border-border bg-surface/85 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
           <Link
             href="/"
-            className="text-lg font-semibold tracking-tight text-stone-950"
+            className="font-serif text-xl font-semibold tracking-tight text-accent-strong"
           >
             Juntos
           </Link>
@@ -41,20 +41,20 @@ export default async function AppLayout({
           <nav className="flex items-center gap-2 text-sm font-semibold">
             <Link
               href="/"
-              className="rounded-full px-3 py-2 text-stone-700 transition hover:bg-stone-100 hover:text-stone-950"
+              className="flex h-11 items-center rounded-2xl px-3 text-foreground/80 transition hover:bg-accent-soft hover:text-accent-strong"
             >
               Lista
             </Link>
             <Link
               href="/items/new"
               aria-label="Nova ideia"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-500 text-lg leading-none text-white transition hover:bg-rose-600"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-strong text-2xl leading-none text-accent-contrast transition hover:bg-accent"
             >
               +
             </Link>
             <Link
               href="/settings"
-              className="rounded-full px-3 py-2 text-stone-700 transition hover:bg-stone-100 hover:text-stone-950"
+              className="flex h-11 items-center rounded-2xl px-3 text-foreground/80 transition hover:bg-accent-soft hover:text-accent-strong"
             >
               Configurações
             </Link>

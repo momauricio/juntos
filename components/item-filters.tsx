@@ -28,14 +28,14 @@ export function ItemFilters({
 }: ItemFiltersProps) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <label className="space-y-2 text-sm font-medium text-stone-800">
+      <label className="space-y-2 text-sm font-medium text-foreground/85">
         <span>Tipo</span>
         <select
           value={type}
           onChange={(event) =>
             onTypeChange(event.target.value as ItemType | "all")
           }
-          className="h-11 w-full rounded-2xl border border-stone-300 bg-white px-4 text-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+          className="h-12 w-full rounded-2xl border border-border bg-surface px-4 text-base outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
         >
           <option value="all">Todos os tipos</option>
           {ITEM_TYPES.map((itemType) => (
@@ -46,14 +46,14 @@ export function ItemFilters({
         </select>
       </label>
 
-      <label className="space-y-2 text-sm font-medium text-stone-800">
+      <label className="space-y-2 text-sm font-medium text-foreground/85">
         <span>Status</span>
         <select
           value={status}
           onChange={(event) =>
             onStatusChange(event.target.value as ItemStatus | "all")
           }
-          className="h-11 w-full rounded-2xl border border-stone-300 bg-white px-4 text-sm outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+          className="h-12 w-full rounded-2xl border border-border bg-surface px-4 text-base outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
         >
           <option value="all">{STATUS_LABELS.all}</option>
           {ITEM_STATUSES.map((itemStatus) => (

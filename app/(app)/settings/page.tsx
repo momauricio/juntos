@@ -141,38 +141,38 @@ export default async function SettingsPage() {
   }
 
   return (
-    <main className="px-4 py-8">
+    <main className="px-4 pb-24 pt-8 sm:pb-12">
       <section className="mx-auto w-full max-w-4xl space-y-6">
         <div className="space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
             Configurações
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             Seu espaço
           </h1>
-          <p className="text-sm leading-6 text-stone-600">
+          <p className="text-base leading-7 text-foreground/70">
             Veja quem está no espaço, convide seu par e saia da sua conta quando
             precisar.
           </p>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
-          <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
+          <section className="rounded-3xl bg-surface p-6 ring-1 ring-border">
             <div className="space-y-2">
-              <p className="text-sm font-medium text-stone-600">
+              <p className="text-sm font-medium text-foreground/70">
                 Nome do espaço
               </p>
-              <h2 className="text-2xl font-semibold tracking-tight">
+              <h2 className="font-serif text-2xl font-semibold tracking-tight">
                 {space.name}
               </h2>
             </div>
 
             <div className="mt-6">
               <div className="flex items-center justify-between gap-4">
-                <h3 className="text-base font-semibold text-stone-950">
+                <h3 className="text-base font-semibold text-foreground">
                   Pessoas
                 </h3>
-                <p className="rounded-full bg-stone-100 px-3 py-1 text-sm font-medium text-stone-600">
+                <p className="rounded-2xl bg-surface-muted px-3 py-1 text-sm font-medium text-foreground/70">
                   {memberCount} de 2
                 </p>
               </div>
@@ -181,23 +181,23 @@ export default async function SettingsPage() {
                 {displayMembers.map((member) => (
                   <li
                     key={member.user_id}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-stone-50 px-4 py-3 ring-1 ring-stone-200"
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface-muted px-4 py-3 ring-1 ring-border"
                   >
                     <div>
-                      <p className="font-medium text-stone-950">
+                      <p className="font-medium text-foreground">
                         {member.displayName}
                       </p>
                       {member.user_id === user.id ? (
-                        <p className="text-sm text-stone-600">Você</p>
+                        <p className="text-sm text-foreground/65">Você</p>
                       ) : null}
                     </div>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-stone-500 ring-1 ring-stone-200">
+                    <span className="rounded-xl bg-surface px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-foreground/60 ring-1 ring-border">
                       {ROLE_LABELS[member.role] ?? "Membro"}
                     </span>
                   </li>
                 ))}
                 {memberCount < 2 ? (
-                  <li className="rounded-2xl border border-dashed border-stone-300 px-4 py-3 text-sm text-stone-500">
+                  <li className="rounded-2xl border border-dashed border-border px-4 py-3 text-sm text-foreground/60">
                     Aguardando seu par entrar com o convite.
                   </li>
                 ) : null}
@@ -205,13 +205,15 @@ export default async function SettingsPage() {
             </div>
           </section>
 
-          <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
+          <section className="rounded-3xl bg-surface p-6 ring-1 ring-border">
             <div className="space-y-3">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
                 Conta
               </p>
-              <h2 className="text-2xl font-semibold tracking-tight">Sair</h2>
-              <p className="text-sm leading-6 text-stone-600">
+              <h2 className="font-serif text-2xl font-semibold tracking-tight">
+                Sair
+              </h2>
+              <p className="text-sm leading-6 text-foreground/70">
                 Encerre sua sessão neste dispositivo.
               </p>
             </div>
@@ -219,7 +221,7 @@ export default async function SettingsPage() {
             <form action={logout}>
               <button
                 type="submit"
-                className="mt-6 h-12 w-full rounded-2xl bg-stone-900 px-4 text-base font-semibold text-white transition hover:bg-stone-800"
+                className="mt-6 h-12 w-full rounded-2xl bg-foreground px-4 text-base font-semibold text-surface transition hover:bg-accent-strong"
               >
                 Sair da conta
               </button>
@@ -236,11 +238,11 @@ export default async function SettingsPage() {
             initialExpiresAt={activeInvite?.expires_at}
           />
         ) : (
-          <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+          <section className="rounded-3xl bg-surface p-6 ring-1 ring-border">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
               Convite
             </p>
-            <p className="mt-3 text-lg font-semibold text-stone-950">
+            <p className="mt-3 text-lg font-semibold text-foreground">
               Vocês dois já estão no espaço.
             </p>
           </section>

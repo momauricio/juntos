@@ -172,15 +172,15 @@ function OnboardingInvitePanel({
 
   return (
     <div className="grid gap-5 md:grid-cols-2">
-      <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
+      <section className="rounded-3xl bg-surface p-6 ring-1 ring-border">
         <div className="space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
             Começar
           </p>
-          <h2 className="text-2xl font-semibold tracking-tight">
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">
             Crie o espaço de vocês
           </h2>
-          <p className="text-sm leading-6 text-stone-600">
+          <p className="text-sm leading-6 text-foreground/70">
             Abra uma lista compartilhada para vocês dois e envie o convite para
             seu par entrar.
           </p>
@@ -190,33 +190,33 @@ function OnboardingInvitePanel({
           type="button"
           disabled={isCreating || Boolean(createdInviteCode)}
           onClick={handleCreateSpace}
-          className="mt-6 h-12 w-full rounded-2xl bg-rose-500 px-4 text-base font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-6 h-12 w-full rounded-2xl bg-accent-strong px-4 text-base font-semibold text-accent-contrast transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isCreating ? "Criando..." : "Criar nosso espaço"}
         </button>
 
         {createError ? (
-          <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-danger">
             {createError}
           </p>
         ) : null}
 
         {createdInviteCode && inviteLink ? (
-          <div className="mt-5 space-y-4 rounded-2xl bg-rose-50 p-4">
+          <div className="mt-5 space-y-4 rounded-2xl bg-accent-soft p-4">
             <div>
-              <p className="text-sm font-medium text-stone-700">
+              <p className="text-sm font-medium text-foreground/75">
                 Código do convite
               </p>
-              <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.2em] text-rose-700">
+              <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.2em] text-accent-strong">
                 {createdInviteCode}
               </p>
             </div>
 
             <div>
-              <p className="text-sm font-medium text-stone-700">
+              <p className="text-sm font-medium text-foreground/75">
                 Link para compartilhar
               </p>
-              <p className="mt-1 break-all rounded-xl bg-white px-3 py-2 text-sm text-stone-700 ring-1 ring-rose-100">
+              <p className="mt-1 break-all rounded-xl bg-surface px-3 py-2 text-sm text-foreground/75 ring-1 ring-border">
                 {inviteLink}
               </p>
             </div>
@@ -225,34 +225,34 @@ function OnboardingInvitePanel({
               <button
                 type="button"
                 onClick={handleCopyInvite}
-                className="h-11 rounded-2xl bg-white px-4 text-sm font-semibold text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-100"
+                className="h-12 rounded-2xl bg-surface px-4 text-sm font-semibold text-accent-strong ring-1 ring-border transition hover:bg-surface-muted"
               >
                 Copiar link
               </button>
               <Link
                 href="/"
-                className="flex h-11 items-center justify-center rounded-2xl bg-stone-900 px-4 text-sm font-semibold text-white transition hover:bg-stone-800"
+                className="flex h-12 items-center justify-center rounded-2xl bg-foreground px-4 text-sm font-semibold text-surface transition hover:bg-accent-strong"
               >
                 Ir para a lista
               </Link>
             </div>
 
             {copyStatus ? (
-              <p className="text-sm text-stone-600">{copyStatus}</p>
+              <p className="text-sm text-foreground/70">{copyStatus}</p>
             ) : null}
           </div>
         ) : null}
       </section>
 
-      <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
+      <section className="rounded-3xl bg-surface p-6 ring-1 ring-border">
         <div className="space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
             Convite
           </p>
-          <h2 className="text-2xl font-semibold tracking-tight">
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">
             Entre em um espaço
           </h2>
-          <p className="text-sm leading-6 text-stone-600">
+          <p className="text-sm leading-6 text-foreground/70">
             Já recebeu um código? Use aqui para entrar na lista criada pelo seu
             par.
           </p>
@@ -260,7 +260,10 @@ function OnboardingInvitePanel({
 
         <form className="mt-6 space-y-4" onSubmit={handleRedeemInvite}>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-stone-800" htmlFor="code">
+            <label
+              className="text-sm font-medium text-foreground/85"
+              htmlFor="code"
+            >
               Código do convite
             </label>
             <input
@@ -273,13 +276,13 @@ function OnboardingInvitePanel({
               onChange={(event) =>
                 setCode(normalizeInviteCode(event.target.value))
               }
-              className="h-12 w-full rounded-2xl border border-stone-300 bg-white px-4 font-mono text-base uppercase tracking-[0.2em] outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+              className="h-12 w-full rounded-2xl border border-border bg-surface px-4 font-mono text-base uppercase tracking-[0.2em] outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
               placeholder="ABCDEFGH"
             />
           </div>
 
           {redeemError ? (
-            <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-danger">
               {redeemError}
             </p>
           ) : null}
@@ -287,7 +290,7 @@ function OnboardingInvitePanel({
           <button
             type="submit"
             disabled={isRedeeming}
-            className="h-12 w-full rounded-2xl bg-stone-900 px-4 text-base font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-12 w-full rounded-2xl bg-foreground px-4 text-base font-semibold text-surface transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isRedeeming ? "Entrando..." : "Usar convite"}
           </button>
@@ -373,31 +376,31 @@ function SettingsInvitePanel({
   }
 
   return (
-    <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
+    <section className="rounded-3xl bg-surface p-6 ring-1 ring-border">
       <div className="space-y-3">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
           Convite
         </p>
-        <h2 className="text-2xl font-semibold tracking-tight">
+        <h2 className="font-serif text-2xl font-semibold tracking-tight">
           Convide seu par
         </h2>
-        <p className="text-sm leading-6 text-stone-600">
+        <p className="text-sm leading-6 text-foreground/70">
           Compartilhe o código ativo ou gere um novo convite para invalidar o
           anterior.
         </p>
       </div>
 
       {currentCode ? (
-        <div className="mt-5 space-y-4 rounded-2xl bg-rose-50 p-4">
+        <div className="mt-5 space-y-4 rounded-2xl bg-accent-soft p-4">
           <div>
-            <p className="text-sm font-medium text-stone-700">
+            <p className="text-sm font-medium text-foreground/75">
               Código do convite
             </p>
-            <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.2em] text-rose-700">
+            <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.2em] text-accent-strong">
               {currentCode}
             </p>
             {formattedExpiration ? (
-              <p className="mt-2 text-sm text-stone-600">
+              <p className="mt-2 text-sm text-foreground/70">
                 Expira em {formattedExpiration}
               </p>
             ) : null}
@@ -405,10 +408,10 @@ function SettingsInvitePanel({
 
           {inviteLink ? (
             <div>
-              <p className="text-sm font-medium text-stone-700">
+              <p className="text-sm font-medium text-foreground/75">
                 Link para compartilhar
               </p>
-              <p className="mt-1 break-all rounded-xl bg-white px-3 py-2 text-sm text-stone-700 ring-1 ring-rose-100">
+              <p className="mt-1 break-all rounded-xl bg-surface px-3 py-2 text-sm text-foreground/75 ring-1 ring-border">
                 {inviteLink}
               </p>
             </div>
@@ -418,24 +421,24 @@ function SettingsInvitePanel({
             <button
               type="button"
               onClick={handleCopyInvite}
-              className="h-11 rounded-2xl bg-white px-4 text-sm font-semibold text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-100"
+              className="h-12 rounded-2xl bg-surface px-4 text-sm font-semibold text-accent-strong ring-1 ring-border transition hover:bg-surface-muted"
             >
               Copiar link
             </button>
           ) : null}
 
           {copyStatus ? (
-            <p className="text-sm text-stone-600">{copyStatus}</p>
+            <p className="text-sm text-foreground/70">{copyStatus}</p>
           ) : null}
         </div>
       ) : (
-        <p className="mt-5 rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-600 ring-1 ring-stone-200">
+        <p className="mt-5 rounded-2xl bg-surface-muted px-4 py-3 text-sm text-foreground/70 ring-1 ring-border">
           Ainda não há um convite ativo.
         </p>
       )}
 
       {error ? (
-        <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
@@ -444,7 +447,7 @@ function SettingsInvitePanel({
         type="button"
         disabled={isRegenerating}
         onClick={handleRegenerateInvite}
-        className="mt-5 h-12 w-full rounded-2xl bg-rose-500 px-4 text-base font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+        className="mt-5 h-12 w-full rounded-2xl bg-accent-strong px-4 text-base font-semibold text-accent-contrast transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isRegenerating ? "Gerando..." : "Gerar novo convite"}
       </button>

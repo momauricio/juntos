@@ -86,22 +86,22 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
     <form
       action={action}
       onSubmit={validateScores}
-      className="space-y-5 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200"
+      className="space-y-5 rounded-3xl bg-surface p-6 ring-1 ring-border"
     >
       <div className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
           Avaliação compartilhada
         </p>
-        <h2 className="text-xl font-semibold tracking-tight">
+        <h2 className="font-serif text-2xl font-semibold tracking-tight">
           {rating ? "Editar nota" : "Marcar como feito"}
         </h2>
-        <p className="text-sm leading-6 text-stone-600">
+        <p className="text-sm leading-6 text-foreground/70">
           {rating
             ? "Atualize a nota que aparece para vocês dois."
             : "Salve a nota para marcar esta ideia como feita."}
         </p>
         {currentSummary ? (
-          <p className="text-sm font-medium text-stone-700">
+          <p className="text-sm font-medium text-foreground/75">
             {currentSummary}
           </p>
         ) : null}
@@ -134,14 +134,14 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
       )}
 
       {error ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-danger">
           {error}
         </p>
       ) : null}
 
       <button
         type="submit"
-        className="h-12 w-full rounded-2xl bg-rose-500 px-5 text-base font-semibold text-white transition hover:bg-rose-600 sm:w-auto"
+        className="h-12 w-full rounded-2xl bg-accent-strong px-5 text-base font-semibold text-accent-contrast transition hover:bg-accent sm:w-auto"
       >
         {item.status === "want" ? "Marcar como feito e salvar nota" : "Salvar nota"}
       </button>
@@ -157,13 +157,13 @@ type ScoreSelectProps = {
 
 function ScoreSelect({ label, name, defaultValue }: ScoreSelectProps) {
   return (
-    <label className="block space-y-2 text-sm font-medium text-stone-800">
+    <label className="block space-y-2 text-sm font-medium text-foreground/85">
       <span>{label}</span>
       <select
         name={name}
         required
         defaultValue={defaultValue}
-        className="h-12 w-full rounded-2xl border border-stone-300 bg-white px-4 text-base outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-100"
+        className="h-12 w-full rounded-2xl border border-border bg-surface px-4 text-base outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
       >
         <option value="" disabled>
           Escolha

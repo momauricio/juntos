@@ -86,6 +86,96 @@ create table public.ratings (
   )
 );
 
+-- data integrity triggers
+create function public.force_item_created_by()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'not_authenticated';
+  end if;
+
+  new.created_by := v_uid;
+  return new;
+end;
+$$;
+
+create trigger items_force_created_by
+  before insert on public.items
+  for each row execute function public.force_item_created_by();
+
+create function public.prevent_item_type_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.type is distinct from old.type then
+    raise exception 'item_type_immutable' using errcode = '23514';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger items_prevent_type_change
+  before update of type on public.items
+  for each row execute function public.prevent_item_type_change();
+
+create function public.enforce_rating_identity_and_shape()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_item_type text;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then
+    raise exception 'not_authenticated';
+  end if;
+
+  new.rated_by := v_uid;
+
+  select i.type into v_item_type
+  from public.items i
+  where i.id = new.item_id;
+
+  if v_item_type is null then
+    raise exception 'invalid_item' using errcode = '23503';
+  end if;
+
+  if v_item_type = 'restaurant' then
+    if new.food is null
+      or new.service is null
+      or new.ambiance is null
+      or new.score is not null then
+      raise exception 'restaurant_rating_shape' using errcode = '23514';
+    end if;
+  elsif new.score is null
+    or new.food is not null
+    or new.service is not null
+    or new.ambiance is not null then
+    raise exception 'standard_rating_shape' using errcode = '23514';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger ratings_enforce_identity_and_shape
+  before insert or update on public.ratings
+  for each row execute function public.enforce_rating_identity_and_shape();
+
 -- helpers
 create function public.is_space_member(p_space_id uuid)
 returns boolean
@@ -180,7 +270,7 @@ begin
   values (v_space_id, auth.uid(), 'owner');
 
   insert into public.invites (space_id, code, created_by, expires_at)
-  values (v_space_id, upper(p_code), auth.uid(), p_expires_at);
+  values (v_space_id, upper(p_code), auth.uid(), now() + interval '7 days');
 
   return query select v_space_id, upper(p_code);
 end;
@@ -255,7 +345,7 @@ begin
   where space_id = p_space_id and redeemed_at is null;
 
   insert into public.invites (space_id, code, created_by, expires_at)
-  values (p_space_id, upper(p_code), auth.uid(), p_expires_at);
+  values (p_space_id, upper(p_code), auth.uid(), now() + interval '7 days');
 
   return upper(p_code);
 end;

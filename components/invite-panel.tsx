@@ -13,28 +13,68 @@ const INVITE_ERROR_MESSAGES: Record<string, string> = {
   invite_expired: "Este convite expirou",
   space_full: "Este espaço já tem 2 pessoas",
   already_in_space: "Você já está em um espaço",
+  forbidden: "Você não pode alterar este convite",
 };
 
 function normalizeInviteCode(code: string) {
   return code.trim().toUpperCase();
 }
 
-function getInviteErrorMessage(error: { message?: string } | null) {
+function getInviteErrorMessage(
+  error: { message?: string } | null,
+  fallback = "Não foi possível usar este convite. Tente novamente.",
+) {
   const message = error?.message ?? "";
   const key = Object.keys(INVITE_ERROR_MESSAGES).find((errorKey) =>
     message.includes(errorKey),
   );
 
-  return key
-    ? INVITE_ERROR_MESSAGES[key]
-    : "Nao foi possivel usar este convite. Tente novamente.";
+  return key ? INVITE_ERROR_MESSAGES[key] : fallback;
 }
 
-type InvitePanelProps = {
+function formatInviteExpiration(expiresAt: string | null) {
+  if (!expiresAt) {
+    return null;
+  }
+
+  const expiresDate = new Date(expiresAt);
+
+  if (Number.isNaN(expiresDate.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(expiresDate);
+}
+
+type OnboardingInvitePanelProps = {
   initialCode?: string;
 };
 
-export function InvitePanel({ initialCode = "" }: InvitePanelProps) {
+type SettingsInvitePanelProps = {
+  variant: "settings";
+  spaceId: string;
+  initialCode?: string | null;
+  initialExpiresAt?: string | null;
+};
+
+type InvitePanelProps =
+  | ({ variant?: "onboarding" } & OnboardingInvitePanelProps)
+  | SettingsInvitePanelProps;
+
+export function InvitePanel(props: InvitePanelProps) {
+  if (props.variant === "settings") {
+    return <SettingsInvitePanel {...props} />;
+  }
+
+  return <OnboardingInvitePanel initialCode={props.initialCode} />;
+}
+
+function OnboardingInvitePanel({
+  initialCode = "",
+}: OnboardingInvitePanelProps) {
   const router = useRouter();
   const [code, setCode] = useState(normalizeInviteCode(initialCode));
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(
@@ -69,7 +109,12 @@ export function InvitePanel({ initialCode = "" }: InvitePanelProps) {
     });
 
     if (error) {
-      setCreateError(getInviteErrorMessage(error));
+      setCreateError(
+        getInviteErrorMessage(
+          error,
+          "Não foi possível criar o espaço. Tente novamente.",
+        ),
+      );
       setIsCreating(false);
       return;
     }
@@ -88,7 +133,7 @@ export function InvitePanel({ initialCode = "" }: InvitePanelProps) {
     const inviteCode = normalizeInviteCode(code);
 
     if (!inviteCode) {
-      setRedeemError("Informe o codigo do convite.");
+      setRedeemError("Informe o código do convite.");
       return;
     }
 
@@ -128,13 +173,13 @@ export function InvitePanel({ initialCode = "" }: InvitePanelProps) {
       <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
         <div className="space-y-3">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
-            Comecar
+            Começar
           </p>
           <h2 className="text-2xl font-semibold tracking-tight">
-            Crie o espaco de voces
+            Crie o espaço de vocês
           </h2>
           <p className="text-sm leading-6 text-stone-600">
-            Abra uma lista compartilhada para voces dois e envie o convite para
+            Abra uma lista compartilhada para vocês dois e envie o convite para
             seu par entrar.
           </p>
         </div>
@@ -145,7 +190,7 @@ export function InvitePanel({ initialCode = "" }: InvitePanelProps) {
           onClick={handleCreateSpace}
           className="mt-6 h-12 w-full rounded-2xl bg-rose-500 px-4 text-base font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isCreating ? "Criando..." : "Criar nosso espaco"}
+          {isCreating ? "Criando..." : "Criar nosso espaço"}
         </button>
 
         {createError ? (
@@ -158,7 +203,7 @@ export function InvitePanel({ initialCode = "" }: InvitePanelProps) {
           <div className="mt-5 space-y-4 rounded-2xl bg-rose-50 p-4">
             <div>
               <p className="text-sm font-medium text-stone-700">
-                Codigo do convite
+                Código do convite
               </p>
               <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.2em] text-rose-700">
                 {createdInviteCode}
@@ -203,10 +248,10 @@ export function InvitePanel({ initialCode = "" }: InvitePanelProps) {
             Convite
           </p>
           <h2 className="text-2xl font-semibold tracking-tight">
-            Entre em um espaco
+            Entre em um espaço
           </h2>
           <p className="text-sm leading-6 text-stone-600">
-            Ja recebeu um codigo? Use aqui para entrar na lista criada pelo seu
+            Já recebeu um código? Use aqui para entrar na lista criada pelo seu
             par.
           </p>
         </div>
@@ -214,7 +259,7 @@ export function InvitePanel({ initialCode = "" }: InvitePanelProps) {
         <form className="mt-6 space-y-4" onSubmit={handleRedeemInvite}>
           <div className="space-y-2">
             <label className="text-sm font-medium text-stone-800" htmlFor="code">
-              Codigo do convite
+              Código do convite
             </label>
             <input
               id="code"
@@ -247,5 +292,159 @@ export function InvitePanel({ initialCode = "" }: InvitePanelProps) {
         </form>
       </section>
     </div>
+  );
+}
+
+function SettingsInvitePanel({
+  spaceId,
+  initialCode = null,
+  initialExpiresAt = null,
+}: SettingsInvitePanelProps) {
+  const router = useRouter();
+  const [currentCode, setCurrentCode] = useState<string | null>(() =>
+    initialCode ? normalizeInviteCode(initialCode) : null,
+  );
+  const [expiresAt, setExpiresAt] = useState<string | null>(initialExpiresAt);
+  const [error, setError] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  const inviteLink = useMemo(() => {
+    if (!currentCode || typeof window === "undefined") {
+      return null;
+    }
+
+    return `${window.location.origin}/onboarding?code=${currentCode}`;
+  }, [currentCode]);
+
+  const formattedExpiration = useMemo(
+    () => formatInviteExpiration(expiresAt),
+    [expiresAt],
+  );
+
+  async function handleRegenerateInvite() {
+    setIsRegenerating(true);
+    setError(null);
+    setCopyStatus(null);
+
+    const supabase = createClient();
+    const inviteCode = generateInviteCode();
+    const expires = inviteExpiresAt().toISOString();
+    const { data, error: regenerateError } = await supabase.rpc(
+      "regenerate_invite",
+      {
+        p_space_id: spaceId,
+        p_code: inviteCode,
+        p_expires_at: expires,
+      },
+    );
+
+    if (regenerateError) {
+      setError(
+        getInviteErrorMessage(
+          regenerateError,
+          "Não foi possível gerar um novo convite. Tente novamente.",
+        ),
+      );
+      setIsRegenerating(false);
+      return;
+    }
+
+    setCurrentCode(typeof data === "string" ? data : inviteCode);
+    setExpiresAt(expires);
+    setIsRegenerating(false);
+    router.refresh();
+  }
+
+  async function handleCopyInvite() {
+    if (!inviteLink) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopyStatus("Link copiado.");
+    } catch {
+      setCopyStatus("Copie o link manualmente.");
+    }
+  }
+
+  return (
+    <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200">
+      <div className="space-y-3">
+        <p className="text-sm font-medium uppercase tracking-[0.2em] text-rose-500">
+          Convite
+        </p>
+        <h2 className="text-2xl font-semibold tracking-tight">
+          Convide seu par
+        </h2>
+        <p className="text-sm leading-6 text-stone-600">
+          Compartilhe o código ativo ou gere um novo convite para invalidar o
+          anterior.
+        </p>
+      </div>
+
+      {currentCode ? (
+        <div className="mt-5 space-y-4 rounded-2xl bg-rose-50 p-4">
+          <div>
+            <p className="text-sm font-medium text-stone-700">
+              Código do convite
+            </p>
+            <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.2em] text-rose-700">
+              {currentCode}
+            </p>
+            {formattedExpiration ? (
+              <p className="mt-2 text-sm text-stone-600">
+                Expira em {formattedExpiration}
+              </p>
+            ) : null}
+          </div>
+
+          {inviteLink ? (
+            <div>
+              <p className="text-sm font-medium text-stone-700">
+                Link para compartilhar
+              </p>
+              <p className="mt-1 break-all rounded-xl bg-white px-3 py-2 text-sm text-stone-700 ring-1 ring-rose-100">
+                {inviteLink}
+              </p>
+            </div>
+          ) : null}
+
+          {inviteLink ? (
+            <button
+              type="button"
+              onClick={handleCopyInvite}
+              className="h-11 rounded-2xl bg-white px-4 text-sm font-semibold text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-100"
+            >
+              Copiar link
+            </button>
+          ) : null}
+
+          {copyStatus ? (
+            <p className="text-sm text-stone-600">{copyStatus}</p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-5 rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-600 ring-1 ring-stone-200">
+          Ainda não há um convite ativo.
+        </p>
+      )}
+
+      {error ? (
+        <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        disabled={isRegenerating}
+        onClick={handleRegenerateInvite}
+        className="mt-5 h-12 w-full rounded-2xl bg-rose-500 px-4 text-base font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isRegenerating ? "Gerando..." : "Gerar novo convite"}
+      </button>
+    </section>
   );
 }

@@ -46,6 +46,7 @@ function formatInviteExpiration(expiresAt: string | null) {
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
   }).format(expiresDate);
 }
 
@@ -56,6 +57,7 @@ type OnboardingInvitePanelProps = {
 type SettingsInvitePanelProps = {
   variant: "settings";
   spaceId: string;
+  origin: string;
   initialCode?: string | null;
   initialExpiresAt?: string | null;
 };
@@ -297,6 +299,7 @@ function OnboardingInvitePanel({
 
 function SettingsInvitePanel({
   spaceId,
+  origin,
   initialCode = null,
   initialExpiresAt = null,
 }: SettingsInvitePanelProps) {
@@ -310,12 +313,12 @@ function SettingsInvitePanel({
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   const inviteLink = useMemo(() => {
-    if (!currentCode || typeof window === "undefined") {
+    if (!currentCode || !origin) {
       return null;
     }
 
-    return `${window.location.origin}/onboarding?code=${currentCode}`;
-  }, [currentCode]);
+    return `${origin}/onboarding?code=${currentCode}`;
+  }, [currentCode, origin]);
 
   const formattedExpiration = useMemo(
     () => formatInviteExpiration(expiresAt),

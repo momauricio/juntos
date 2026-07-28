@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { InvitePanel } from "@/components/invite-panel";
@@ -23,6 +24,24 @@ const ROLE_LABELS: Record<string, string> = {
   owner: "Responsável",
   member: "Membro",
 };
+
+async function getRequestOrigin() {
+  const headersList = await headers();
+  const host = headersList.get("host");
+
+  if (!host) {
+    return "";
+  }
+
+  const forwardedProto = headersList.get("x-forwarded-proto");
+  const protocol =
+    forwardedProto?.split(",")[0]?.trim() ??
+    (host.startsWith("localhost") || host.startsWith("127.0.0.1")
+      ? "http"
+      : "https");
+
+  return `${protocol}://${host}`;
+}
 
 async function logout() {
   "use server";
@@ -100,6 +119,7 @@ export default async function SettingsPage() {
       (member.user_id === user.id ? "Você" : `Pessoa ${index + 1}`),
   }));
 
+  const origin = await getRequestOrigin();
   let activeInvite: ActiveInviteRow | null = null;
 
   if (memberCount < 2) {
@@ -211,6 +231,7 @@ export default async function SettingsPage() {
           <InvitePanel
             variant="settings"
             spaceId={membership.space_id}
+            origin={origin}
             initialCode={activeInvite?.code}
             initialExpiresAt={activeInvite?.expires_at}
           />

@@ -1,22 +1,34 @@
+"use client";
+
 import Link from "next/link";
+import { useActionState } from "react";
 
 import { TYPE_LABELS } from "@/lib/labels";
 import type { Item, ItemType } from "@/lib/types";
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
+const INITIAL_ACTION_STATE: ItemFormState = { error: null };
+
+export type ItemFormState = {
+  error: string | null;
+};
 
 type ItemFormProps = {
-  action: (formData: FormData) => Promise<void>;
+  action: (state: ItemFormState, formData: FormData) => Promise<ItemFormState>;
   item?: Pick<Item, "title" | "type" | "url" | "notes">;
   mode: "create" | "edit";
 };
 
 export function ItemForm({ action, item, mode }: ItemFormProps) {
   const isCreate = mode === "create";
+  const [state, formAction, isPending] = useActionState(
+    action,
+    INITIAL_ACTION_STATE,
+  );
 
   return (
     <form
-      action={action}
+      action={formAction}
       className="space-y-5 rounded-3xl bg-surface p-6 ring-1 ring-border"
     >
       {isCreate ? (
@@ -81,6 +93,12 @@ export function ItemForm({ action, item, mode }: ItemFormProps) {
         />
       </label>
 
+      {state.error ? (
+        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-danger">
+          {state.error}
+        </p>
+      ) : null}
+
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Link
           href="/"
@@ -90,9 +108,16 @@ export function ItemForm({ action, item, mode }: ItemFormProps) {
         </Link>
         <button
           type="submit"
-          className="h-12 rounded-2xl bg-accent-strong px-5 text-base font-semibold text-accent-contrast transition hover:bg-accent"
+          disabled={isPending}
+          className="h-12 rounded-2xl bg-accent-strong px-5 text-base font-semibold text-accent-contrast transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isCreate ? "Criar ideia" : "Salvar alterações"}
+          {isPending
+            ? isCreate
+              ? "Criando..."
+              : "Salvando..."
+            : isCreate
+              ? "Criar ideia"
+              : "Salvar alterações"}
         </button>
       </div>
     </form>

@@ -12,13 +12,20 @@ type OnboardingPageProps = {
 export default async function OnboardingPage({
   searchParams,
 }: OnboardingPageProps) {
+  const params = await searchParams;
+  const code = Array.isArray(params.code) ? params.code[0] : params.code;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    const onboardingPath = code
+      ? `/onboarding?code=${encodeURIComponent(code)}`
+      : "/onboarding";
+    const loginParams = new URLSearchParams({ next: onboardingPath });
+
+    redirect(`/login?${loginParams.toString()}`);
   }
 
   const { data: membership } = await supabase
@@ -30,9 +37,6 @@ export default async function OnboardingPage({
   if (membership) {
     redirect("/");
   }
-
-  const params = await searchParams;
-  const code = Array.isArray(params.code) ? params.code[0] : params.code;
 
   return (
     <main className="min-h-dvh px-4 py-10 text-foreground">

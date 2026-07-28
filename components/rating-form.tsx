@@ -1,17 +1,25 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useActionState, useState, type FormEvent } from "react";
 
 import { assertScore, displayRating, restaurantAverage } from "@/lib/ratings";
 import type { Item, Rating } from "@/lib/types";
 
 type RatingFormProps = {
-  action: (formData: FormData) => Promise<void>;
+  action: (
+    state: RatingFormState,
+    formData: FormData,
+  ) => Promise<RatingFormState>;
   item: Pick<Item, "type" | "status">;
   rating: Pick<Rating, "food" | "service" | "ambiance" | "score"> | null;
 };
 
 const SCORE_OPTIONS = [1, 2, 3, 4, 5];
+const INITIAL_ACTION_STATE: RatingFormState = { error: null };
+
+export type RatingFormState = {
+  error: string | null;
+};
 
 function formatRating(value: number) {
   return value.toLocaleString("pt-BR", {
@@ -51,8 +59,13 @@ function restaurantSummary(
 
 export function RatingForm({ action, item, rating }: RatingFormProps) {
   const [error, setError] = useState<string | null>(null);
+  const [state, formAction, isPending] = useActionState(
+    action,
+    INITIAL_ACTION_STATE,
+  );
   const isRestaurant = item.type === "restaurant";
   const currentRating = rating ? displayRating(rating) : null;
+  const displayError = error ?? state.error;
   const currentSummary = isRestaurant
     ? restaurantSummary(rating)
     : currentRating != null
@@ -84,7 +97,7 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
 
   return (
     <form
-      action={action}
+      action={formAction}
       onSubmit={validateScores}
       className="space-y-5 rounded-3xl bg-surface p-6 ring-1 ring-border"
     >
@@ -133,17 +146,22 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
         />
       )}
 
-      {error ? (
+      {displayError ? (
         <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-danger">
-          {error}
+          {displayError}
         </p>
       ) : null}
 
       <button
         type="submit"
-        className="h-12 w-full rounded-2xl bg-accent-strong px-5 text-base font-semibold text-accent-contrast transition hover:bg-accent sm:w-auto"
+        disabled={isPending}
+        className="h-12 w-full rounded-2xl bg-accent-strong px-5 text-base font-semibold text-accent-contrast transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
-        {item.status === "want" ? "Marcar como feito e salvar nota" : "Salvar nota"}
+        {isPending
+          ? "Salvando..."
+          : item.status === "want"
+            ? "Marcar como feito e salvar nota"
+            : "Salvar nota"}
       </button>
     </form>
   );

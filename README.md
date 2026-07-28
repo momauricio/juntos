@@ -1,6 +1,6 @@
 # Juntos
 
-A couple wishlist app — share gift ideas and keep them in sync.
+A couple ideas app — share restaurants, films, trips, and plans, and keep them in sync.
 
 ## Setup
 

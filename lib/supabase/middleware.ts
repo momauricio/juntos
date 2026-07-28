@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { authRedirectPath, safeRedirectPath } from "@/lib/auth-redirect";
+
 const AUTH_ROUTES = ["/login", "/signup"];
 const PUBLIC_ROUTES = [...AUTH_ROUTES, "/auth/callback"];
 const SUPABASE_CACHE_HEADERS = ["Cache-Control", "Expires", "Pragma"];
@@ -14,11 +16,14 @@ function isRouteMatch(pathname: string, routes: string[]) {
 function redirectWithSupabaseState(
   request: NextRequest,
   response: NextResponse,
-  pathname: string,
+  destination: string,
 ) {
+  const safeDestination = safeRedirectPath(destination, "/");
+  const destinationUrl = new URL(safeDestination, request.url);
   const redirectUrl = request.nextUrl.clone();
-  redirectUrl.pathname = pathname;
-  redirectUrl.search = "";
+  redirectUrl.pathname = destinationUrl.pathname;
+  redirectUrl.search = destinationUrl.search;
+  redirectUrl.hash = destinationUrl.hash;
 
   const redirectResponse = NextResponse.redirect(redirectUrl);
 
@@ -77,11 +82,27 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isRouteMatch(pathname, AUTH_ROUTES) && isAuthenticated) {
-    return redirectWithSupabaseState(request, response, "/");
+    return redirectWithSupabaseState(
+      request,
+      response,
+      authRedirectPath({
+        next: request.nextUrl.searchParams.get("next"),
+        code: request.nextUrl.searchParams.get("code"),
+        fallback: "/",
+      }),
+    );
   }
 
   if (!isRouteMatch(pathname, PUBLIC_ROUTES) && !isAuthenticated) {
-    return redirectWithSupabaseState(request, response, "/login");
+    const params = new URLSearchParams({
+      next: `${pathname}${request.nextUrl.search}`,
+    });
+
+    return redirectWithSupabaseState(
+      request,
+      response,
+      `/login?${params.toString()}`,
+    );
   }
 
   return response;

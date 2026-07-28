@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { ItemForm } from "@/components/item-form";
-import { RatingForm } from "@/components/rating-form";
+import { ItemForm, type ItemFormState } from "@/components/item-form";
+import { RatingForm, type RatingFormState } from "@/components/rating-form";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { assertScore, displayRating, restaurantAverage } from "@/lib/ratings";
 import { createClient } from "@/lib/supabase/server";
@@ -14,14 +14,9 @@ type ItemPageProps = {
   }>;
 };
 
-type RatingUpsert = {
-  item_id: string;
-  rated_by: string;
-  food: number | null;
-  service: number | null;
-  ambiance: number | null;
-  score: number | null;
-  updated_at: string;
+type ProfileRow = {
+  id: string;
+  display_name: string;
 };
 
 function formValue(formData: FormData, key: string) {
@@ -116,8 +111,36 @@ export default async function ItemPage({ params }: ItemPageProps) {
   const currentRatingLabel = rating ? ratingLabel(item, rating) : null;
   const currentRestaurantDetails =
     item.type === "restaurant" && rating ? restaurantDetails(rating) : null;
+  const profileIds = Array.from(
+    new Set(
+      [item.created_by, rating?.rated_by].filter(
+        (profileId): profileId is string => Boolean(profileId),
+      ),
+    ),
+  );
+  let profiles: ProfileRow[] = [];
 
-  async function updateItem(formData: FormData) {
+  if (profileIds.length > 0) {
+    const { data: profileRows } = await supabase
+      .from("profiles")
+      .select("id,display_name")
+      .in("id", profileIds);
+
+    profiles = (profileRows ?? []) as ProfileRow[];
+  }
+
+  const profilesById = new Map(
+    profiles.map((profile) => [profile.id, profile.display_name]),
+  );
+  const creatorName = profilesById.get(item.created_by) ?? "Pessoa do espaço";
+  const lastRaterName = rating
+    ? (profilesById.get(rating.rated_by) ?? "Pessoa do espaço")
+    : null;
+
+  async function updateItem(
+    _state: ItemFormState,
+    formData: FormData,
+  ): Promise<ItemFormState> {
     "use server";
 
     const title = formValue(formData, "title");
@@ -125,7 +148,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
     const notes = formValue(formData, "notes");
 
     if (!title) {
-      throw new Error("Informe um título para a ideia.");
+      return { error: "Informe um título para a ideia." };
     }
 
     const actionSupabase = await createClient();
@@ -159,13 +182,16 @@ export default async function ItemPage({ params }: ItemPageProps) {
       .eq("space_id", actionMembership.space_id);
 
     if (updateError) {
-      throw new Error("Não foi possível salvar a ideia.");
+      return { error: "Não foi possível salvar a ideia. Tente novamente." };
     }
 
     redirect(`/items/${id}`);
   }
 
-  async function saveRating(formData: FormData) {
+  async function saveRating(
+    _state: RatingFormState,
+    formData: FormData,
+  ): Promise<RatingFormState> {
     "use server";
 
     const actionSupabase = await createClient();
@@ -189,64 +215,63 @@ export default async function ItemPage({ params }: ItemPageProps) {
 
     const { data: actionItem, error: actionItemError } = await actionSupabase
       .from("items")
-      .select("id,type,status")
+      .select("id,type")
       .eq("id", id)
       .eq("space_id", actionMembership.space_id)
       .maybeSingle();
 
     if (actionItemError) {
-      throw new Error("Não foi possível carregar a ideia.");
+      return { error: "Não foi possível carregar a ideia. Tente novamente." };
     }
 
     if (!actionItem) {
       notFound();
     }
 
-    const now = new Date().toISOString();
-    const ratingPayload: RatingUpsert =
-      actionItem.type === "restaurant"
-        ? {
-            item_id: actionItem.id as string,
-            rated_by: actionUser.id,
-            food: scoreValue(formData, "food"),
-            service: scoreValue(formData, "service"),
-            ambiance: scoreValue(formData, "ambiance"),
-            score: null,
-            updated_at: now,
-          }
-        : {
-            item_id: actionItem.id as string,
-            rated_by: actionUser.id,
-            food: null,
-            service: null,
-            ambiance: null,
-            score: scoreValue(formData, "score"),
-            updated_at: now,
-          };
+    let ratingParams:
+      | {
+          p_item_id: string;
+          p_food: number;
+          p_service: number;
+          p_ambiance: number;
+          p_score: null;
+        }
+      | {
+          p_item_id: string;
+          p_food: null;
+          p_service: null;
+          p_ambiance: null;
+          p_score: number;
+        };
 
-    if (actionItem.status === "want") {
-      const { error: statusError } = await actionSupabase
-        .from("items")
-        .update({
-          status: "done",
-          completed_at: now,
-          updated_at: now,
-        })
-        .eq("id", actionItem.id)
-        .eq("space_id", actionMembership.space_id)
-        .eq("status", "want");
-
-      if (statusError) {
-        throw new Error("Não foi possível marcar a ideia como feita.");
-      }
+    try {
+      ratingParams =
+        actionItem.type === "restaurant"
+          ? {
+              p_item_id: actionItem.id as string,
+              p_food: scoreValue(formData, "food"),
+              p_service: scoreValue(formData, "service"),
+              p_ambiance: scoreValue(formData, "ambiance"),
+              p_score: null,
+            }
+          : {
+              p_item_id: actionItem.id as string,
+              p_food: null,
+              p_service: null,
+              p_ambiance: null,
+              p_score: scoreValue(formData, "score"),
+            };
+    } catch {
+      return { error: "Informe uma nota de 1 a 5." };
     }
 
-    const { error: ratingError } = await actionSupabase
-      .from("ratings")
-      .upsert(ratingPayload, { onConflict: "item_id" });
+    const { error: ratingError } = await actionSupabase.rpc(
+      "complete_item_with_rating",
+      ratingParams,
+    );
 
     if (ratingError) {
-      throw new Error("Não foi possível salvar a nota.");
+      return { error: "Não foi possível salvar a nota. Tente novamente." };
     }
 
     redirect(`/items/${id}`);
@@ -273,6 +298,10 @@ export default async function ItemPage({ params }: ItemPageProps) {
             Marque como feito, salve a nota compartilhada e ajuste título, URL
             ou notas quando precisarem.
           </p>
+          <div className="flex flex-col gap-1 text-sm text-foreground/65 sm:flex-row sm:gap-4">
+            <p>Criada por {creatorName}</p>
+            {lastRaterName ? <p>Última nota por {lastRaterName}</p> : null}
+          </div>
         </div>
 
         <div className="rounded-3xl bg-surface p-6 ring-1 ring-border">

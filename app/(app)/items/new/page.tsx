@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { ItemForm } from "@/components/item-form";
+import { ItemForm, type ItemFormState } from "@/components/item-form";
 import { TYPE_LABELS } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import type { ItemType } from "@/lib/types";
@@ -17,10 +17,13 @@ function parseType(value: string) {
     return value as ItemType;
   }
 
-  throw new Error("Escolha um tipo válido.");
+  return null;
 }
 
-async function createItem(formData: FormData) {
+async function createItem(
+  _state: ItemFormState,
+  formData: FormData,
+): Promise<ItemFormState> {
   "use server";
 
   const type = parseType(formValue(formData, "type"));
@@ -28,8 +31,12 @@ async function createItem(formData: FormData) {
   const url = formValue(formData, "url");
   const notes = formValue(formData, "notes");
 
+  if (!type) {
+    return { error: "Escolha um tipo válido." };
+  }
+
   if (!title) {
-    throw new Error("Informe um título para a ideia.");
+    return { error: "Informe um título para a ideia." };
   }
 
   const supabase = await createClient();
@@ -62,7 +69,7 @@ async function createItem(formData: FormData) {
   });
 
   if (error) {
-    throw new Error("Não foi possível criar a ideia.");
+    return { error: "Não foi possível criar a ideia. Tente novamente." };
   }
 
   redirect("/");

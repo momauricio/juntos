@@ -2,9 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { authRedirectPath, safeRedirectPath } from "@/lib/auth-redirect";
+import { isDemoMode } from "@/lib/demo-mode";
 
 const AUTH_ROUTES = ["/login", "/signup"];
-const PUBLIC_ROUTES = [...AUTH_ROUTES, "/auth/callback"];
+const PUBLIC_ROUTES = [...AUTH_ROUTES, "/auth/callback", "/demo"];
 const SUPABASE_CACHE_HEADERS = ["Cache-Control", "Expires", "Pragma"];
 
 function isRouteMatch(pathname: string, routes: string[]) {
@@ -43,6 +44,17 @@ function redirectWithSupabaseState(
 }
 
 export async function updateSession(request: NextRequest) {
+  if (isDemoMode()) {
+    const { pathname } = request.nextUrl;
+    if (pathname === "/demo" || pathname.startsWith("/demo/")) {
+      return NextResponse.next();
+    }
+    const demoUrl = request.nextUrl.clone();
+    demoUrl.pathname = "/demo";
+    demoUrl.search = request.nextUrl.search;
+    return NextResponse.redirect(demoUrl);
+  }
+
   let response = NextResponse.next({
     request,
   });

@@ -1,16 +1,32 @@
 # Juntos
 
-A couple ideas app — share restaurants, films, trips, and plans, and keep them in sync.
+Wishlist compartilhada do casal — restaurantes, filmes, viagens e ideias, com notas depois de viver.
 
-## Setup
+## Modo demo (teste mobile agora)
+
+Sem projeto Supabase extra, o app sobe em **modo demo**:
+
+- Dados ficam no aparelho (`localStorage`)
+- Aba **Sync** gera um link para mandar no WhatsApp
+- A outra pessoa abre o link, entra com o nome e vê a lista
+- Quando ela adicionar algo, manda o Sync de volta para mesclar
+
+```bash
+# .env.local
+NEXT_PUBLIC_DEMO_MODE=true
+```
+
+Abra `/demo` (ou `/` — redireciona no modo demo).
+
+## Setup completo (Supabase)
 
 ### 1. Environment variables
-
-Copy the example env file and fill in your Supabase credentials:
 
 ```bash
 cp .env.local.example .env.local
 ```
+
+Defina `NEXT_PUBLIC_DEMO_MODE=false` e preencha URL + anon key do Supabase.
 
 ### 2. Supabase project
 

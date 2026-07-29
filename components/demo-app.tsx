@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { TYPE_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { assertScore } from "@/lib/ratings";
@@ -40,7 +41,9 @@ function formatScore(value: number | null) {
   });
 }
 
-export function DemoApp({ initialSync }: { initialSync?: string }) {
+export function DemoApp() {
+  const searchParams = useSearchParams();
+  const initialSync = searchParams.get("sync") ?? undefined;
   const [ready, setReady] = useState(false);
   const [state, setState] = useState<DemoState>({ user: null, space: null });
   const [screen, setScreen] = useState<Screen>({ name: "welcome" });
@@ -764,7 +767,8 @@ function SyncPanel({
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    setLink(`${window.location.origin}/demo?sync=${payload}`);
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    setLink(`${window.location.origin}${base}/?sync=${payload}`);
   }, [payload]);
 
   async function copyLink() {

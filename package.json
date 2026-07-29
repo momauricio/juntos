@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:demo-static": "node scripts/build-demo-static.cjs",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",

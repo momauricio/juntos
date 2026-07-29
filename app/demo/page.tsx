@@ -1,17 +1,17 @@
+import { Suspense } from "react";
+
 import { DemoApp } from "@/components/demo-app";
 
-type DemoPageProps = {
-  searchParams: Promise<{
-    sync?: string | string[];
-  }>;
-};
-
-function firstParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-export default async function DemoPage({ searchParams }: DemoPageProps) {
-  const params = await searchParams;
-
-  return <DemoApp initialSync={firstParam(params.sync)} />;
+export default function DemoPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto flex min-h-dvh w-full max-w-lg items-center justify-center px-4">
+          <p className="text-sm text-accent-strong/70">Carregando Juntos…</p>
+        </main>
+      }
+    >
+      <DemoApp />
+    </Suspense>
+  );
 }

@@ -4,19 +4,37 @@ Wishlist compartilhada do casal — restaurantes, filmes, viagens e ideias, com 
 
 ## Modo demo (teste mobile agora)
 
+Site público de teste (mobile-first):
+
+**https://momauricio.github.io/juntos/**
+
 Sem projeto Supabase extra, o app sobe em **modo demo**:
 
 - Dados ficam no aparelho (`localStorage`)
+- Aba **Lista** para ideias (restaurantes, filmes, etc.)
+- Aba **Viagens** para checklist + roteiro por dia + documentos (links)
 - Aba **Sync** gera um link para mandar no WhatsApp
-- A outra pessoa abre o link, entra com o nome e vê a lista
+- A outra pessoa abre o link, entra com o nome e vê lista **e** viagens
 - Quando ela adicionar algo, manda o Sync de volta para mesclar
+
+### Fluxo rápido de viagem
+
+1. Abra **Viagens** → **+ Nova** (ex.: Chile 2026)
+2. Em **Checklist**, marque o que levar
+3. Em **Roteiro**, adicione paradas por dia
+4. Em **Docs**, cole links de passagem, reserva, entrada ou seguro
+5. Em **Sync**, compartilhe o link com a parceira
 
 ```bash
 # .env.local
 NEXT_PUBLIC_DEMO_MODE=true
 ```
 
-Abra `/demo` (ou `/` — redireciona no modo demo).
+Build estático para GitHub Pages:
+
+```bash
+npm run build:demo-static
+```
 
 ## Setup completo (Supabase)
 
@@ -57,14 +75,15 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 For a quick end-to-end check with two people or two browser profiles:
 
-1. Create account A and account B.
-2. Sign in as A, create a space, and share the invite code or link.
-3. Sign in as B and join the space with that invite.
+1. Create account A and account B (or use demo names).
+2. Sign in as A, create a space, and share the Sync link.
+3. Sign in as B and join/merge with that link.
 4. Add a restaurant idea from an Instagram paste or URL.
 5. Open the item, mark it done, and save the 3 restaurant scores.
 6. Filter the list by **Já fizemos** and confirm the completed item appears.
+7. Create a trip under **Viagens**, add checklist + day stops + document links, Sync again.
 
-For couple testing, Supabase Auth email confirmation is easiest with **Confirm email** disabled in the Supabase dashboard.
+For couple testing with Supabase Auth, email confirmation is easiest with **Confirm email** disabled in the Supabase dashboard.
 
 ### Testing on your phone
 

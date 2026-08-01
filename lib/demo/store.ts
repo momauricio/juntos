@@ -7,6 +7,58 @@ export type DemoUser = {
   name: string;
 };
 
+export type DocCategory =
+  | "flight"
+  | "reservation"
+  | "ticket"
+  | "insurance"
+  | "other";
+
+export type PackItem = {
+  id: string;
+  tripId: string;
+  title: string;
+  done: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Stop = {
+  id: string;
+  tripId: string;
+  day: number;
+  title: string;
+  notes: string | null;
+  url: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DocLink = {
+  id: string;
+  tripId: string;
+  title: string;
+  category: DocCategory;
+  url: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Trip = {
+  id: string;
+  title: string;
+  destination: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  notes: string | null;
+  packItems: PackItem[];
+  stops: Stop[];
+  docs: DocLink[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type DemoSpace = {
   id: string;
   name: string;
@@ -14,6 +66,7 @@ export type DemoSpace = {
   members: DemoUser[];
   items: Item[];
   ratings: Rating[];
+  trips: Trip[];
   updatedAt: string;
 };
 
@@ -21,6 +74,16 @@ export type DemoState = {
   user: DemoUser | null;
   space: DemoSpace | null;
 };
+
+export const DOC_CATEGORY_LABELS: Record<DocCategory, string> = {
+  flight: "Passagem",
+  reservation: "Reserva",
+  ticket: "Entrada",
+  insurance: "Seguro",
+  other: "Outro",
+};
+
+export const DOC_CATEGORIES = Object.keys(DOC_CATEGORY_LABELS) as DocCategory[];
 
 const STORAGE_KEY = "juntos-demo-v1";
 
@@ -32,6 +95,29 @@ function uid(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 }
 
+function normalizeTrip(raw: Partial<Trip> & { id: string; title: string }): Trip {
+  return {
+    id: raw.id,
+    title: raw.title,
+    destination: raw.destination ?? null,
+    startDate: raw.startDate ?? null,
+    endDate: raw.endDate ?? null,
+    notes: raw.notes ?? null,
+    packItems: Array.isArray(raw.packItems) ? raw.packItems : [],
+    stops: Array.isArray(raw.stops) ? raw.stops : [],
+    docs: Array.isArray(raw.docs) ? raw.docs : [],
+    createdAt: raw.createdAt ?? nowIso(),
+    updatedAt: raw.updatedAt ?? nowIso(),
+  };
+}
+
+export function normalizeSpace(raw: DemoSpace | (Omit<DemoSpace, "trips"> & { trips?: Trip[] })): DemoSpace {
+  return {
+    ...raw,
+    trips: Array.isArray(raw.trips) ? raw.trips.map((t) => normalizeTrip(t)) : [],
+  };
+}
+
 export function emptyState(): DemoState {
   return { user: null, space: null };
 }
@@ -41,7 +127,11 @@ export function loadState(): DemoState {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyState();
-    return JSON.parse(raw) as DemoState;
+    const parsed = JSON.parse(raw) as DemoState;
+    if (parsed.space) {
+      return { ...parsed, space: normalizeSpace(parsed.space) };
+    }
+    return parsed;
   } catch {
     return emptyState();
   }
@@ -63,6 +153,7 @@ export function createSpace(owner: DemoUser, name = "Nós dois"): DemoSpace {
     members: [owner],
     items: [],
     ratings: [],
+    trips: [],
     updatedAt: nowIso(),
   };
 }
@@ -141,18 +232,239 @@ export function upsertRating(
   return { ...space, items, ratings, updatedAt: stamp };
 }
 
+export function createTrip(
+  space: DemoSpace,
+  input: {
+    title: string;
+    destination?: string;
+    startDate?: string;
+    endDate?: string;
+    notes?: string;
+  },
+): DemoSpace {
+  const stamp = nowIso();
+  const trip: Trip = {
+    id: uid("trip"),
+    title: input.title.trim(),
+    destination: input.destination?.trim() || null,
+    startDate: input.startDate?.trim() || null,
+    endDate: input.endDate?.trim() || null,
+    notes: input.notes?.trim() || null,
+    packItems: [],
+    stops: [],
+    docs: [],
+    createdAt: stamp,
+    updatedAt: stamp,
+  };
+
+  return {
+    ...space,
+    trips: [trip, ...space.trips],
+    updatedAt: stamp,
+  };
+}
+
+function updateTrip(
+  space: DemoSpace,
+  tripId: string,
+  updater: (trip: Trip, stamp: string) => Trip,
+): DemoSpace {
+  const stamp = nowIso();
+  let found = false;
+  const trips = space.trips.map((trip) => {
+    if (trip.id !== tripId) return trip;
+    found = true;
+    return updater(trip, stamp);
+  });
+  if (!found) return space;
+  return { ...space, trips, updatedAt: stamp };
+}
+
+export function addPackItem(
+  space: DemoSpace,
+  tripId: string,
+  title: string,
+): DemoSpace {
+  return updateTrip(space, tripId, (trip, stamp) => {
+    const item: PackItem = {
+      id: uid("pack"),
+      tripId,
+      title: title.trim(),
+      done: false,
+      createdAt: stamp,
+      updatedAt: stamp,
+    };
+    return {
+      ...trip,
+      packItems: [...trip.packItems, item],
+      updatedAt: stamp,
+    };
+  });
+}
+
+export function togglePackItem(
+  space: DemoSpace,
+  tripId: string,
+  packItemId: string,
+): DemoSpace {
+  return updateTrip(space, tripId, (trip, stamp) => ({
+    ...trip,
+    packItems: trip.packItems.map((item) =>
+      item.id === packItemId
+        ? { ...item, done: !item.done, updatedAt: stamp }
+        : item,
+    ),
+    updatedAt: stamp,
+  }));
+}
+
+export function removePackItem(
+  space: DemoSpace,
+  tripId: string,
+  packItemId: string,
+): DemoSpace {
+  return updateTrip(space, tripId, (trip, stamp) => ({
+    ...trip,
+    packItems: trip.packItems.filter((item) => item.id !== packItemId),
+    updatedAt: stamp,
+  }));
+}
+
+export function addStop(
+  space: DemoSpace,
+  tripId: string,
+  input: { day: number; title: string; notes?: string; url?: string },
+): DemoSpace {
+  return updateTrip(space, tripId, (trip, stamp) => {
+    const stop: Stop = {
+      id: uid("stop"),
+      tripId,
+      day: Math.max(1, Math.floor(input.day)),
+      title: input.title.trim(),
+      notes: input.notes?.trim() || null,
+      url: input.url?.trim() || null,
+      createdAt: stamp,
+      updatedAt: stamp,
+    };
+    return {
+      ...trip,
+      stops: [...trip.stops, stop].sort((a, b) =>
+        a.day === b.day
+          ? a.createdAt.localeCompare(b.createdAt)
+          : a.day - b.day,
+      ),
+      updatedAt: stamp,
+    };
+  });
+}
+
+export function removeStop(
+  space: DemoSpace,
+  tripId: string,
+  stopId: string,
+): DemoSpace {
+  return updateTrip(space, tripId, (trip, stamp) => ({
+    ...trip,
+    stops: trip.stops.filter((stop) => stop.id !== stopId),
+    updatedAt: stamp,
+  }));
+}
+
+export function addDocLink(
+  space: DemoSpace,
+  tripId: string,
+  input: {
+    title: string;
+    category: DocCategory;
+    url: string;
+    notes?: string;
+  },
+): DemoSpace {
+  return updateTrip(space, tripId, (trip, stamp) => {
+    const doc: DocLink = {
+      id: uid("doc"),
+      tripId,
+      title: input.title.trim(),
+      category: input.category,
+      url: input.url.trim(),
+      notes: input.notes?.trim() || null,
+      createdAt: stamp,
+      updatedAt: stamp,
+    };
+    return {
+      ...trip,
+      docs: [doc, ...trip.docs],
+      updatedAt: stamp,
+    };
+  });
+}
+
+export function removeDocLink(
+  space: DemoSpace,
+  tripId: string,
+  docId: string,
+): DemoSpace {
+  return updateTrip(space, tripId, (trip, stamp) => ({
+    ...trip,
+    docs: trip.docs.filter((doc) => doc.id !== docId),
+    updatedAt: stamp,
+  }));
+}
+
+function mergeByUpdatedAt<T extends { id: string; updatedAt: string }>(
+  local: T[],
+  incoming: T[],
+): T[] {
+  const map = new Map<string, T>();
+  [...local, ...incoming].forEach((entry) => {
+    const prev = map.get(entry.id);
+    if (!prev || prev.updatedAt <= entry.updatedAt) map.set(entry.id, entry);
+  });
+  return Array.from(map.values());
+}
+
+function mergeTrips(local: Trip[], incoming: Trip[]): Trip[] {
+  const byId = new Map<string, Trip>();
+  [...local, ...incoming].forEach((trip) => {
+    const normalized = normalizeTrip(trip);
+    const prev = byId.get(normalized.id);
+    if (!prev) {
+      byId.set(normalized.id, normalized);
+      return;
+    }
+    const newer = prev.updatedAt <= normalized.updatedAt ? normalized : prev;
+    const older = newer === normalized ? prev : normalized;
+    byId.set(normalized.id, {
+      ...newer,
+      packItems: mergeByUpdatedAt(older.packItems, newer.packItems),
+      stops: mergeByUpdatedAt(older.stops, newer.stops).sort((a, b) =>
+        a.day === b.day
+          ? a.createdAt.localeCompare(b.createdAt)
+          : a.day - b.day,
+      ),
+      docs: mergeByUpdatedAt(older.docs, newer.docs),
+    });
+  });
+  return Array.from(byId.values()).sort((a, b) =>
+    a.createdAt < b.createdAt ? 1 : -1,
+  );
+}
+
 export function mergeSpaces(local: DemoSpace, incoming: DemoSpace): DemoSpace {
+  const left = normalizeSpace(local);
+  const right = normalizeSpace(incoming);
+
   const membersById = new Map<string, DemoUser>();
-  [...local.members, ...incoming.members].forEach((m) => membersById.set(m.id, m));
+  [...left.members, ...right.members].forEach((m) => membersById.set(m.id, m));
 
   const itemsById = new Map<string, Item>();
-  [...local.items, ...incoming.items].forEach((item) => {
+  [...left.items, ...right.items].forEach((item) => {
     const prev = itemsById.get(item.id);
     if (!prev || prev.updated_at <= item.updated_at) itemsById.set(item.id, item);
   });
 
   const ratingsByItem = new Map<string, Rating>();
-  [...local.ratings, ...incoming.ratings].forEach((rating) => {
+  [...left.ratings, ...right.ratings].forEach((rating) => {
     const prev = ratingsByItem.get(rating.item_id);
     if (!prev || prev.updated_at <= rating.updated_at) {
       ratingsByItem.set(rating.item_id, rating);
@@ -160,20 +472,21 @@ export function mergeSpaces(local: DemoSpace, incoming: DemoSpace): DemoSpace {
   });
 
   return {
-    id: local.id || incoming.id,
-    name: local.name || incoming.name,
-    inviteCode: local.inviteCode || incoming.inviteCode,
+    id: left.id || right.id,
+    name: left.name || right.name,
+    inviteCode: left.inviteCode || right.inviteCode,
     members: Array.from(membersById.values()).slice(0, 2),
     items: Array.from(itemsById.values()).sort((a, b) =>
       a.created_at < b.created_at ? 1 : -1,
     ),
     ratings: Array.from(ratingsByItem.values()),
+    trips: mergeTrips(left.trips, right.trips),
     updatedAt: nowIso(),
   };
 }
 
 export function encodeSpace(space: DemoSpace): string {
-  const json = JSON.stringify(space);
+  const json = JSON.stringify(normalizeSpace(space));
   const bytes = new TextEncoder().encode(json);
   let binary = "";
   bytes.forEach((b) => {
@@ -189,7 +502,7 @@ export function decodeSpace(payload: string): DemoSpace | null {
     const binary = atob(padded + pad);
     const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
     const json = new TextDecoder().decode(bytes);
-    return JSON.parse(json) as DemoSpace;
+    return normalizeSpace(JSON.parse(json) as DemoSpace);
   } catch {
     return null;
   }
@@ -203,4 +516,10 @@ export function ratingForItem(space: DemoSpace, itemId: string): number | null {
 
 export function memberName(space: DemoSpace, userId: string): string {
   return space.members.find((m) => m.id === userId)?.name ?? "Alguém";
+}
+
+export function formatTripDates(trip: Trip): string | null {
+  if (!trip.startDate && !trip.endDate) return null;
+  if (trip.startDate && trip.endDate) return `${trip.startDate} → ${trip.endDate}`;
+  return trip.startDate || trip.endDate;
 }

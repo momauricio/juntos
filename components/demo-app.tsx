@@ -9,6 +9,7 @@ import type { Item, ItemStatus, ItemType } from "@/lib/types";
 import {
   addItem,
   createSpace,
+  createTrip,
   createUser,
   decodeSpace,
   encodeSpace,
@@ -22,6 +23,7 @@ import {
   type DemoState,
   type DemoUser,
 } from "@/lib/demo/store";
+import { NewTripForm, TripDetail, TripsHome } from "@/components/demo-trips";
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 
@@ -30,6 +32,9 @@ type Screen =
   | { name: "home" }
   | { name: "new" }
   | { name: "detail"; itemId: string }
+  | { name: "trips" }
+  | { name: "trip-new" }
+  | { name: "trip-detail"; tripId: string }
   | { name: "sync" }
   | { name: "settings" };
 
@@ -194,7 +199,13 @@ export function DemoApp() {
             <button
               type="button"
               className="inline-flex h-11 min-w-11 items-center justify-center rounded-xl bg-accent text-lg font-semibold text-accent-contrast"
-              onClick={() => setScreen({ name: "new" })}
+              onClick={() =>
+                setScreen(
+                  screen.name === "trips" || screen.name === "trip-detail"
+                    ? { name: "trip-new" }
+                    : { name: "new" },
+                )
+              }
               aria-label="Adicionar"
             >
               +
@@ -266,6 +277,60 @@ export function DemoApp() {
           />
         ) : null}
 
+        {screen.name === "trips" ? (
+          <TripsHome
+            space={space}
+            onOpen={(tripId) => setScreen({ name: "trip-detail", tripId })}
+            onNew={() => setScreen({ name: "trip-new" })}
+          />
+        ) : null}
+
+        {screen.name === "trip-new" ? (
+          <NewTripForm
+            onCancel={() => setScreen({ name: "trips" })}
+            onSave={(input) => {
+              const nextSpace = createTrip(space, input);
+              persist({ user, space: nextSpace });
+              const tripId = nextSpace.trips[0]?.id;
+              setMessage("Viagem criada. Use Sync para enviar à parceira.");
+              setScreen(
+                tripId
+                  ? { name: "trip-detail", tripId }
+                  : { name: "trips" },
+              );
+            }}
+          />
+        ) : null}
+
+        {screen.name === "trip-detail" ? (
+          (() => {
+            const trip = space.trips.find((t) => t.id === screen.tripId);
+            if (!trip) {
+              return (
+                <div className="space-y-3">
+                  <p className="text-sm">Viagem não encontrada.</p>
+                  <button
+                    type="button"
+                    className="text-sm underline"
+                    onClick={() => setScreen({ name: "trips" })}
+                  >
+                    Voltar
+                  </button>
+                </div>
+              );
+            }
+            return (
+              <TripDetail
+                trip={trip}
+                onBack={() => setScreen({ name: "trips" })}
+                onChange={(updater) => {
+                  persist({ user, space: updater(space) });
+                }}
+              />
+            );
+          })()
+        ) : null}
+
         {screen.name === "sync" ? (
           <SyncPanel
             space={space}
@@ -279,7 +344,7 @@ export function DemoApp() {
               const merged = mergeSpaces(space, incoming);
               persist({ user, space: merged });
               setScreen({ name: "home" });
-              setMessage("Listas mescladas.");
+              setMessage("Listas e viagens mescladas.");
             }}
           />
         ) : null}
@@ -298,9 +363,22 @@ export function DemoApp() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border/70 bg-surface/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex max-w-lg gap-2">
-          <NavButton active={screen.name === "home"} onClick={() => setScreen({ name: "home" })}>
+        <div className="mx-auto flex max-w-lg gap-1.5">
+          <NavButton
+            active={screen.name === "home" || screen.name === "new" || screen.name === "detail"}
+            onClick={() => setScreen({ name: "home" })}
+          >
             Lista
+          </NavButton>
+          <NavButton
+            active={
+              screen.name === "trips" ||
+              screen.name === "trip-new" ||
+              screen.name === "trip-detail"
+            }
+            onClick={() => setScreen({ name: "trips" })}
+          >
+            Viagens
           </NavButton>
           <NavButton active={screen.name === "sync"} onClick={() => setScreen({ name: "sync" })}>
             Sync
@@ -801,8 +879,8 @@ function SyncPanel({
       <h1 className="font-serif text-2xl text-accent-strong">Sincronizar</h1>
       <p className="text-sm leading-6 text-accent-strong/75">
         Sem backend ainda: mande este link no WhatsApp. A outra pessoa abre, entra com o
-        nome dela e vê a lista. Quando ela adicionar algo, ela manda o Sync de volta
-        para mesclar.
+        nome dela e vê a lista e as viagens. Quando ela adicionar algo, ela manda o Sync
+        de volta para mesclar.
       </p>
       <textarea
         readOnly
@@ -886,6 +964,9 @@ function Settings({
         </p>
         <p className="mt-2">
           <span className="text-accent-strong/65">Ideias:</span> {space.items.length}
+        </p>
+        <p className="mt-2">
+          <span className="text-accent-strong/65">Viagens:</span> {space.trips.length}
         </p>
       </div>
       <p className="text-xs leading-5 text-accent-strong/65">

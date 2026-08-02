@@ -262,7 +262,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
               p_score: scoreValue(formData, "score"),
             };
     } catch {
-      return { error: "Informe uma nota de 1 a 5." };
+      return { error: "Informe uma nota de 1 a 10." };
     }
 
     const { error: ratingError } = await actionSupabase.rpc(

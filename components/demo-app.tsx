@@ -385,6 +385,12 @@ export function DemoApp() {
             Início
           </NavButton>
           <NavButton
+            active={screen.name === "ideas" || screen.name === "detail"}
+            onClick={() => setScreen({ name: "ideas" })}
+          >
+            Lista
+          </NavButton>
+          <NavButton
             active={
               screen.name === "trips" ||
               screen.name === "trip-new" ||

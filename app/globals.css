@@ -1,17 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #eef3ec;
-  --foreground: #233027;
-  --surface: #fbfdf8;
-  --surface-muted: #edf5ea;
-  --surface-strong: #e2ecde;
-  --border: #ccd9c6;
-  --accent: #5f7f63;
-  --accent-strong: #34563e;
-  --accent-soft: #dbead7;
-  --accent-contrast: #ffffff;
-  --danger: #9f2f2f;
+  --background: #1a2238;
+  --foreground: #f3ebe3;
+  --surface: rgba(243, 235, 227, 0.94);
+  --surface-muted: rgba(243, 235, 227, 0.78);
+  --surface-strong: #e8dcd0;
+  --border: rgba(243, 235, 227, 0.22);
+  --accent: #c45c3e;
+  --accent-strong: #1a2238;
+  --accent-soft: #f0d5c8;
+  --accent-contrast: #fff8f3;
+  --danger: #e07070;
+  --ink-on-surface: #1a2238;
+  --cream: #f3ebe3;
+  --indigo-deep: #12182b;
+  --indigo: #1a2238;
+  --terracotta: #c45c3e;
 }
 
 @theme inline {
@@ -33,9 +38,9 @@
 
 body {
   background:
-    radial-gradient(circle at 18% 0%, rgba(224, 236, 219, 0.95), transparent 34rem),
-    radial-gradient(circle at 88% 12%, rgba(202, 220, 198, 0.72), transparent 28rem),
-    linear-gradient(180deg, #f7faf4 0%, var(--background) 48%, #e8f0e4 100%);
+    radial-gradient(circle at 18% 0%, rgba(243, 235, 227, 0.14), transparent 34rem),
+    radial-gradient(circle at 88% 85%, rgba(240, 213, 200, 0.16), transparent 32rem),
+    linear-gradient(180deg, var(--indigo-deep) 0%, var(--indigo) 55%, #252d45 100%);
   color: var(--foreground);
   font-family: var(--font-source-sans), sans-serif;
 }
@@ -50,4 +55,27 @@ h2,
 ::selection {
   background: var(--accent-soft);
   color: var(--accent-strong);
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hub-card-enter {
+  animation: rise-in 420ms ease-out both;
+}
+
+.hub-card-enter:nth-child(2) {
+  animation-delay: 80ms;
+}
+
+.wizard-step-enter {
+  animation: rise-in 320ms ease-out both;
 }

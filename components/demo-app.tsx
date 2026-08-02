@@ -25,7 +25,8 @@ import {
 } from "@/lib/demo/store";
 import { DemoHub } from "@/components/demo-hub";
 import { IdeaWizard } from "@/components/demo-idea-wizard";
-import { NewTripForm, TripDetail, TripsHome } from "@/components/demo-trips";
+import { TripWizard } from "@/components/demo-trip-wizard";
+import { TripDetail, TripsHome } from "@/components/demo-trips";
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 
@@ -299,7 +300,7 @@ export function DemoApp() {
         ) : null}
 
         {screen.name === "trip-new" ? (
-          <NewTripForm
+          <TripWizard
             onCancel={() => setScreen({ name: "trips" })}
             onSave={(input) => {
               const nextSpace = createTrip(space, input);

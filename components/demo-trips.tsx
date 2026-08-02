@@ -62,6 +62,7 @@ export function TripsHome({
       <ul className="space-y-2">
         {space.trips.map((trip) => {
           const dates = formatTripDates(trip);
+          const destinations = formatTripDestinations(trip);
           return (
             <li key={trip.id}>
               <button
@@ -71,7 +72,7 @@ export function TripsHome({
               >
                 <p className="font-medium text-accent-strong">{trip.title}</p>
                 <p className="mt-1 text-xs text-accent-strong/65">
-                  {[trip.destination, dates].filter(Boolean).join(" · ") ||
+                  {[destinations, dates].filter(Boolean).join(" · ") ||
                     "Sem datas"}
                 </p>
                 <p className="mt-1 text-xs text-accent-strong/55">
@@ -87,114 +88,11 @@ export function TripsHome({
   );
 }
 
-export function NewTripForm({
-  onCancel,
-  onSave,
-}: {
-  onCancel: () => void;
-  onSave: (input: {
-    title: string;
-    destinations: Array<{
-      name: string;
-      startDate?: string;
-      endDate?: string;
-    }>;
-    notes?: string;
-  }) => void;
-}) {
-  const [title, setTitle] = useState("");
-  const [destination, setDestination] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [notes, setNotes] = useState("");
-
-  return (
-    <form
-      className="space-y-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!title.trim()) return;
-        onSave({
-          title,
-          destinations: [
-            {
-              name: destination.trim() || "Destino",
-              startDate: startDate || undefined,
-              endDate: endDate || undefined,
-            },
-          ],
-          notes,
-        });
-      }}
-    >
-      <h1 className="font-serif text-2xl text-accent-strong">Nova viagem</h1>
-      <label className="block text-sm font-medium">
-        Título
-        <input
-          required
-          className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Ex.: Chile 2026"
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        Destino
-        <input
-          className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3"
-          value={destination}
-          onChange={(e) => setDestination(e.target.value)}
-          placeholder="Santiago"
-        />
-      </label>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="block text-sm font-medium">
-          Início
-          <input
-            type="date"
-            className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </label>
-        <label className="block text-sm font-medium">
-          Fim
-          <input
-            type="date"
-            className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-        </label>
-      </div>
-      <label className="block text-sm font-medium">
-        Observação
-        <textarea
-          className="mt-2 min-h-24 w-full rounded-xl border border-border bg-surface p-3"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-      </label>
-      <div className="flex gap-2 pt-2">
-        <button
-          type="button"
-          className="h-12 flex-1 rounded-xl bg-surface-muted font-medium"
-          onClick={onCancel}
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          className="h-12 flex-1 rounded-xl bg-accent font-medium text-accent-contrast"
-        >
-          Salvar
-        </button>
-      </div>
-    </form>
-  );
-}
-
 type TripSegment = "checklist" | "itinerary" | "docs";
+
+function formatTripDestinations(trip: Trip): string | null {
+  return trip.destinations.map((destination) => destination.name).join(" → ") || null;
+}
 
 export function TripDetail({
   trip,
@@ -207,6 +105,7 @@ export function TripDetail({
 }) {
   const [segment, setSegment] = useState<TripSegment>("checklist");
   const dates = formatTripDates(trip);
+  const destinations = formatTripDestinations(trip);
 
   return (
     <div className="space-y-4">
@@ -216,7 +115,8 @@ export function TripDetail({
       <div>
         <h1 className="font-serif text-3xl text-accent-strong">{trip.title}</h1>
         <p className="mt-1 text-sm text-accent-strong/70">
-          {[trip.destination, dates].filter(Boolean).join(" · ") || "Sem destino/datas"}
+          {[destinations, dates].filter(Boolean).join(" · ") ||
+            "Sem destino/datas"}
         </p>
       </div>
 
@@ -351,7 +251,7 @@ function ItinerarySegment({
   const [url, setUrl] = useState("");
 
   const byDay = useMemo(() => {
-    const map = new Map<number, typeof trip.stops>();
+    const map = new Map<number, Trip["stops"]>();
     trip.stops.forEach((stop) => {
       const list = map.get(stop.day) ?? [];
       list.push(stop);

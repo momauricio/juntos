@@ -45,12 +45,21 @@ export type DocLink = {
   updatedAt: string;
 };
 
+export type TripDestination = {
+  id: string;
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+};
+
 export type Trip = {
   id: string;
   title: string;
+  destinations: TripDestination[];
+  /** @deprecated legacy single field; normalized into destinations */
   destination: string | null;
-  startDate: string | null;
-  endDate: string | null;
+  startDate: string | null; // derived cache: tripDateRange().start
+  endDate: string | null;   // derived cache: tripDateRange().end
   notes: string | null;
   packItems: PackItem[];
   stops: Stop[];
@@ -95,13 +104,44 @@ function uid(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 }
 
+export function tripDateRange(destinations: TripDestination[]): {
+  start: string | null;
+  end: string | null;
+} {
+  const starts = destinations.map((d) => d.startDate).filter(Boolean) as string[];
+  const ends = destinations.map((d) => d.endDate).filter(Boolean) as string[];
+  const start = starts.length ? starts.reduce((a, b) => (a < b ? a : b)) : null;
+  const end = ends.length ? ends.reduce((a, b) => (a > b ? a : b)) : null;
+  return { start, end };
+}
+
 function normalizeTrip(raw: Partial<Trip> & { id: string; title: string }): Trip {
+  const destinations = Array.isArray(raw.destinations) && raw.destinations.length > 0
+    ? raw.destinations.map((destination) => ({
+        id: destination.id || uid("dest"),
+        name: destination.name.trim(),
+        startDate: destination.startDate?.trim() || null,
+        endDate: destination.endDate?.trim() || null,
+      }))
+    : raw.destination || raw.startDate || raw.endDate
+      ? [
+          {
+            id: uid("dest"),
+            name: (raw.destination ?? "Destino").trim(),
+            startDate: raw.startDate?.trim() || null,
+            endDate: raw.endDate?.trim() || null,
+          },
+        ]
+      : [];
+  const range = tripDateRange(destinations);
+
   return {
     id: raw.id,
     title: raw.title,
-    destination: raw.destination ?? null,
-    startDate: raw.startDate ?? null,
-    endDate: raw.endDate ?? null,
+    destinations,
+    destination: destinations.map((d) => d.name).join(" → ") || null,
+    startDate: range.start,
+    endDate: range.end,
     notes: raw.notes ?? null,
     packItems: Array.isArray(raw.packItems) ? raw.packItems : [],
     stops: Array.isArray(raw.stops) ? raw.stops : [],
@@ -236,19 +276,34 @@ export function createTrip(
   space: DemoSpace,
   input: {
     title: string;
-    destination?: string;
-    startDate?: string;
-    endDate?: string;
+    destinations: Array<{
+      name: string;
+      startDate?: string;
+      endDate?: string;
+    }>;
     notes?: string;
   },
 ): DemoSpace {
   const stamp = nowIso();
+  const destinations: TripDestination[] = input.destinations
+    .map((destination) => ({
+      id: uid("dest"),
+      name: destination.name.trim(),
+      startDate: destination.startDate?.trim() || null,
+      endDate: destination.endDate?.trim() || null,
+    }))
+    .filter((destination) => destination.name.length > 0);
+  if (destinations.length === 0) {
+    throw new Error("Viagem precisa de pelo menos um destino");
+  }
+  const range = tripDateRange(destinations);
   const trip: Trip = {
     id: uid("trip"),
     title: input.title.trim(),
-    destination: input.destination?.trim() || null,
-    startDate: input.startDate?.trim() || null,
-    endDate: input.endDate?.trim() || null,
+    destinations,
+    destination: destinations.map((d) => d.name).join(" → ") || null,
+    startDate: range.start,
+    endDate: range.end,
     notes: input.notes?.trim() || null,
     packItems: [],
     stops: [],

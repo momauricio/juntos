@@ -94,9 +94,11 @@ export function NewTripForm({
   onCancel: () => void;
   onSave: (input: {
     title: string;
-    destination?: string;
-    startDate?: string;
-    endDate?: string;
+    destinations: Array<{
+      name: string;
+      startDate?: string;
+      endDate?: string;
+    }>;
     notes?: string;
   }) => void;
 }) {
@@ -112,7 +114,17 @@ export function NewTripForm({
       onSubmit={(e) => {
         e.preventDefault();
         if (!title.trim()) return;
-        onSave({ title, destination, startDate, endDate, notes });
+        onSave({
+          title,
+          destinations: [
+            {
+              name: destination.trim() || "Destino",
+              startDate: startDate || undefined,
+              endDate: endDate || undefined,
+            },
+          ],
+          notes,
+        });
       }}
     >
       <h1 className="font-serif text-2xl text-accent-strong">Nova viagem</h1>

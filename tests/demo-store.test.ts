@@ -11,6 +11,7 @@ import {
   decodeSpace,
   encodeSpace,
   mergeSpaces,
+  tripDateRange,
   togglePackItem,
 } from "@/lib/demo/store";
 
@@ -59,9 +60,13 @@ describe("demo trips", () => {
     let space = createSpace(user);
     space = createTrip(space, {
       title: "Chile 2026",
-      destination: "Santiago",
-      startDate: "2026-09-01",
-      endDate: "2026-09-10",
+      destinations: [
+        {
+          name: "Santiago",
+          startDate: "2026-09-01",
+          endDate: "2026-09-10",
+        },
+      ],
     });
     const tripId = space.trips[0].id;
 
@@ -89,7 +94,10 @@ describe("demo trips", () => {
   it("merges trip nested entities by updatedAt", () => {
     const user = createUser("A");
     let left = createSpace(user);
-    left = createTrip(left, { title: "Chile 2026" });
+    left = createTrip(left, {
+      title: "Chile 2026",
+      destinations: [{ name: "Santiago" }],
+    });
     const tripId = left.trips[0].id;
     left = addPackItem(left, tripId, "Carregador");
 
@@ -131,5 +139,73 @@ describe("demo trips", () => {
 
     const decoded = decodeSpace(encoded);
     expect(decoded?.trips).toEqual([]);
+  });
+});
+
+describe("trip destinations", () => {
+  it("computes total range from multiple destinations", () => {
+    expect(
+      tripDateRange([
+        { id: "a", name: "SP", startDate: "2026-12-20", endDate: "2026-12-22" },
+        { id: "b", name: "Nordeste", startDate: "2026-12-22", endDate: "2026-12-30" },
+      ]),
+    ).toEqual({ start: "2026-12-20", end: "2026-12-30" });
+  });
+
+  it("creates trip with ordered destinations and derived dates", () => {
+    const user = createUser("Mauricio");
+    let space = createSpace(user);
+    space = createTrip(space, {
+      title: "Nordeste final do ano",
+      destinations: [
+        { name: "SP", startDate: "2026-12-20", endDate: "2026-12-22" },
+        { name: "Nordeste", startDate: "2026-12-22", endDate: "2026-12-30" },
+      ],
+    });
+    const trip = space.trips[0];
+    expect(trip.destinations.map((d) => d.name)).toEqual(["SP", "Nordeste"]);
+    expect(trip.startDate).toBe("2026-12-20");
+    expect(trip.endDate).toBe("2026-12-30");
+  });
+
+  it("normalizes legacy single destination into destinations[]", () => {
+    const user = createUser("Mauricio");
+    const space = createSpace(user);
+    const legacy = {
+      ...space,
+      trips: [
+        {
+          id: "trip_legacy",
+          title: "Chile",
+          destination: "Santiago",
+          startDate: "2026-08-01",
+          endDate: "2026-08-10",
+          notes: null,
+          packItems: [],
+          stops: [],
+          docs: [],
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    };
+    const decoded = decodeSpace(encodeSpace(legacy as never));
+    expect(decoded?.trips[0].destinations).toHaveLength(1);
+    expect(decoded?.trips[0].destinations[0].name).toBe("Santiago");
+  });
+
+  it("round-trips destinations through sync encode", () => {
+    const user = createUser("Mauricio");
+    let space = createSpace(user);
+    space = createTrip(space, {
+      title: "Nordeste",
+      destinations: [
+        { name: "SP", startDate: "2026-12-20", endDate: "2026-12-22" },
+        { name: "Nordeste", startDate: "2026-12-22", endDate: "2026-12-30" },
+      ],
+    });
+    const decoded = decodeSpace(encodeSpace(space));
+    expect(decoded?.trips[0].destinations).toHaveLength(2);
+    expect(decoded?.trips[0].endDate).toBe("2026-12-30");
   });
 });

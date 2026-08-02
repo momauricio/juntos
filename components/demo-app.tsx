@@ -723,10 +723,10 @@ function Detail({
 }) {
   const item = space.items.find((i) => i.id === itemId);
   const rating = space.ratings.find((r) => r.item_id === itemId);
-  const [food, setFood] = useState(rating?.food ?? 5);
-  const [service, setService] = useState(rating?.service ?? 5);
-  const [ambiance, setAmbiance] = useState(rating?.ambiance ?? 5);
-  const [score, setScore] = useState(rating?.score ?? 5);
+  const [food, setFood] = useState(rating?.food ?? 7);
+  const [service, setService] = useState(rating?.service ?? 7);
+  const [ambiance, setAmbiance] = useState(rating?.ambiance ?? 7);
+  const [score, setScore] = useState(rating?.score ?? 7);
 
   if (!item) {
     return (
@@ -820,7 +820,7 @@ function ScoreSelect({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       >
-        {[1, 2, 3, 4, 5].map((n) => (
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
           <option key={n} value={n}>
             {n}
           </option>

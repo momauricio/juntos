@@ -1,6 +1,6 @@
 export function assertScore(n: number): void {
-  if (!Number.isInteger(n) || n < 1 || n > 5) {
-    throw new Error("Nota deve ser um inteiro de 1 a 5");
+  if (!Number.isInteger(n) || n < 1 || n > 10) {
+    throw new Error("Nota deve ser um inteiro de 1 a 10");
   }
 }
 

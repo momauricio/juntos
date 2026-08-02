@@ -14,7 +14,7 @@ type RatingFormProps = {
   rating: Pick<Rating, "food" | "service" | "ambiance" | "score"> | null;
 };
 
-const SCORE_OPTIONS = [1, 2, 3, 4, 5];
+const SCORE_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1);
 const INITIAL_ACTION_STATE: RatingFormState = { error: null };
 
 export type RatingFormState = {
@@ -90,7 +90,7 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
       setError(
         validationError instanceof Error
           ? validationError.message
-          : "Informe uma nota de 1 a 5.",
+          : "Informe uma nota de 1 a 10.",
       );
     }
   }

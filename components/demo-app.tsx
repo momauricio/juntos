@@ -23,14 +23,17 @@ import {
   type DemoState,
   type DemoUser,
 } from "@/lib/demo/store";
+import { DemoHub } from "@/components/demo-hub";
+import { IdeaWizard } from "@/components/demo-idea-wizard";
 import { NewTripForm, TripDetail, TripsHome } from "@/components/demo-trips";
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 
 type Screen =
   | { name: "welcome" }
-  | { name: "home" }
-  | { name: "new" }
+  | { name: "hub" }
+  | { name: "ideas" }
+  | { name: "idea-wizard" }
   | { name: "detail"; itemId: string }
   | { name: "trips" }
   | { name: "trip-new" }
@@ -89,7 +92,7 @@ export function DemoApp() {
     }
 
     setState(next);
-    setScreen(next.user && next.space ? { name: "home" } : { name: "welcome" });
+    setScreen(next.user && next.space ? { name: "hub" } : { name: "welcome" });
     setReady(true);
   }, [initialSync]);
 
@@ -134,14 +137,14 @@ export function DemoApp() {
           } else {
             persist({ user, space: null });
           }
-          setScreen({ name: "home" });
+          setScreen({ name: "hub" });
           setMessage(null);
         }}
         onCreate={(userName) => {
           const user = createUser(userName);
           const space = createSpace(user);
           persist({ user, space });
-          setScreen({ name: "home" });
+          setScreen({ name: "hub" });
           setMessage("Espaço criado. Depois use Sincronizar para mandar o link.");
         }}
       />
@@ -155,7 +158,7 @@ export function DemoApp() {
         onCreate={() => {
           const space = createSpace(state.user!);
           persist({ ...state, space });
-          setScreen({ name: "home" });
+          setScreen({ name: "hub" });
         }}
         onPasteSync={(payload) => {
           const incoming = decodeSpace(payload.trim());
@@ -167,7 +170,7 @@ export function DemoApp() {
             ? incoming.members
             : [...incoming.members, state.user!].slice(0, 2);
           persist({ user: state.user, space: { ...incoming, members } });
-          setScreen({ name: "home" });
+          setScreen({ name: "hub" });
           setMessage("Espaço importado.");
         }}
         message={message}
@@ -201,9 +204,11 @@ export function DemoApp() {
               className="inline-flex h-11 min-w-11 items-center justify-center rounded-xl bg-accent text-lg font-semibold text-accent-contrast"
               onClick={() =>
                 setScreen(
-                  screen.name === "trips" || screen.name === "trip-detail"
+                  screen.name === "trips" ||
+                    screen.name === "trip-detail" ||
+                    screen.name === "trip-new"
                     ? { name: "trip-new" }
-                    : { name: "new" },
+                    : { name: "idea-wizard" },
                 )
               }
               aria-label="Adicionar"
@@ -221,7 +226,15 @@ export function DemoApp() {
       ) : null}
 
       <main className="flex-1 px-4 pb-28 pt-4">
-        {screen.name === "home" ? (
+        {screen.name === "hub" ? (
+          <DemoHub
+            onIdea={() => setScreen({ name: "idea-wizard" })}
+            onTrip={() => setScreen({ name: "trip-new" })}
+            onSeeIdeas={() => setScreen({ name: "ideas" })}
+          />
+        ) : null}
+
+        {screen.name === "ideas" ? (
           <Home
             space={space}
             items={filteredItems}
@@ -233,16 +246,16 @@ export function DemoApp() {
           />
         ) : null}
 
-        {screen.name === "new" ? (
-          <NewItem
-            onCancel={() => setScreen({ name: "home" })}
+        {screen.name === "idea-wizard" ? (
+          <IdeaWizard
+            onCancel={() => setScreen({ name: "hub" })}
             onSave={(input) => {
               const nextSpace = addItem(space, {
                 ...input,
                 createdBy: user.id,
               });
               persist({ user, space: nextSpace });
-              setScreen({ name: "home" });
+              setScreen({ name: "hub" });
               setMessage("Ideia salva neste aparelho. Use Sync para enviar.");
             }}
           />
@@ -253,7 +266,7 @@ export function DemoApp() {
             space={space}
             itemId={screen.itemId}
             user={user}
-            onBack={() => setScreen({ name: "home" })}
+            onBack={() => setScreen({ name: "ideas" })}
             onRate={(payload) => {
               try {
                 if (payload.score != null) assertScore(payload.score);
@@ -267,7 +280,7 @@ export function DemoApp() {
                 });
                 persist({ user, space: nextSpace });
                 setMessage("Nota salva.");
-                setScreen({ name: "home" });
+                setScreen({ name: "ideas" });
               } catch (error) {
                 setMessage(
                   error instanceof Error ? error.message : "Não foi possível salvar a nota.",
@@ -334,7 +347,7 @@ export function DemoApp() {
         {screen.name === "sync" ? (
           <SyncPanel
             space={space}
-            onBack={() => setScreen({ name: "home" })}
+            onBack={() => setScreen({ name: "hub" })}
             onImport={(payload) => {
               const incoming = decodeSpace(payload.trim());
               if (!incoming) {
@@ -343,7 +356,7 @@ export function DemoApp() {
               }
               const merged = mergeSpaces(space, incoming);
               persist({ user, space: merged });
-              setScreen({ name: "home" });
+              setScreen({ name: "hub" });
               setMessage("Listas e viagens mescladas.");
             }}
           />
@@ -353,7 +366,7 @@ export function DemoApp() {
           <Settings
             space={space}
             user={user}
-            onBack={() => setScreen({ name: "home" })}
+            onBack={() => setScreen({ name: "hub" })}
             onReset={() => {
               persist({ user: null, space: null });
               setScreen({ name: "welcome" });
@@ -365,10 +378,10 @@ export function DemoApp() {
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border/70 bg-surface/95 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex max-w-lg gap-1.5">
           <NavButton
-            active={screen.name === "home" || screen.name === "new" || screen.name === "detail"}
-            onClick={() => setScreen({ name: "home" })}
+            active={screen.name === "hub" || screen.name === "idea-wizard"}
+            onClick={() => setScreen({ name: "hub" })}
           >
-            Lista
+            Início
           </NavButton>
           <NavButton
             active={
@@ -612,94 +625,6 @@ function Home({
         </ul>
       )}
     </div>
-  );
-}
-
-function NewItem({
-  onCancel,
-  onSave,
-}: {
-  onCancel: () => void;
-  onSave: (input: {
-    type: ItemType;
-    title: string;
-    url?: string;
-    notes?: string;
-  }) => void;
-}) {
-  const [type, setType] = useState<ItemType>("restaurant");
-  const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
-  const [notes, setNotes] = useState("");
-
-  return (
-    <form
-      className="space-y-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!title.trim()) return;
-        onSave({ type, title, url, notes });
-      }}
-    >
-      <h1 className="font-serif text-2xl text-accent-strong">Nova ideia</h1>
-      <label className="block text-sm font-medium">
-        Tipo
-        <select
-          className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3"
-          value={type}
-          onChange={(e) => setType(e.target.value as ItemType)}
-        >
-          {ITEM_TYPES.map((value) => (
-            <option key={value} value={value}>
-              {TYPE_LABELS[value]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block text-sm font-medium">
-        Nome
-        <input
-          required
-          className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Ex.: Osteria Francescana"
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        Link (Instagram etc.)
-        <input
-          className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://..."
-          inputMode="url"
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        Observação
-        <textarea
-          className="mt-2 min-h-24 w-full rounded-xl border border-border bg-surface p-3"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-      </label>
-      <div className="flex gap-2 pt-2">
-        <button
-          type="button"
-          className="h-12 flex-1 rounded-xl bg-surface-muted font-medium"
-          onClick={onCancel}
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          className="h-12 flex-1 rounded-xl bg-accent font-medium text-accent-contrast"
-        >
-          Salvar
-        </button>
-      </div>
-    </form>
   );
 }
 

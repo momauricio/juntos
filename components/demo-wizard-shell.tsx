@@ -9,6 +9,9 @@ export function WizardShell({
   nextLabel = "Continuar",
   backLabel = "Voltar",
   nextDisabled = false,
+  heading,
+  subtitle,
+  bare = false,
   children,
 }: {
   title: string;
@@ -19,6 +22,11 @@ export function WizardShell({
   nextLabel?: string;
   backLabel?: string;
   nextDisabled?: boolean;
+  /** Question shown outside the card surface */
+  heading?: string;
+  subtitle?: string;
+  /** When true, children render without the white card wrapper (for clickable card grids) */
+  bare?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -36,9 +44,26 @@ export function WizardShell({
           ))}
         </div>
       </div>
-      <div className="rounded-3xl bg-surface p-4 text-[var(--ink-on-surface)] shadow-lg shadow-black/20">
-        {children}
-      </div>
+
+      {heading || subtitle ? (
+        <div className="space-y-2 text-center">
+          {heading ? (
+            <h1 className="font-serif text-3xl leading-tight text-cream">{heading}</h1>
+          ) : null}
+          {subtitle ? (
+            <p className="text-sm leading-6 text-cream/70">{subtitle}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {bare ? (
+        children
+      ) : (
+        <div className="rounded-3xl bg-surface p-4 text-[var(--ink-on-surface)] shadow-lg shadow-black/20">
+          {children}
+        </div>
+      )}
+
       <div className="flex gap-3">
         <button
           type="button"

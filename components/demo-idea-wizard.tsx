@@ -9,6 +9,14 @@ import type { ItemType } from "@/lib/types";
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 const STEP_COUNT = 3;
 
+const TYPE_HINTS: Record<ItemType, string> = {
+  restaurant: "Onde comer bem juntos.",
+  food_idea: "Um prato ou receita para tentar.",
+  tourist_spot: "Lugar para visitar e explorar.",
+  movie: "Filme, série ou sessão juntos.",
+  city: "Uma cidade ou destino para sonhar.",
+};
+
 export function IdeaWizard({
   onCancel,
   onSave,
@@ -46,6 +54,8 @@ export function IdeaWizard({
     });
   }
 
+  const typeStep = step === 0;
+
   return (
     <WizardShell
       title="Nova ideia"
@@ -56,46 +66,43 @@ export function IdeaWizard({
       backLabel={step === 0 ? "Cancelar" : "Voltar"}
       nextLabel={step === STEP_COUNT - 1 ? "Salvar" : "Continuar"}
       nextDisabled={nextDisabled}
+      bare={typeStep}
+      heading={typeStep ? "Que tipo de ideia?" : undefined}
+      subtitle={
+        typeStep
+          ? "Toque no card inteiro para escolher. Depois vocês filtram fácil."
+          : undefined
+      }
     >
       {step === 0 ? (
-        <div className="space-y-4">
-          <div>
-            <h1 className="font-serif text-2xl text-accent-strong">
-              Que tipo de ideia?
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-accent-strong/70">
-              Escolha uma categoria para ficar fácil de filtrar depois.
-            </p>
-          </div>
-          <div className="space-y-2">
-            {ITEM_TYPES.map((value) => {
-              const selected = type === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  className={`flex min-h-16 w-full items-center justify-between rounded-2xl border px-4 text-left transition ${
-                    selected
-                      ? "border-[var(--terracotta)] bg-accent-soft text-accent-strong"
-                      : "border-border bg-surface text-accent-strong"
+        <div className="space-y-3" role="group" aria-label="Tipo da ideia">
+          {ITEM_TYPES.map((value) => {
+            const selected = type === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={selected}
+                className={`w-full rounded-[1.75rem] p-5 text-left transition-transform active:scale-[0.99] ${
+                  selected
+                    ? "border-2 border-[var(--terracotta)] bg-accent-soft text-[var(--ink-on-surface)] shadow-lg shadow-black/15"
+                    : "border border-transparent bg-surface text-[var(--ink-on-surface)] shadow-lg shadow-black/15"
+                }`}
+                onClick={() => setType(value)}
+              >
+                <span
+                  className={`block font-serif text-2xl leading-tight ${
+                    selected ? "text-[var(--terracotta)]" : "text-accent-strong"
                   }`}
-                  onClick={() => setType(value)}
                 >
-                  <span className="font-medium">{TYPE_LABELS[value]}</span>
-                  <span
-                    className={`flex h-6 w-6 items-center justify-center rounded-full border text-sm ${
-                      selected
-                        ? "border-[var(--terracotta)] bg-[var(--terracotta)] text-accent-contrast"
-                        : "border-accent-strong/20"
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {selected ? "✓" : ""}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                  {TYPE_LABELS[value]}
+                </span>
+                <span className="mt-2 block text-sm leading-6 text-accent-strong/70">
+                  {TYPE_HINTS[value]}
+                </span>
+              </button>
+            );
+          })}
         </div>
       ) : null}
 

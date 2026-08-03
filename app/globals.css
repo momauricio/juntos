@@ -82,6 +82,16 @@ textarea::placeholder {
   color: color-mix(in srgb, var(--ink-on-surface) 45%, transparent);
 }
 
+button,
+[role="button"],
+a {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 h1,
 h2,
 .font-serif {

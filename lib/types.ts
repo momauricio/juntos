@@ -3,7 +3,8 @@ export type ItemType =
   | "food_idea"
   | "tourist_spot"
   | "movie"
-  | "city";
+  | "city"
+  | "event";
 
 export type ItemStatus = "want" | "done";
 

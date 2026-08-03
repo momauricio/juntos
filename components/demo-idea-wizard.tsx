@@ -15,6 +15,7 @@ const TYPE_HINTS: Record<ItemType, string> = {
   tourist_spot: "Lugar para visitar e explorar.",
   movie: "Filme, série ou sessão juntos.",
   city: "Uma cidade ou destino para sonhar.",
+  event: "Show, festa, exposição ou qualquer programa.",
 };
 
 export function IdeaWizard({

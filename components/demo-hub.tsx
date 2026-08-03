@@ -40,7 +40,8 @@ export function DemoHub({
             Ideia de Role
           </span>
           <span className="mt-3 block text-sm leading-6 text-accent-strong/70">
-            Restaurante, filme, cidade ou qualquer vontade para decidir depois.
+            Restaurante, evento, filme, cidade ou qualquer vontade para decidir
+            depois.
           </span>
         </button>
 

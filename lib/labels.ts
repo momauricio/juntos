@@ -6,6 +6,7 @@ export const TYPE_LABELS: Record<ItemType, string> = {
   tourist_spot: "Ponto turístico",
   movie: "Filme",
   city: "Cidade",
+  event: "Evento",
 };
 
 export const STATUS_LABELS: Record<ItemStatus | "all", string> = {

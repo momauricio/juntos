@@ -37,13 +37,30 @@
   --font-mono: "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
 }
 
+html {
+  min-height: 100%;
+  background-color: var(--indigo);
+}
+
 body {
+  position: relative;
+  min-height: 100%;
+  color: var(--foreground);
+  font-family: var(--font-source-sans), sans-serif;
+  background-color: transparent;
+}
+
+/* Fixed to the viewport so scroll doesn't stretch/end the gradient */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
     radial-gradient(circle at 18% 0%, rgba(243, 235, 227, 0.14), transparent 34rem),
     radial-gradient(circle at 88% 85%, rgba(240, 213, 200, 0.16), transparent 32rem),
     linear-gradient(180deg, var(--indigo-deep) 0%, var(--indigo) 55%, #252d45 100%);
-  color: var(--foreground);
-  font-family: var(--font-source-sans), sans-serif;
 }
 
 /* Light surfaces inherit cream from body — force readable dark ink */

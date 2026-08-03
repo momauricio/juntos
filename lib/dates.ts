@@ -66,3 +66,38 @@ export function destinationDateError(
   }
   return null;
 }
+
+function parseIsoUtc(iso: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+export function addDaysIso(iso: string, days: number): string | null {
+  const date = parseIsoUtc(iso);
+  if (!date) return null;
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Day 1 = trip start date. */
+export function tripDateFromDayNumber(
+  tripStartIso: string,
+  day: number,
+): string | null {
+  if (!Number.isInteger(day) || day < 1) return null;
+  return addDaysIso(tripStartIso, day - 1);
+}
+
+/** Convert calendar date to trip day number (1-based). */
+export function dayNumberFromTripDate(
+  tripStartIso: string,
+  dateIso: string,
+): number | null {
+  const start = parseIsoUtc(tripStartIso);
+  const date = parseIsoUtc(dateIso);
+  if (!start || !date) return null;
+  const diff = Math.round((date.getTime() - start.getTime()) / 86_400_000) + 1;
+  if (diff < 1) return null;
+  return diff;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   DOC_CATEGORIES,
@@ -17,6 +17,11 @@ import {
   type DocCategory,
   type Trip,
 } from "@/lib/demo/store";
+import {
+  dayNumberFromTripDate,
+  isoToBr,
+  tripDateFromDayNumber,
+} from "@/lib/dates";
 
 export function TripsHome({
   space,
@@ -257,6 +262,13 @@ function ItinerarySegment({
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [url, setUrl] = useState("");
+  const calendarRef = useRef<HTMLInputElement>(null);
+
+  const tripStart = trip.startDate;
+  const tripEnd = trip.endDate;
+  const selectedDate = tripStart
+    ? tripDateFromDayNumber(tripStart, day)
+    : null;
 
   const byDay = useMemo(() => {
     const map = new Map<number, Trip["stops"]>();
@@ -267,6 +279,22 @@ function ItinerarySegment({
     });
     return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
   }, [trip.stops]);
+
+  function openCalendar() {
+    const el = calendarRef.current;
+    if (!el) return;
+    try {
+      el.showPicker();
+    } catch {
+      el.click();
+    }
+  }
+
+  function onCalendarPick(iso: string) {
+    if (!tripStart || !iso) return;
+    const nextDay = dayNumberFromTripDate(tripStart, iso);
+    if (nextDay != null) setDay(nextDay);
+  }
 
   return (
     <div className="space-y-4">
@@ -284,15 +312,64 @@ function ItinerarySegment({
         }}
       >
         <p className="text-sm font-medium">Nova parada</p>
-        <label className="block text-xs">
+        <label className="block text-xs font-medium text-accent-strong">
           Dia
-          <input
-            type="number"
-            min={1}
-            className="mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm"
-            value={day}
-            onChange={(e) => setDay(Number(e.target.value) || 1)}
-          />
+          <div className="relative mt-1">
+            <input
+              type="number"
+              min={1}
+              className="h-11 w-full rounded-xl border border-border bg-surface py-0 pl-3 pr-12 text-sm"
+              value={day}
+              onChange={(e) => setDay(Math.max(1, Number(e.target.value) || 1))}
+            />
+            {tripStart ? (
+              <>
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-accent-strong/70"
+                  onClick={openCalendar}
+                  aria-label="Escolher dia no calendário"
+                >
+                  <span aria-hidden="true">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="5" width="18" height="16" rx="2" />
+                      <path d="M8 3v4M16 3v4M3 11h18" />
+                    </svg>
+                  </span>
+                </button>
+                <input
+                  ref={calendarRef}
+                  type="date"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  min={tripStart}
+                  max={tripEnd || undefined}
+                  className="pointer-events-none absolute h-0 w-0 opacity-0"
+                  value={selectedDate || tripStart}
+                  onChange={(e) => onCalendarPick(e.target.value)}
+                />
+              </>
+            ) : null}
+          </div>
+          {tripStart && selectedDate ? (
+            <p className="mt-1 text-[11px] text-accent-strong/60">
+              Dia {day} = {isoToBr(selectedDate)}
+              {tripStart ? ` · início da viagem ${isoToBr(tripStart)}` : ""}
+            </p>
+          ) : (
+            <p className="mt-1 text-[11px] text-accent-strong/60">
+              Digite o número do dia (1, 2, 3…)
+            </p>
+          )}
         </label>
         <input
           required
@@ -327,9 +404,17 @@ function ItinerarySegment({
           Roteiro vazio
         </p>
       ) : (
-        byDay.map(([dayNumber, stops]) => (
+        byDay.map(([dayNumber, stops]) => {
+          const dayDate =
+            tripStart != null
+              ? tripDateFromDayNumber(tripStart, dayNumber)
+              : null;
+          return (
           <section key={dayNumber} className="space-y-2">
-            <h2 className="text-sm font-semibold text-accent-strong">Dia {dayNumber}</h2>
+            <h2 className="text-sm font-semibold text-accent-strong">
+              Dia {dayNumber}
+              {dayDate ? ` · ${isoToBr(dayDate)}` : ""}
+            </h2>
             <ul className="space-y-2">
               {stops.map((stop) => (
                 <li key={stop.id} className="rounded-xl bg-surface px-3 py-3">
@@ -364,7 +449,8 @@ function ItinerarySegment({
               ))}
             </ul>
           </section>
-        ))
+          );
+        })
       )}
     </div>
   );

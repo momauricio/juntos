@@ -67,7 +67,7 @@ export default function Page() {
     <Suspense
       fallback={
         <main className="mx-auto flex min-h-dvh w-full max-w-lg items-center justify-center px-4">
-          <p className="text-sm text-accent-strong/70">Carregando Juntos…</p>
+          <p className="text-sm text-cream/70">Carregando Juntos…</p>
         </main>
       }
     >
@@ -92,6 +92,20 @@ try {
     },
   });
   console.log("Static demo build ready in out/");
+
+  // GitHub Pages can cache index.html aggressively on phones.
+  for (const file of ["index.html", "404.html"]) {
+    const htmlPath = path.join(root, "out", file);
+    if (!fs.existsSync(htmlPath)) continue;
+    let html = fs.readFileSync(htmlPath, "utf8");
+    if (!html.includes("Cache-Control")) {
+      html = html.replace(
+        "<head>",
+        `<head><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" /><meta http-equiv="Pragma" content="no-cache" /><meta http-equiv="Expires" content="0" />`,
+      );
+      fs.writeFileSync(htmlPath, html);
+    }
+  }
 } finally {
   if (fs.existsSync(pagePath)) fs.unlinkSync(pagePath);
   restore();

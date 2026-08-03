@@ -15,7 +15,7 @@ export function DemoHub({
     <div className="space-y-8 py-4">
       <section className="space-y-3">
         <p className="text-sm font-medium uppercase tracking-[0.28em] text-cream/60">
-          Juntos
+          Juntos · demo
         </p>
         <div>
           <h1 className="font-serif text-4xl leading-tight text-cream">

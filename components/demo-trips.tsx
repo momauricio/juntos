@@ -31,7 +31,7 @@ export function TripsHome({
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="font-serif text-2xl text-accent-strong">Viagens</h1>
+          <h1 className="font-serif text-2xl text-cream">Viagens</h1>
           <button
             type="button"
             className="h-11 rounded-xl bg-accent px-4 text-sm font-medium text-accent-contrast"
@@ -50,7 +50,7 @@ export function TripsHome({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="font-serif text-2xl text-accent-strong">Viagens</h1>
+        <h1 className="font-serif text-2xl text-cream">Viagens</h1>
         <button
           type="button"
           className="h-11 rounded-xl bg-accent px-4 text-sm font-medium text-accent-contrast"
@@ -109,12 +109,12 @@ export function TripDetail({
 
   return (
     <div className="space-y-4">
-      <button type="button" className="text-sm text-accent-strong/70" onClick={onBack}>
+      <button type="button" className="text-sm text-cream/70" onClick={onBack}>
         ← Viagens
       </button>
       <div>
-        <h1 className="font-serif text-3xl text-accent-strong">{trip.title}</h1>
-        <p className="mt-1 text-sm text-accent-strong/70">
+        <h1 className="font-serif text-3xl text-cream">{trip.title}</h1>
+        <p className="mt-1 text-sm text-cream/70">
           {[destinations, dates].filter(Boolean).join(" · ") ||
             "Sem destino/datas"}
         </p>

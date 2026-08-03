@@ -46,6 +46,25 @@ body {
   font-family: var(--font-source-sans), sans-serif;
 }
 
+/* Light surfaces inherit cream from body — force readable dark ink */
+.bg-surface,
+.bg-surface-muted,
+.bg-surface-strong,
+.bg-accent-soft {
+  color: var(--ink-on-surface);
+}
+
+input,
+textarea,
+select {
+  color: var(--ink-on-surface);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in srgb, var(--ink-on-surface) 45%, transparent);
+}
+
 h1,
 h2,
 .font-serif {

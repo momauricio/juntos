@@ -12,7 +12,6 @@ import {
   createTrip,
   createUser,
   decodeSpace,
-  encodeSpace,
   loadState,
   memberName,
   mergeSpaces,
@@ -39,7 +38,6 @@ type Screen =
   | { name: "trips" }
   | { name: "trip-new" }
   | { name: "trip-detail"; tripId: string }
-  | { name: "sync" }
   | { name: "settings" };
 
 function formatScore(value: number | null) {
@@ -114,7 +112,7 @@ export function DemoApp() {
   if (!ready) {
     return (
       <main className="mx-auto flex min-h-dvh w-full max-w-lg items-center justify-center px-4">
-        <p className="text-sm text-accent-strong/70">Carregando Juntos…</p>
+        <p className="text-sm text-cream/70">Carregando Juntos…</p>
       </main>
     );
   }
@@ -146,7 +144,7 @@ export function DemoApp() {
           const space = createSpace(user);
           persist({ user, space });
           setScreen({ name: "hub" });
-          setMessage("Espaço criado. Depois use Sincronizar para mandar o link.");
+          setMessage("Espaço criado.");
         }}
       />
     );
@@ -192,31 +190,22 @@ export function DemoApp() {
               Modo demo · {user.name}
             </p>
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="inline-flex h-11 min-w-11 items-center justify-center rounded-xl bg-accent-soft px-3 text-sm font-medium text-accent-strong"
-              onClick={() => setScreen({ name: "sync" })}
-            >
-              Sync
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-11 min-w-11 items-center justify-center rounded-xl bg-accent text-lg font-semibold text-accent-contrast"
-              onClick={() =>
-                setScreen(
-                  screen.name === "trips" ||
-                    screen.name === "trip-detail" ||
-                    screen.name === "trip-new"
-                    ? { name: "trip-new" }
-                    : { name: "idea-wizard" },
-                )
-              }
-              aria-label="Adicionar"
-            >
-              +
-            </button>
-          </div>
+          <button
+            type="button"
+            className="inline-flex h-11 min-w-11 items-center justify-center rounded-xl bg-accent text-lg font-semibold text-accent-contrast"
+            onClick={() =>
+              setScreen(
+                screen.name === "trips" ||
+                  screen.name === "trip-detail" ||
+                  screen.name === "trip-new"
+                  ? { name: "trip-new" }
+                  : { name: "idea-wizard" },
+              )
+            }
+            aria-label="Adicionar"
+          >
+            +
+          </button>
         </div>
       </header>
 
@@ -257,7 +246,7 @@ export function DemoApp() {
               });
               persist({ user, space: nextSpace });
               setScreen({ name: "hub" });
-              setMessage("Ideia salva neste aparelho. Use Sync para enviar.");
+              setMessage("Ideia salva neste aparelho.");
             }}
           />
         ) : null}
@@ -306,7 +295,7 @@ export function DemoApp() {
               const nextSpace = createTrip(space, input);
               persist({ user, space: nextSpace });
               const tripId = nextSpace.trips[0]?.id;
-              setMessage("Viagem criada. Use Sync para enviar à parceira.");
+              setMessage("Viagem criada.");
               setScreen(
                 tripId
                   ? { name: "trip-detail", tripId }
@@ -322,10 +311,10 @@ export function DemoApp() {
             if (!trip) {
               return (
                 <div className="space-y-3">
-                  <p className="text-sm">Viagem não encontrada.</p>
+                  <p className="text-sm text-cream">Viagem não encontrada.</p>
                   <button
                     type="button"
-                    className="text-sm underline"
+                    className="text-sm text-cream underline"
                     onClick={() => setScreen({ name: "trips" })}
                   >
                     Voltar
@@ -343,24 +332,6 @@ export function DemoApp() {
               />
             );
           })()
-        ) : null}
-
-        {screen.name === "sync" ? (
-          <SyncPanel
-            space={space}
-            onBack={() => setScreen({ name: "hub" })}
-            onImport={(payload) => {
-              const incoming = decodeSpace(payload.trim());
-              if (!incoming) {
-                setMessage("Código inválido.");
-                return;
-              }
-              const merged = mergeSpaces(space, incoming);
-              persist({ user, space: merged });
-              setScreen({ name: "hub" });
-              setMessage("Listas e viagens mescladas.");
-            }}
-          />
         ) : null}
 
         {screen.name === "settings" ? (
@@ -399,9 +370,6 @@ export function DemoApp() {
             onClick={() => setScreen({ name: "trips" })}
           >
             Viagens
-          </NavButton>
-          <NavButton active={screen.name === "sync"} onClick={() => setScreen({ name: "sync" })}>
-            Sync
           </NavButton>
           <NavButton
             active={screen.name === "settings"}
@@ -456,16 +424,16 @@ function Welcome({
 }) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-4 py-8">
-      <p className="font-serif text-4xl text-accent-strong">Juntos</p>
-      <p className="mt-2 text-base text-accent-strong/80">
-        Modo demo no celular: salve ideias, dê nota e sincronize com um link.
+      <p className="font-serif text-4xl text-cream">Juntos</p>
+      <p className="mt-2 text-base text-cream/80">
+        Modo demo no celular: salve ideias, dê nota e planejem juntos.
       </p>
       {message ? (
         <p className="mt-4 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-strong">
           {message}
         </p>
       ) : null}
-      <label className="mt-8 block text-sm font-medium text-accent-strong">
+      <label className="mt-8 block text-sm font-medium text-cream">
         Seu nome
         <input
           className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3"
@@ -496,9 +464,8 @@ function Welcome({
           </button>
         )}
       </div>
-      <p className="mt-6 text-xs leading-5 text-accent-strong/65">
-        Os dados ficam neste aparelho. Para a outra pessoa ver a mesma lista, use a
-        aba Sync e envie o link (WhatsApp/iMessage).
+      <p className="mt-6 text-xs leading-5 text-cream/65">
+        Os dados ficam neste aparelho por enquanto (modo demo).
       </p>
     </main>
   );
@@ -518,7 +485,7 @@ function NoSpace({
   const [paste, setPaste] = useState("");
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-4 py-8">
-      <p className="font-serif text-3xl text-accent-strong">Olá, {user.name}</p>
+      <p className="font-serif text-3xl text-cream">Olá, {user.name}</p>
       {message ? (
         <p className="mt-3 rounded-xl bg-accent-soft px-3 py-2 text-sm">{message}</p>
       ) : null}
@@ -529,8 +496,8 @@ function NoSpace({
       >
         Criar nosso espaço
       </button>
-      <label className="mt-8 block text-sm font-medium">
-        Ou cole um código Sync
+      <label className="mt-8 block text-sm font-medium text-cream">
+        Ou cole um código recebido
         <textarea
           className="mt-2 min-h-28 w-full rounded-xl border border-border bg-surface p-3 text-sm"
           value={paste}
@@ -673,14 +640,14 @@ function Detail({
 
   return (
     <div className="space-y-4">
-      <button type="button" className="text-sm text-accent-strong/70" onClick={onBack}>
+      <button type="button" className="text-sm text-cream/70" onClick={onBack}>
         ← Voltar
       </button>
-      <h1 className="font-serif text-3xl text-accent-strong">{item.title}</h1>
-      <p className="text-sm text-accent-strong/70">
+      <h1 className="font-serif text-3xl text-cream">{item.title}</h1>
+      <p className="text-sm text-cream/70">
         {TYPE_LABELS[item.type]} · {STATUS_LABELS[item.status]}
       </p>
-      <p className="text-sm text-accent-strong/70">
+      <p className="text-sm text-cream/70">
         Criado por {memberName(space, item.created_by)}
         {rating ? ` · Nota por ${memberName(space, rating.rated_by)}` : ""}
       </p>
@@ -689,12 +656,12 @@ function Detail({
           href={item.url}
           target="_blank"
           rel="noreferrer"
-          className="block break-all text-sm text-accent underline"
+          className="block break-all text-sm text-cream underline decoration-cream/40"
         >
           {item.url}
         </a>
       ) : null}
-      {item.notes ? <p className="text-sm">{item.notes}</p> : null}
+      {item.notes ? <p className="text-sm text-cream/80">{item.notes}</p> : null}
 
       <div className="rounded-2xl bg-surface p-4">
         <h2 className="font-medium">
@@ -762,110 +729,6 @@ function ScoreSelect({
   );
 }
 
-function SyncPanel({
-  space,
-  onBack,
-  onImport,
-}: {
-  space: DemoSpace;
-  onBack: () => void;
-  onImport: (payload: string) => void;
-}) {
-  const payload = encodeSpace(space);
-  const [link, setLink] = useState("");
-  const [paste, setPaste] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
-    setLink(`${window.location.origin}${base}/?sync=${payload}`);
-  }, [payload]);
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  }
-
-  async function share() {
-    if (navigator.share) {
-      await navigator.share({
-        title: "Juntos — nossa lista",
-        text: "Abre no celular para sincronizar nossa lista do Juntos",
-        url: link,
-      });
-      return;
-    }
-    await copyLink();
-  }
-
-  return (
-    <div className="space-y-4">
-      <button type="button" className="text-sm text-accent-strong/70" onClick={onBack}>
-        ← Voltar
-      </button>
-      <h1 className="font-serif text-2xl text-accent-strong">Sincronizar</h1>
-      <p className="text-sm leading-6 text-accent-strong/75">
-        Sem backend ainda: mande este link no WhatsApp. A outra pessoa abre, entra com o
-        nome dela e vê a lista e as viagens. Quando ela adicionar algo, ela manda o Sync
-        de volta para mesclar.
-      </p>
-      <textarea
-        readOnly
-        className="min-h-28 w-full rounded-xl border border-border bg-surface p-3 text-xs"
-        value={link}
-      />
-      <div className="flex gap-2">
-        <button
-          type="button"
-          className="h-12 flex-1 rounded-xl bg-accent font-medium text-accent-contrast"
-          onClick={() => void share()}
-        >
-          Compartilhar
-        </button>
-        <button
-          type="button"
-          className="h-12 flex-1 rounded-xl bg-accent-soft font-medium text-accent-strong"
-          onClick={() => void copyLink()}
-        >
-          {copied ? "Copiado" : "Copiar link"}
-        </button>
-      </div>
-      <label className="block text-sm font-medium">
-        Colar Sync recebido
-        <textarea
-          className="mt-2 min-h-24 w-full rounded-xl border border-border bg-surface p-3 text-sm"
-          value={paste}
-          onChange={(e) => setPaste(e.target.value)}
-          placeholder="Cole o link ou o código sync"
-        />
-      </label>
-      <button
-        type="button"
-        className="h-12 w-full rounded-xl bg-surface-strong font-medium text-accent-strong"
-        onClick={() => {
-          try {
-            if (paste.includes("sync=")) {
-              const url = new URL(paste, window.location.origin);
-              onImport(url.searchParams.get("sync") || paste);
-            } else {
-              onImport(paste);
-            }
-          } catch {
-            onImport(paste);
-          }
-        }}
-      >
-        Mesclar lista recebida
-      </button>
-    </div>
-  );
-}
-
 function Settings({
   space,
   user,
@@ -879,10 +742,10 @@ function Settings({
 }) {
   return (
     <div className="space-y-4">
-      <button type="button" className="text-sm text-accent-strong/70" onClick={onBack}>
+      <button type="button" className="text-sm text-cream/70" onClick={onBack}>
         ← Voltar
       </button>
-      <h1 className="font-serif text-2xl text-accent-strong">Ajustes</h1>
+      <h1 className="font-serif text-2xl text-cream">Ajustes</h1>
       <div className="rounded-2xl bg-surface p-4 text-sm">
         <p>
           <span className="text-accent-strong/65">Espaço:</span> {space.name}
@@ -901,9 +764,8 @@ function Settings({
           <span className="text-accent-strong/65">Viagens:</span> {space.trips.length}
         </p>
       </div>
-      <p className="text-xs leading-5 text-accent-strong/65">
-        Modo demo local. Quando tivermos projeto Supabase, migraremos para conta real com
-        sync automático.
+      <p className="text-xs leading-5 text-cream/65">
+        Modo demo local. Quando tivermos projeto Supabase, migraremos para conta real.
       </p>
       <button
         type="button"

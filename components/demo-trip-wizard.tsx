@@ -3,12 +3,11 @@
 import { useState, type JSX } from "react";
 
 import { WizardShell } from "@/components/demo-wizard-shell";
+import { BrDateField } from "@/components/br-date-field";
 import {
-  brToIso,
   destinationDateError,
   formatIsoRange,
   isoToBr,
-  maskBrDateInput,
 } from "@/lib/dates";
 import { tripDateRange } from "@/lib/demo/store";
 
@@ -101,17 +100,15 @@ export function TripWizard({
     );
   }
 
-  function onDateTextChange(
+  function onDateChange(
     index: number,
     field: "start" | "end",
-    raw: string,
+    next: { iso: string; text: string },
   ) {
-    const masked = maskBrDateInput(raw);
-    const iso = brToIso(masked) ?? "";
     if (field === "start") {
-      updateDestination(index, { startText: masked, startDate: iso });
+      updateDestination(index, { startText: next.text, startDate: next.iso });
     } else {
-      updateDestination(index, { endText: masked, endDate: iso });
+      updateDestination(index, { endText: next.text, endDate: next.iso });
     }
   }
 
@@ -292,34 +289,22 @@ export function TripWizard({
                     </p>
                   ) : null}
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <label className="block text-sm font-medium text-accent-strong">
-                      Início
-                      <input
-                        required
-                        inputMode="numeric"
-                        autoComplete="off"
-                        placeholder="DD/MM/AAAA"
-                        className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3 text-sm"
-                        value={destination.startText}
-                        onChange={(event) =>
-                          onDateTextChange(index, "start", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="block text-sm font-medium text-accent-strong">
-                      Fim
-                      <input
-                        required
-                        inputMode="numeric"
-                        autoComplete="off"
-                        placeholder="DD/MM/AAAA"
-                        className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3 text-sm"
-                        value={destination.endText}
-                        onChange={(event) =>
-                          onDateTextChange(index, "end", event.target.value)
-                        }
-                      />
-                    </label>
+                    <BrDateField
+                      label="Início"
+                      valueIso={destination.startDate}
+                      valueText={destination.startText}
+                      minIso={previousEnd || undefined}
+                      onChange={(next) => onDateChange(index, "start", next)}
+                    />
+                    <BrDateField
+                      label="Fim"
+                      valueIso={destination.endDate}
+                      valueText={destination.endText}
+                      minIso={
+                        destination.startDate || previousEnd || undefined
+                      }
+                      onChange={(next) => onDateChange(index, "end", next)}
+                    />
                   </div>
                   {dateErrors[index] ? (
                     <p className="mt-2 text-xs text-danger">{dateErrors[index]}</p>

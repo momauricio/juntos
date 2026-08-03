@@ -19,6 +19,8 @@ export type PackItem = {
   tripId: string;
   title: string;
   done: boolean;
+  /** Member id, or "shared" for both */
+  assigneeId: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -41,9 +43,21 @@ export type DocLink = {
   category: DocCategory;
   url: string;
   notes: string | null;
+  /** Member id, or "shared" for both */
+  assigneeId: string;
   createdAt: string;
   updatedAt: string;
 };
+
+export const SHARED_ASSIGNEE = "shared";
+
+export function assigneeLabel(
+  assigneeId: string,
+  members: DemoUser[],
+): string {
+  if (assigneeId === SHARED_ASSIGNEE) return "Nós dois";
+  return members.find((member) => member.id === assigneeId)?.name ?? "Alguém";
+}
 
 export type TripDestination = {
   id: string;
@@ -143,9 +157,25 @@ function normalizeTrip(raw: Partial<Trip> & { id: string; title: string }): Trip
     startDate: range.start,
     endDate: range.end,
     notes: raw.notes ?? null,
-    packItems: Array.isArray(raw.packItems) ? raw.packItems : [],
+    packItems: Array.isArray(raw.packItems)
+      ? raw.packItems.map((item) => ({
+          ...item,
+          assigneeId:
+            typeof item.assigneeId === "string" && item.assigneeId
+              ? item.assigneeId
+              : SHARED_ASSIGNEE,
+        }))
+      : [],
     stops: Array.isArray(raw.stops) ? raw.stops : [],
-    docs: Array.isArray(raw.docs) ? raw.docs : [],
+    docs: Array.isArray(raw.docs)
+      ? raw.docs.map((doc) => ({
+          ...doc,
+          assigneeId:
+            typeof doc.assigneeId === "string" && doc.assigneeId
+              ? doc.assigneeId
+              : SHARED_ASSIGNEE,
+        }))
+      : [],
     createdAt: raw.createdAt ?? nowIso(),
     updatedAt: raw.updatedAt ?? nowIso(),
   };
@@ -339,6 +369,7 @@ export function addPackItem(
   space: DemoSpace,
   tripId: string,
   title: string,
+  assigneeId: string = SHARED_ASSIGNEE,
 ): DemoSpace {
   return updateTrip(space, tripId, (trip, stamp) => {
     const item: PackItem = {
@@ -346,6 +377,7 @@ export function addPackItem(
       tripId,
       title: title.trim(),
       done: false,
+      assigneeId: assigneeId || SHARED_ASSIGNEE,
       createdAt: stamp,
       updatedAt: stamp,
     };
@@ -433,6 +465,7 @@ export function addDocLink(
     category: DocCategory;
     url: string;
     notes?: string;
+    assigneeId?: string;
   },
 ): DemoSpace {
   return updateTrip(space, tripId, (trip, stamp) => {
@@ -443,6 +476,7 @@ export function addDocLink(
       category: input.category,
       url: input.url.trim(),
       notes: input.notes?.trim() || null,
+      assigneeId: input.assigneeId || SHARED_ASSIGNEE,
       createdAt: stamp,
       updatedAt: stamp,
     };

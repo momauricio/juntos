@@ -70,7 +70,7 @@ describe("demo trips", () => {
     });
     const tripId = space.trips[0].id;
 
-    space = addPackItem(space, tripId, "Passaporte");
+    space = addPackItem(space, tripId, "Passaporte", user.id);
     space = togglePackItem(space, tripId, space.trips[0].packItems[0].id);
     space = addStop(space, tripId, {
       day: 1,
@@ -81,14 +81,59 @@ describe("demo trips", () => {
       title: "LATAM ida",
       category: "flight",
       url: "https://latam.example/ticket",
+      assigneeId: user.id,
     });
 
     const decoded = decodeSpace(encodeSpace(space));
     expect(decoded?.trips).toHaveLength(1);
     expect(decoded?.trips[0].title).toBe("Chile 2026");
     expect(decoded?.trips[0].packItems[0].done).toBe(true);
+    expect(decoded?.trips[0].packItems[0].assigneeId).toBe(user.id);
     expect(decoded?.trips[0].stops[0].day).toBe(1);
     expect(decoded?.trips[0].docs[0].category).toBe("flight");
+    expect(decoded?.trips[0].docs[0].assigneeId).toBe(user.id);
+  });
+
+  it("normalizes legacy pack/docs without assigneeId to shared", () => {
+    const user = createUser("Mauricio");
+    let space = createSpace(user);
+    space = createTrip(space, {
+      title: "Chile",
+      destinations: [{ name: "Santiago" }],
+    });
+    const legacy = {
+      ...space,
+      trips: [
+        {
+          ...space.trips[0],
+          packItems: [
+            {
+              id: "pack_1",
+              tripId: space.trips[0].id,
+              title: "Meia",
+              done: false,
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+          docs: [
+            {
+              id: "doc_1",
+              tripId: space.trips[0].id,
+              title: "Hotel",
+              category: "reservation" as const,
+              url: "https://example.com",
+              notes: null,
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    };
+    const decoded = decodeSpace(encodeSpace(legacy as never));
+    expect(decoded?.trips[0].packItems[0].assigneeId).toBe("shared");
+    expect(decoded?.trips[0].docs[0].assigneeId).toBe("shared");
   });
 
   it("merges trip nested entities by updatedAt", () => {

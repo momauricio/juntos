@@ -5,15 +5,18 @@ import { useMemo, useRef, useState } from "react";
 import {
   DOC_CATEGORIES,
   DOC_CATEGORY_LABELS,
+  SHARED_ASSIGNEE,
   addDocLink,
   addPackItem,
   addStop,
+  assigneeLabel,
   formatTripDates,
   removeDocLink,
   removePackItem,
   removeStop,
   togglePackItem,
   type DemoSpace,
+  type DemoUser,
   type DocCategory,
   type Trip,
 } from "@/lib/demo/store";
@@ -109,10 +112,12 @@ function formatTripDestinations(trip: Trip): string | null {
 
 export function TripDetail({
   trip,
+  members,
   onBack,
   onChange,
 }: {
   trip: Trip;
+  members: DemoUser[];
   onBack: () => void;
   onChange: (updater: (space: DemoSpace) => DemoSpace) => void;
 }) {
@@ -157,48 +162,111 @@ export function TripDetail({
       </div>
 
       {segment === "checklist" ? (
-        <ChecklistSegment trip={trip} onChange={onChange} />
+        <ChecklistSegment trip={trip} members={members} onChange={onChange} />
       ) : null}
       {segment === "itinerary" ? (
         <ItinerarySegment trip={trip} onChange={onChange} />
       ) : null}
-      {segment === "docs" ? <DocsSegment trip={trip} onChange={onChange} /> : null}
+      {segment === "docs" ? (
+        <DocsSegment trip={trip} members={members} onChange={onChange} />
+      ) : null}
     </div>
+  );
+}
+
+function AssigneeSelect({
+  members,
+  value,
+  onChange,
+}: {
+  members: DemoUser[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block text-xs font-medium text-accent-strong">
+      Para quem
+      <select
+        className="mt-1 h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value={SHARED_ASSIGNEE}>Nós dois</option>
+        {members.map((member) => (
+          <option key={member.id} value={member.id}>
+            {member.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
 function ChecklistSegment({
   trip,
+  members,
   onChange,
 }: {
   trip: Trip;
+  members: DemoUser[];
   onChange: (updater: (space: DemoSpace) => DemoSpace) => void;
 }) {
   const [title, setTitle] = useState("");
+  const [assigneeId, setAssigneeId] = useState(SHARED_ASSIGNEE);
+
+  const grouped = useMemo(() => {
+    const order = [SHARED_ASSIGNEE, ...members.map((member) => member.id)];
+    const map = new Map<string, typeof trip.packItems>();
+    trip.packItems.forEach((item) => {
+      const key = item.assigneeId || SHARED_ASSIGNEE;
+      const list = map.get(key) ?? [];
+      list.push(item);
+      map.set(key, list);
+    });
+    const keys = [
+      ...order.filter((id) => map.has(id)),
+      ...Array.from(map.keys()).filter((id) => !order.includes(id)),
+    ];
+    return keys.map((id) => ({
+      id,
+      label: assigneeLabel(id, members),
+      items: map.get(id) ?? [],
+    }));
+  }, [trip.packItems, members]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <form
-        className="flex gap-2"
+        className="space-y-2 rounded-2xl bg-surface p-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!title.trim()) return;
-          onChange((space) => addPackItem(space, trip.id, title));
+          onChange((space) =>
+            addPackItem(space, trip.id, title, assigneeId),
+          );
           setTitle("");
         }}
       >
-        <input
-          className="h-12 flex-1 rounded-xl border border-border bg-surface px-3 text-sm"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Ex.: Passaporte"
+        <p className="text-sm font-medium">Novo item da mala</p>
+        <AssigneeSelect
+          members={members}
+          value={assigneeId}
+          onChange={setAssigneeId}
         />
-        <button
-          type="submit"
-          className="h-12 rounded-xl bg-accent px-4 text-sm font-medium text-accent-contrast"
-        >
-          Add
-        </button>
+        <div className="flex gap-2">
+          <input
+            className="h-12 flex-1 rounded-xl border border-border bg-surface px-3 text-sm"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex.: Passaporte"
+          />
+          <button
+            type="submit"
+            className="h-12 rounded-xl bg-accent px-4 text-sm font-medium text-accent-contrast"
+          >
+            Add
+          </button>
+        </div>
       </form>
 
       {trip.packItems.length === 0 ? (
@@ -206,46 +274,59 @@ function ChecklistSegment({
           Nada na mala ainda
         </p>
       ) : (
-        <ul className="space-y-2">
-          {trip.packItems.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2"
-            >
-              <button
-                type="button"
-                className="flex min-h-11 flex-1 items-center gap-3 text-left"
-                onClick={() =>
-                  onChange((space) => togglePackItem(space, trip.id, item.id))
-                }
-              >
-                <span
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${
-                    item.done
-                      ? "border-accent bg-accent text-accent-contrast"
-                      : "border-border bg-surface"
-                  }`}
-                >
-                  {item.done ? "✓" : ""}
-                </span>
-                <span
-                  className={`text-sm ${item.done ? "text-accent-strong/50 line-through" : ""}`}
-                >
-                  {item.title}
-                </span>
-              </button>
-              <button
-                type="button"
-                className="h-11 px-2 text-sm text-danger"
-                onClick={() =>
-                  onChange((space) => removePackItem(space, trip.id, item.id))
-                }
-              >
-                Apagar
-              </button>
-            </li>
+        <div className="space-y-4">
+          {grouped.map((group) => (
+            <section key={group.id} className="space-y-2">
+              <h2 className="text-sm font-semibold text-cream">
+                {group.label}
+              </h2>
+              <ul className="space-y-2">
+                {group.items.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2"
+                  >
+                    <button
+                      type="button"
+                      className="flex min-h-11 flex-1 items-center gap-3 text-left"
+                      onClick={() =>
+                        onChange((space) =>
+                          togglePackItem(space, trip.id, item.id),
+                        )
+                      }
+                    >
+                      <span
+                        className={`inline-flex h-6 w-6 items-center justify-center rounded-md border ${
+                          item.done
+                            ? "border-accent bg-accent text-accent-contrast"
+                            : "border-border bg-surface"
+                        }`}
+                      >
+                        {item.done ? "✓" : ""}
+                      </span>
+                      <span
+                        className={`text-sm ${item.done ? "text-accent-strong/50 line-through" : ""}`}
+                      >
+                        {item.title}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="h-11 px-2 text-sm text-danger"
+                      onClick={() =>
+                        onChange((space) =>
+                          removePackItem(space, trip.id, item.id),
+                        )
+                      }
+                    >
+                      Apagar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
@@ -458,15 +539,38 @@ function ItinerarySegment({
 
 function DocsSegment({
   trip,
+  members,
   onChange,
 }: {
   trip: Trip;
+  members: DemoUser[];
   onChange: (updater: (space: DemoSpace) => DemoSpace) => void;
 }) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<DocCategory>("flight");
   const [url, setUrl] = useState("");
   const [notes, setNotes] = useState("");
+  const [assigneeId, setAssigneeId] = useState(SHARED_ASSIGNEE);
+
+  const grouped = useMemo(() => {
+    const order = [SHARED_ASSIGNEE, ...members.map((member) => member.id)];
+    const map = new Map<string, typeof trip.docs>();
+    trip.docs.forEach((doc) => {
+      const key = doc.assigneeId || SHARED_ASSIGNEE;
+      const list = map.get(key) ?? [];
+      list.push(doc);
+      map.set(key, list);
+    });
+    const keys = [
+      ...order.filter((id) => map.has(id)),
+      ...Array.from(map.keys()).filter((id) => !order.includes(id)),
+    ];
+    return keys.map((id) => ({
+      id,
+      label: assigneeLabel(id, members),
+      docs: map.get(id) ?? [],
+    }));
+  }, [trip.docs, members]);
 
   return (
     <div className="space-y-4">
@@ -476,7 +580,13 @@ function DocsSegment({
           e.preventDefault();
           if (!title.trim() || !url.trim()) return;
           onChange((space) =>
-            addDocLink(space, trip.id, { title, category, url, notes }),
+            addDocLink(space, trip.id, {
+              title,
+              category,
+              url,
+              notes,
+              assigneeId,
+            }),
           );
           setTitle("");
           setUrl("");
@@ -484,6 +594,11 @@ function DocsSegment({
         }}
       >
         <p className="text-sm font-medium">Novo documento (link)</p>
+        <AssigneeSelect
+          members={members}
+          value={assigneeId}
+          onChange={setAssigneeId}
+        />
         <input
           required
           className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm"
@@ -529,39 +644,50 @@ function DocsSegment({
           Nenhum documento ainda
         </p>
       ) : (
-        <ul className="space-y-2">
-          {trip.docs.map((doc) => (
-            <li key={doc.id} className="rounded-xl bg-surface px-3 py-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs text-accent-strong/60">
-                    {DOC_CATEGORY_LABELS[doc.category]}
-                  </p>
-                  <a
-                    href={doc.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium text-accent-strong underline"
-                  >
-                    {doc.title}
-                  </a>
-                  {doc.notes ? (
-                    <p className="mt-1 text-xs text-accent-strong/65">{doc.notes}</p>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  className="h-11 px-2 text-sm text-danger"
-                  onClick={() =>
-                    onChange((space) => removeDocLink(space, trip.id, doc.id))
-                  }
-                >
-                  Apagar
-                </button>
-              </div>
-            </li>
+        <div className="space-y-4">
+          {grouped.map((group) => (
+            <section key={group.id} className="space-y-2">
+              <h2 className="text-sm font-semibold text-cream">{group.label}</h2>
+              <ul className="space-y-2">
+                {group.docs.map((doc) => (
+                  <li key={doc.id} className="rounded-xl bg-surface px-3 py-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs text-accent-strong/60">
+                          {DOC_CATEGORY_LABELS[doc.category]}
+                        </p>
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium text-accent-strong underline"
+                        >
+                          {doc.title}
+                        </a>
+                        {doc.notes ? (
+                          <p className="mt-1 text-xs text-accent-strong/65">
+                            {doc.notes}
+                          </p>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        className="h-11 px-2 text-sm text-danger"
+                        onClick={() =>
+                          onChange((space) =>
+                            removeDocLink(space, trip.id, doc.id),
+                          )
+                        }
+                      >
+                        Apagar
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

@@ -301,6 +301,7 @@ export function DemoApp() {
             return (
               <TripDetail
                 trip={trip}
+                members={space.members}
                 onBack={() => setScreen({ name: "trips" })}
                 onChange={(updater) => {
                   persist({ user, space: updater(space) });

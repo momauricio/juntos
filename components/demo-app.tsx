@@ -182,35 +182,8 @@ export function DemoApp() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
-      <header className="sticky top-0 z-20 border-b border-border/70 bg-surface/90 px-4 py-3 backdrop-blur">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="font-serif text-xl text-accent-strong">Juntos</p>
-            <p className="text-xs text-accent-strong/70">
-              Modo demo · {user.name}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="inline-flex h-11 min-w-11 items-center justify-center rounded-xl bg-accent text-lg font-semibold text-accent-contrast"
-            onClick={() =>
-              setScreen(
-                screen.name === "trips" ||
-                  screen.name === "trip-detail" ||
-                  screen.name === "trip-new"
-                  ? { name: "trip-new" }
-                  : { name: "idea-wizard" },
-              )
-            }
-            aria-label="Adicionar"
-          >
-            +
-          </button>
-        </div>
-      </header>
-
       {message ? (
-        <div className="mx-4 mt-3 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-strong">
+        <div className="mx-4 mt-4 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-strong">
           {message}
         </div>
       ) : null}

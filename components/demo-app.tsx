@@ -188,12 +188,13 @@ export function DemoApp() {
         </div>
       ) : null}
 
-      <main className="flex-1 px-4 pb-28 pt-4">
+      <main className="flex-1 px-4 pb-10 pt-4">
         {screen.name === "hub" ? (
           <DemoHub
             onIdea={() => setScreen({ name: "idea-wizard" })}
             onTrip={() => setScreen({ name: "trip-new" })}
             onSeeIdeas={() => setScreen({ name: "ideas" })}
+            onSeeTrips={() => setScreen({ name: "trips" })}
           />
         ) : null}
 
@@ -206,6 +207,7 @@ export function DemoApp() {
             onTypeFilter={setTypeFilter}
             onStatusFilter={setStatusFilter}
             onOpen={(itemId) => setScreen({ name: "detail", itemId })}
+            onBack={() => setScreen({ name: "hub" })}
           />
         ) : null}
 
@@ -258,12 +260,13 @@ export function DemoApp() {
             space={space}
             onOpen={(tripId) => setScreen({ name: "trip-detail", tripId })}
             onNew={() => setScreen({ name: "trip-new" })}
+            onBack={() => setScreen({ name: "hub" })}
           />
         ) : null}
 
         {screen.name === "trip-new" ? (
           <TripWizard
-            onCancel={() => setScreen({ name: "trips" })}
+            onCancel={() => setScreen({ name: "hub" })}
             onSave={(input) => {
               const nextSpace = createTrip(space, input);
               persist({ user, space: nextSpace });
@@ -319,64 +322,7 @@ export function DemoApp() {
           />
         ) : null}
       </main>
-
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border/70 bg-surface/95 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex max-w-lg gap-1.5">
-          <NavButton
-            active={screen.name === "hub" || screen.name === "idea-wizard"}
-            onClick={() => setScreen({ name: "hub" })}
-          >
-            Início
-          </NavButton>
-          <NavButton
-            active={screen.name === "ideas" || screen.name === "detail"}
-            onClick={() => setScreen({ name: "ideas" })}
-          >
-            Lista
-          </NavButton>
-          <NavButton
-            active={
-              screen.name === "trips" ||
-              screen.name === "trip-new" ||
-              screen.name === "trip-detail"
-            }
-            onClick={() => setScreen({ name: "trips" })}
-          >
-            Viagens
-          </NavButton>
-          <NavButton
-            active={screen.name === "settings"}
-            onClick={() => setScreen({ name: "settings" })}
-          >
-            Ajustes
-          </NavButton>
-        </div>
-      </nav>
     </div>
-  );
-}
-
-function NavButton({
-  children,
-  active,
-  onClick,
-}: {
-  children: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`h-12 flex-1 rounded-xl text-sm font-medium ${
-        active
-          ? "bg-accent text-accent-contrast"
-          : "bg-surface-muted text-accent-strong"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -502,6 +448,7 @@ function Home({
   onTypeFilter,
   onStatusFilter,
   onOpen,
+  onBack,
 }: {
   space: DemoSpace;
   items: Item[];
@@ -510,9 +457,13 @@ function Home({
   onTypeFilter: (v: ItemType | "all") => void;
   onStatusFilter: (v: ItemStatus | "all") => void;
   onOpen: (id: string) => void;
+  onBack: () => void;
 }) {
   return (
     <div className="space-y-4">
+      <button type="button" className="text-sm text-cream/70" onClick={onBack}>
+        ← Voltar
+      </button>
       <div className="grid grid-cols-2 gap-2">
         <select
           className="h-12 rounded-xl border border-border bg-surface px-3 text-sm"

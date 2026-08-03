@@ -6,10 +6,12 @@ export function DemoHub({
   onIdea,
   onTrip,
   onSeeIdeas,
+  onSeeTrips,
 }: {
   onIdea: () => void;
   onTrip: () => void;
   onSeeIdeas: () => void;
+  onSeeTrips: () => void;
 }): JSX.Element {
   return (
     <div className="space-y-8 py-4">
@@ -62,13 +64,22 @@ export function DemoHub({
         </button>
       </section>
 
-      <button
-        type="button"
-        className="w-full text-center text-sm font-semibold text-cream underline decoration-cream/40 underline-offset-4"
-        onClick={onSeeIdeas}
-      >
-        Ver ideias registradas
-      </button>
+      <div className="space-y-3 pb-4">
+        <button
+          type="button"
+          className="w-full text-center text-sm font-semibold text-cream underline decoration-cream/40 underline-offset-4"
+          onClick={onSeeIdeas}
+        >
+          Ver ideias registradas
+        </button>
+        <button
+          type="button"
+          className="w-full text-center text-sm font-semibold text-cream underline decoration-cream/40 underline-offset-4"
+          onClick={onSeeTrips}
+        >
+          Ver viagens registradas
+        </button>
+      </div>
     </div>
   );
 }

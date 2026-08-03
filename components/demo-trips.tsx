@@ -22,14 +22,19 @@ export function TripsHome({
   space,
   onOpen,
   onNew,
+  onBack,
 }: {
   space: DemoSpace;
   onOpen: (tripId: string) => void;
   onNew: () => void;
+  onBack: () => void;
 }) {
   if (space.trips.length === 0) {
     return (
       <div className="space-y-4">
+        <button type="button" className="text-sm text-cream/70" onClick={onBack}>
+          ← Voltar
+        </button>
         <div className="flex items-center justify-between">
           <h1 className="font-serif text-2xl text-cream">Viagens</h1>
           <button
@@ -49,6 +54,9 @@ export function TripsHome({
 
   return (
     <div className="space-y-4">
+      <button type="button" className="text-sm text-cream/70" onClick={onBack}>
+        ← Voltar
+      </button>
       <div className="flex items-center justify-between">
         <h1 className="font-serif text-2xl text-cream">Viagens</h1>
         <button

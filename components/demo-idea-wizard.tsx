@@ -64,7 +64,7 @@ export function IdeaWizard({
       stepCount={STEP_COUNT}
       onBack={back}
       onNext={next}
-      backLabel={step === 0 ? "Cancelar" : "Voltar"}
+      backLabel="Voltar"
       nextLabel={step === STEP_COUNT - 1 ? "Salvar" : "Continuar"}
       nextDisabled={nextDisabled}
       bare={typeStep}

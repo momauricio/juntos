@@ -130,7 +130,7 @@ export function TripWizard({
       stepCount={STEP_COUNT}
       onBack={back}
       onNext={next}
-      backLabel={step === 0 ? "Cancelar" : "Voltar"}
+      backLabel="Voltar"
       nextLabel={step === STEP_COUNT - 1 ? "Criar viagem" : "Continuar"}
       nextDisabled={nextDisabled}
     >

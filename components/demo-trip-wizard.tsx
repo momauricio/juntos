@@ -3,18 +3,35 @@
 import { useState, type JSX } from "react";
 
 import { WizardShell } from "@/components/demo-wizard-shell";
+import {
+  brToIso,
+  destinationDateError,
+  formatIsoRange,
+  isoToBr,
+  maskBrDateInput,
+} from "@/lib/dates";
 import { tripDateRange } from "@/lib/demo/store";
 
 type DestinationDraft = {
   name: string;
+  /** ISO YYYY-MM-DD when complete, else empty */
   startDate: string;
   endDate: string;
+  /** What the user is typing in the fields */
+  startText: string;
+  endText: string;
 };
 
 const STEP_COUNT = 3;
 
 function blankDestination(): DestinationDraft {
-  return { name: "", startDate: "", endDate: "" };
+  return {
+    name: "",
+    startDate: "",
+    endDate: "",
+    startText: "",
+    endText: "",
+  };
 }
 
 function moveDestination(
@@ -28,14 +45,6 @@ function moveDestination(
   const [destination] = next.splice(index, 1);
   next.splice(nextIndex, 0, destination);
   return next;
-}
-
-function destinationDateError(destination: DestinationDraft): string | null {
-  if (!destination.startDate || !destination.endDate) return "Defina início e fim.";
-  if (destination.endDate < destination.startDate) {
-    return "Fim precisa ser depois do início.";
-  }
-  return null;
 }
 
 export function TripWizard({
@@ -59,7 +68,9 @@ export function TripWizard({
     name: destination.name.trim(),
   }));
 
-  const dateErrors = trimmedDestinations.map(destinationDateError);
+  const dateErrors = trimmedDestinations.map((_, index) =>
+    destinationDateError(trimmedDestinations, index),
+  );
   const total = tripDateRange(
     trimmedDestinations.map((destination, index) => ({
       id: String(index),
@@ -88,6 +99,20 @@ export function TripWizard({
         currentIndex === index ? { ...destination, ...patch } : destination,
       ),
     );
+  }
+
+  function onDateTextChange(
+    index: number,
+    field: "start" | "end",
+    raw: string,
+  ) {
+    const masked = maskBrDateInput(raw);
+    const iso = brToIso(masked) ?? "";
+    if (field === "start") {
+      updateDestination(index, { startText: masked, startDate: iso });
+    } else {
+      updateDestination(index, { endText: masked, endDate: iso });
+    }
   }
 
   function removeDestination(index: number) {
@@ -243,56 +268,65 @@ export function TripWizard({
               Quando estarão em cada lugar?
             </h1>
             <p className="mt-2 text-sm leading-6 text-accent-strong/70">
-              Informe início e fim para todos os destinos.
+              Digite as datas em DD/MM/AAAA. O próximo destino só pode começar
+              no fim do anterior (ou depois).
             </p>
           </div>
 
           <p className="rounded-xl bg-accent-soft px-3 py-2 text-sm font-medium text-accent-strong">
             Período total:{" "}
-            {total.start && total.end
-              ? `${total.start} → ${total.end}`
-              : "Defina as datas"}
+            {formatIsoRange(total.start, total.end) || "Defina as datas"}
           </p>
 
           <div className="space-y-3">
-            {destinations.map((destination, index) => (
-              <div key={index} className="rounded-2xl border border-border p-3">
-                <p className="font-medium text-accent-strong">
-                  {trimmedDestinations[index]?.name || `Destino ${index + 1}`}
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <label className="block text-sm font-medium text-accent-strong">
-                    Início
-                    <input
-                      required
-                      type="date"
-                      className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3 text-sm"
-                      value={destination.startDate}
-                      onChange={(event) =>
-                        updateDestination(index, {
-                          startDate: event.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label className="block text-sm font-medium text-accent-strong">
-                    Fim
-                    <input
-                      required
-                      type="date"
-                      className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3 text-sm"
-                      value={destination.endDate}
-                      onChange={(event) =>
-                        updateDestination(index, { endDate: event.target.value })
-                      }
-                    />
-                  </label>
+            {destinations.map((destination, index) => {
+              const previousEnd = trimmedDestinations[index - 1]?.endDate;
+              return (
+                <div key={index} className="rounded-2xl border border-border p-3">
+                  <p className="font-medium text-accent-strong">
+                    {trimmedDestinations[index]?.name || `Destino ${index + 1}`}
+                  </p>
+                  {previousEnd ? (
+                    <p className="mt-1 text-xs text-accent-strong/60">
+                      A partir de {isoToBr(previousEnd)} (fim do destino anterior)
+                    </p>
+                  ) : null}
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <label className="block text-sm font-medium text-accent-strong">
+                      Início
+                      <input
+                        required
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="DD/MM/AAAA"
+                        className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3 text-sm"
+                        value={destination.startText}
+                        onChange={(event) =>
+                          onDateTextChange(index, "start", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label className="block text-sm font-medium text-accent-strong">
+                      Fim
+                      <input
+                        required
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="DD/MM/AAAA"
+                        className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3 text-sm"
+                        value={destination.endText}
+                        onChange={(event) =>
+                          onDateTextChange(index, "end", event.target.value)
+                        }
+                      />
+                    </label>
+                  </div>
+                  {dateErrors[index] ? (
+                    <p className="mt-2 text-xs text-danger">{dateErrors[index]}</p>
+                  ) : null}
                 </div>
-                {dateErrors[index] ? (
-                  <p className="mt-2 text-xs text-danger">{dateErrors[index]}</p>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : null}

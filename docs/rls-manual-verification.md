@@ -22,3 +22,16 @@ accounts in the same couple space and a third account outside it.
      invite code for that space.
    - Confirm the RPC rejects the request and C has no `space_members` row for
      the full space.
+
+4. **Autoria (updated_by)**
+   - Sign in as account A and create an item; confirm `created_by` and
+     `updated_by` are both A.
+   - Sign in as account B and edit A's item title. Confirm `updated_by` is B,
+     `updated_at` was refreshed, and `created_by` is still A.
+   - As B, run `update items set created_by = <outro>` through the API and
+     confirm it fails with `created_by_immutable`.
+   - As B, send an update with `updated_by = <outro>` and confirm the stored
+     `updated_by` is overwritten with B (`auth.uid()`).
+   - Repeat the `created_by` update against `spaces` and confirm the same
+     `created_by_immutable` error; a rename sets `spaces.updated_by` to the
+     authenticated user.

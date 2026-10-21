@@ -48,6 +48,12 @@ describe("function grants migration", () => {
 
   it("revokes execute on future functions by default", () => {
     expect(sql).toContain(
+      "alter default privileges revoke execute on functions from public;",
+    );
+    expect(sql).toContain(
+      "alter default privileges in schema public revoke execute on functions from anon;",
+    );
+    expect(sql).not.toContain(
       "alter default privileges in schema public revoke execute on functions from public;",
     );
   });

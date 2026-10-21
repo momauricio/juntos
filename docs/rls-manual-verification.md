@@ -38,6 +38,12 @@ accounts in the same couple space and a third account outside it.
      `rpc('complete_item_with_rating')`, and `rpc('is_space_member')`.
    - Confirm each returns `permission denied for function ...`.
    - Confirm signed-in users can still call them.
+   - As `postgres` (the role that runs migrations), create a new function in
+     `public` after the migration and confirm anon calling it gets
+     `permission denied for function ...`.
+   - Note: anon reading a table whose policy uses `is_space_member` now gets
+     `permission denied for function is_space_member` instead of empty rows.
+     This is expected; the app only queries those tables with a session.
 
 6. **Smoke test after the grants change**
    - Sign in as A and create a space.

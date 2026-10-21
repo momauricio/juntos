@@ -36,4 +36,11 @@ grant execute on function public.complete_item_with_rating(uuid, int, int, int, 
 grant execute on function public.is_space_member(uuid) to authenticated;
 grant execute on function public.space_member_count(uuid) to authenticated;
 
-alter default privileges in schema public revoke execute on functions from public;
+-- default privileges apply per creating role: these apply to functions created
+-- later by the role that runs migrations (postgres). the global one removes the
+-- built-in PUBLIC execute; the schema one removes Supabase's direct grant to anon.
+-- authenticated keeps EXECUTE on new functions via Supabase's defaults, so new
+-- RPCs still need an explicit grant review. PR6's invite_preview must explicitly
+-- grant execute to anon.
+alter default privileges revoke execute on functions from public;
+alter default privileges in schema public revoke execute on functions from anon;

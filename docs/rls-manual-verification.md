@@ -35,3 +35,12 @@ accounts in the same couple space and a third account outside it.
    - Repeat the `created_by` update against `spaces` and confirm the same
      `created_by_immutable` error; a rename sets `spaces.updated_by` to the
      authenticated user.
+   - Rename a space and confirm `spaces.updated_at` is refreshed to now.
+   - As B, send an update that changes nothing (e.g. `title = title` with
+     `updated_by = <outro>`) and confirm `updated_by`/`updated_at` are kept.
+   - As A, rate a "Quero ir" item created by B (the first rating moves it to
+     "Já fomos") and confirm `updated_by` is A.
+   - As B, re-rate an item that is already "Já fomos" and confirm the item's
+     `updated_by`/`updated_at` are unchanged (only the rating row changes).
+   - As B, move an item to a space B is not a member of and confirm it fails
+     with a row-level security violation; the item stays in its space.

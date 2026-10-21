@@ -44,7 +44,7 @@ process.on("uncaughtException", (err) => {
 rimraf(bakRoot);
 fs.mkdirSync(bakRoot, { recursive: true });
 
-moveAside("middleware.ts");
+moveAside("proxy.ts");
 moveAside("app/(app)");
 moveAside("app/login");
 moveAside("app/signup");

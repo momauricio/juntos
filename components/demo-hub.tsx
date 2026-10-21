@@ -39,7 +39,7 @@ export function DemoHub({
             Adicionar
           </span>
           <span className="mt-3 block font-serif text-3xl leading-tight">
-            Ideia de Role
+            Ideia de rolê
           </span>
           <span className="mt-3 block text-sm leading-6 text-accent-strong/70">
             Restaurante, evento, filme, cidade ou qualquer vontade para decidir

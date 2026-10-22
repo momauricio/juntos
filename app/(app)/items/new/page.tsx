@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { ItemForm, type ItemFormState } from "@/components/item-form";
 import { TYPE_LABELS } from "@/lib/labels";
+import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 import type { ItemType } from "@/lib/types";
 
@@ -45,7 +46,7 @@ async function createItem(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(signInPathWithNext("/items/new"));
   }
 
   const { data: membership } = await supabase

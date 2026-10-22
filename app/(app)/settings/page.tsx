@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { InvitePanel } from "@/components/invite-panel";
+import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 
 type SpaceMemberRow = {
@@ -48,7 +49,7 @@ async function logout() {
 
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/login");
+  redirect(signInPathWithNext(null));
 }
 
 export default async function SettingsPage() {
@@ -58,7 +59,7 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(signInPathWithNext("/settings"));
   }
 
   const { data: membership } = await supabase

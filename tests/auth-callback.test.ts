@@ -4,6 +4,7 @@ import {
   authErrorPath,
   parseAuthErrorReason,
   reasonFromCallbackParams,
+  postLoginCallbackPath,
   reasonFromExchangeError,
   signInPathWithNext,
 } from "@/lib/auth-callback";
@@ -71,13 +72,37 @@ describe("parseAuthErrorReason", () => {
 });
 
 describe("signInPathWithNext", () => {
+  it("points to /entrar without params", () => {
+    expect(signInPathWithNext(null)).toBe("/entrar");
+  });
+
   it("drops unsafe next paths", () => {
-    expect(signInPathWithNext("//evil.com")).toBe("/login");
+    expect(signInPathWithNext("//evil.com")).toBe("/entrar");
+    expect(signInPathWithNext("https://evil.com/x")).toBe("/entrar");
   });
 
   it("keeps a safe next path", () => {
     expect(signInPathWithNext("/onboarding?code=AB")).toBe(
-      "/login?next=%2Fonboarding%3Fcode%3DAB",
+      "/entrar?next=%2Fonboarding%3Fcode%3DAB",
     );
+  });
+
+  it("keeps the invite code", () => {
+    expect(signInPathWithNext("/items/1", " AB12 ")).toBe(
+      "/entrar?next=%2Fitems%2F1&code=AB12",
+    );
+    expect(signInPathWithNext("//evil.com", "AB12")).toBe("/entrar?code=AB12");
+  });
+});
+
+describe("postLoginCallbackPath", () => {
+  it("sends next and invite_code to the callback", () => {
+    expect(postLoginCallbackPath("/items/1", "AB12")).toBe(
+      "/auth/callback?next=%2Fitems%2F1&invite_code=AB12",
+    );
+  });
+
+  it("drops unsafe next and empty code", () => {
+    expect(postLoginCallbackPath("//evil.com", "  ")).toBe("/auth/callback");
   });
 });

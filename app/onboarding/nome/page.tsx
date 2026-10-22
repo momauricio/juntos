@@ -3,7 +3,11 @@ import { redirect } from "next/navigation";
 
 import { NomeForm, type NomeFormState } from "@/components/nome-form";
 import { signInPathWithNext } from "@/lib/auth-callback";
-import { googleFirstName, validateDisplayName } from "@/lib/display-name";
+import {
+  DISPLAY_NAME_SAVE_ERROR,
+  googleFirstName,
+  validateDisplayName,
+} from "@/lib/display-name";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -48,7 +52,7 @@ async function saveName(
     .eq("id", userId);
 
   if (error) {
-    return { error: "Não foi possível salvar seu nome. Tente novamente." };
+    return { error: DISPLAY_NAME_SAVE_ERROR };
   }
 
   redirect("/onboarding");

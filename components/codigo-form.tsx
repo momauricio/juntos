@@ -265,6 +265,8 @@ export function CodigoForm({ email, next, code }: CodigoFormProps) {
     }
   }
 
+  // No código expirado, o reenvio vira a ação principal e o "Entrar" recua.
+  const isExpired = errorKind === "codigo_expirado";
   let message: string | null = null;
 
   if (errorKind === "aguarde") {
@@ -334,14 +336,18 @@ export function CodigoForm({ email, next, code }: CodigoFormProps) {
           </p>
         ) : null}
 
-        {errorKind === "codigo_expirado" ? (
+        {isExpired ? (
           <button
             type="button"
             onClick={resend}
-            disabled={isOffline || isResending}
-            className="flex h-12 w-full items-center justify-center rounded-2xl bg-accent-soft px-4 text-base font-semibold transition hover:brightness-95 disabled:opacity-60"
+            disabled={isOffline || isResending || resendRemaining > 0}
+            className="flex h-14 w-full items-center justify-center rounded-3xl bg-accent px-4 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110 disabled:opacity-45 disabled:shadow-none"
           >
-            Mandar outro código
+            {isResending
+              ? "Mandando..."
+              : resendRemaining > 0
+                ? `Mandar outro código em ${formatCountdown(resendRemaining)}`
+                : "Mandar outro código"}
           </button>
         ) : null}
 
@@ -368,7 +374,11 @@ export function CodigoForm({ email, next, code }: CodigoFormProps) {
         type="button"
         onClick={() => verify(token)}
         disabled={!isComplete || isVerifying || isOffline}
-        className="mt-6 flex h-14 w-full items-center justify-center rounded-3xl bg-accent px-4 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110 disabled:opacity-45 disabled:shadow-none"
+        className={`mt-6 flex h-14 w-full items-center justify-center rounded-3xl px-4 text-lg font-semibold transition disabled:opacity-45 ${
+          isExpired
+            ? "border border-[#1a2238]/15 bg-surface text-foreground hover:brightness-95"
+            : "bg-accent text-accent-contrast shadow-lg shadow-accent/30 hover:brightness-110 disabled:shadow-none"
+        }`}
       >
         {isVerifying ? "Entrando..." : "Entrar"}
       </button>

@@ -2,7 +2,10 @@
 
 export const DISPLAY_NAME_MAX = 40;
 
-export const DISPLAY_NAME_ERROR = `Seu nome precisa ter de 1 a ${DISPLAY_NAME_MAX} caracteres.`;
+export const DISPLAY_NAME_ERROR = `Escreve seu nome, com até ${DISPLAY_NAME_MAX} letras.`;
+
+export const DISPLAY_NAME_SAVE_ERROR =
+  "Não deu pra salvar seu nome agora. Tenta de novo?";
 
 function codePoints(value: string) {
   return Array.from(value);

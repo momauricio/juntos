@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DISPLAY_NAME_ERROR,
+  DISPLAY_NAME_SAVE_ERROR,
   firstName,
   googleFirstName,
   validateDisplayName,
@@ -57,5 +58,18 @@ describe("validateDisplayName", () => {
     expect(validateDisplayName("")).toEqual({ ok: false, error: DISPLAY_NAME_ERROR });
     expect(validateDisplayName("    ").ok).toBe(false);
     expect(validateDisplayName("a".repeat(41)).ok).toBe(false);
+  });
+});
+
+describe("display name copy", () => {
+  it("uses the designer's microcopy", () => {
+    expect(DISPLAY_NAME_ERROR).toBe("Escreve seu nome, com até 40 letras.");
+    expect(DISPLAY_NAME_SAVE_ERROR).toBe(
+      "Não deu pra salvar seu nome agora. Tenta de novo?",
+    );
+    expect(validateDisplayName("    ")).toEqual({
+      ok: false,
+      error: "Escreve seu nome, com até 40 letras.",
+    });
   });
 });

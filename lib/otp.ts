@@ -19,8 +19,8 @@ export type OtpErrorKind =
 // Microcopy exata da spec (tabela "Estados e erros").
 export const OTP_COPY = {
   email_invalido: "Esse e-mail parece incompleto. Confere?",
-  codigo_errado: "Código não confere. Dá uma olhada de novo no e-mail.",
-  codigo_expirado: "Esse código expirou. Quer que a gente mande outro?",
+  codigo_errado: "Esse código não confere. Dá uma olhada de novo no e-mail?",
+  codigo_expirado: "Esse código expirou. Te mando um novo?",
   muitas_tentativas:
     "Muitas tentativas por agora. Espera um pouquinho e pede um código novo.",
   offline: "Sem internet agora. Assim que voltar, é só tentar de novo.",

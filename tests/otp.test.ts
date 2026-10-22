@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  OTP_COPY,
   OTP_EXPIRY_SECONDS,
   formatCountdown,
   isValidEmail,
@@ -180,5 +181,14 @@ describe("otpVerifyErrorKind", () => {
     expect(
       otpVerifyErrorKind({ status: 500, message: "boom" }, { secondsSinceSent: 10 }),
     ).toBe("desconhecido");
+  });
+});
+
+describe("OTP_COPY", () => {
+  it("uses the designer's microcopy for code errors", () => {
+    expect(OTP_COPY.codigo_errado).toBe(
+      "Esse código não confere. Dá uma olhada de novo no e-mail?",
+    );
+    expect(OTP_COPY.codigo_expirado).toBe("Esse código expirou. Te mando um novo?");
   });
 });

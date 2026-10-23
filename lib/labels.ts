@@ -11,7 +11,7 @@ export const TYPE_LABELS: Record<ItemType, string> = {
 
 export const STATUS_LABELS: Record<ItemStatus | "all", string> = {
   all: "Todos",
-  want: "Queremos",
+  want: "Quero ir",
   done: "Já fizemos",
 };
 

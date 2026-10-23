@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { ItemForm, type ItemFormState } from "@/components/item-form";
 import { RatingForm, type RatingFormState } from "@/components/rating-form";
+import { SavedRatingPrompt } from "@/components/saved-rating-prompt";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { assertScore, displayRating, restaurantAverage } from "@/lib/ratings";
 import { signInPathWithNext } from "@/lib/auth-callback";
@@ -343,6 +344,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
           )}
         </div>
 
+        <SavedRatingPrompt />
         <RatingForm action={saveRating} item={item} rating={rating} />
 
         <ItemForm action={updateItem} item={item} mode="edit" />

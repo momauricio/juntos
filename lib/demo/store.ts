@@ -1,4 +1,3 @@
-import { generateInviteCode } from "@/lib/invites";
 import { displayRating } from "@/lib/ratings";
 import type { Item, ItemStatus, ItemType, Rating } from "@/lib/types";
 
@@ -85,7 +84,6 @@ export type Trip = {
 export type DemoSpace = {
   id: string;
   name: string;
-  inviteCode: string;
   members: DemoUser[];
   items: Item[];
   ratings: Rating[];
@@ -94,8 +92,8 @@ export type DemoSpace = {
 };
 
 export type DemoState = {
-  user: DemoUser | null;
-  space: DemoSpace | null;
+  user: DemoUser;
+  space: DemoSpace;
 };
 
 export const DOC_CATEGORY_LABELS: Record<DocCategory, string> = {
@@ -188,44 +186,105 @@ export function normalizeSpace(raw: DemoSpace | (Omit<DemoSpace, "trips"> & { tr
   };
 }
 
-export function emptyState(): DemoState {
-  return { user: null, space: null };
+const HOUR_MS = 60 * 60 * 1000;
+
+/** Dados de exemplo da vitrine (mockups 06 e 09). */
+export function sampleState(): DemoState {
+  const now = Date.now();
+  const at = (hoursAgo: number) => new Date(now - hoursAgo * HOUR_MS).toISOString();
+  const spaceId = "space_vitrine";
+  const mauricio: DemoUser = { id: "user_mauricio", name: "Mauricio" };
+  const ana: DemoUser = { id: "user_ana", name: "Ana" };
+
+  const item = (
+    input: Pick<Item, "id" | "type" | "title" | "notes"> & {
+      createdAt: string;
+      completedAt?: string;
+    },
+  ): Item => ({
+    id: input.id,
+    space_id: spaceId,
+    type: input.type,
+    title: input.title,
+    url: null,
+    notes: input.notes,
+    status: input.completedAt ? "done" : "want",
+    created_by: mauricio.id,
+    completed_at: input.completedAt ?? null,
+    created_at: input.createdAt,
+    updated_at: input.completedAt ?? input.createdAt,
+  });
+
+  const cantinaDoneAt = at(20);
+  const items: Item[] = [
+    item({
+      id: "item_cafe_da_esquina",
+      type: "food_idea",
+      title: "Café da Esquina",
+      notes: "São Paulo",
+      createdAt: at(0),
+    }),
+    item({
+      id: "item_praia_do_felix",
+      type: "tourist_spot",
+      title: "Praia do Félix",
+      notes: "Ubatuba",
+      createdAt: at(26),
+    }),
+    item({
+      id: "item_cantina_da_nonna",
+      type: "restaurant",
+      title: "Cantina da Nonna",
+      notes: "São Paulo",
+      createdAt: at(30),
+      completedAt: cantinaDoneAt,
+    }),
+  ];
+
+  // A demo guarda uma nota por item; nota por pessoa é do app real (PR3).
+  const ratings: Rating[] = [
+    {
+      id: "rating_cantina_da_nonna",
+      item_id: "item_cantina_da_nonna",
+      rated_by: mauricio.id,
+      food: 9,
+      service: 8,
+      ambiance: 9,
+      score: null,
+      created_at: cantinaDoneAt,
+      updated_at: cantinaDoneAt,
+    },
+  ];
+
+  return {
+    user: mauricio,
+    space: {
+      id: spaceId,
+      name: "Mauricio & Ana",
+      members: [mauricio, ana],
+      items,
+      ratings,
+      trips: [],
+      updatedAt: at(0),
+    },
+  };
 }
 
 export function loadState(): DemoState {
-  if (typeof window === "undefined") return emptyState();
+  if (typeof window === "undefined") return sampleState();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return emptyState();
-    const parsed = JSON.parse(raw) as DemoState;
-    if (parsed.space) {
-      return { ...parsed, space: normalizeSpace(parsed.space) };
-    }
-    return parsed;
+    if (!raw) return sampleState();
+    const parsed = JSON.parse(raw) as Partial<DemoState> | null;
+    if (!parsed?.user || !parsed.space) return sampleState();
+    return { user: parsed.user, space: normalizeSpace(parsed.space) };
   } catch {
-    return emptyState();
+    return sampleState();
   }
 }
 
 export function saveState(state: DemoState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-export function createUser(name: string): DemoUser {
-  return { id: uid("user"), name: name.trim() || "Eu" };
-}
-
-export function createSpace(owner: DemoUser, name = "Nós dois"): DemoSpace {
-  return {
-    id: uid("space"),
-    name,
-    inviteCode: generateInviteCode(),
-    members: [owner],
-    items: [],
-    ratings: [],
-    trips: [],
-    updatedAt: nowIso(),
-  };
 }
 
 export function addItem(
@@ -498,103 +557,6 @@ export function removeDocLink(
     docs: trip.docs.filter((doc) => doc.id !== docId),
     updatedAt: stamp,
   }));
-}
-
-function mergeByUpdatedAt<T extends { id: string; updatedAt: string }>(
-  local: T[],
-  incoming: T[],
-): T[] {
-  const map = new Map<string, T>();
-  [...local, ...incoming].forEach((entry) => {
-    const prev = map.get(entry.id);
-    if (!prev || prev.updatedAt <= entry.updatedAt) map.set(entry.id, entry);
-  });
-  return Array.from(map.values());
-}
-
-function mergeTrips(local: Trip[], incoming: Trip[]): Trip[] {
-  const byId = new Map<string, Trip>();
-  [...local, ...incoming].forEach((trip) => {
-    const normalized = normalizeTrip(trip);
-    const prev = byId.get(normalized.id);
-    if (!prev) {
-      byId.set(normalized.id, normalized);
-      return;
-    }
-    const newer = prev.updatedAt <= normalized.updatedAt ? normalized : prev;
-    const older = newer === normalized ? prev : normalized;
-    byId.set(normalized.id, {
-      ...newer,
-      packItems: mergeByUpdatedAt(older.packItems, newer.packItems),
-      stops: mergeByUpdatedAt(older.stops, newer.stops).sort((a, b) =>
-        a.day === b.day
-          ? a.createdAt.localeCompare(b.createdAt)
-          : a.day - b.day,
-      ),
-      docs: mergeByUpdatedAt(older.docs, newer.docs),
-    });
-  });
-  return Array.from(byId.values()).sort((a, b) =>
-    a.createdAt < b.createdAt ? 1 : -1,
-  );
-}
-
-export function mergeSpaces(local: DemoSpace, incoming: DemoSpace): DemoSpace {
-  const left = normalizeSpace(local);
-  const right = normalizeSpace(incoming);
-
-  const membersById = new Map<string, DemoUser>();
-  [...left.members, ...right.members].forEach((m) => membersById.set(m.id, m));
-
-  const itemsById = new Map<string, Item>();
-  [...left.items, ...right.items].forEach((item) => {
-    const prev = itemsById.get(item.id);
-    if (!prev || prev.updated_at <= item.updated_at) itemsById.set(item.id, item);
-  });
-
-  const ratingsByItem = new Map<string, Rating>();
-  [...left.ratings, ...right.ratings].forEach((rating) => {
-    const prev = ratingsByItem.get(rating.item_id);
-    if (!prev || prev.updated_at <= rating.updated_at) {
-      ratingsByItem.set(rating.item_id, rating);
-    }
-  });
-
-  return {
-    id: left.id || right.id,
-    name: left.name || right.name,
-    inviteCode: left.inviteCode || right.inviteCode,
-    members: Array.from(membersById.values()).slice(0, 2),
-    items: Array.from(itemsById.values()).sort((a, b) =>
-      a.created_at < b.created_at ? 1 : -1,
-    ),
-    ratings: Array.from(ratingsByItem.values()),
-    trips: mergeTrips(left.trips, right.trips),
-    updatedAt: nowIso(),
-  };
-}
-
-export function encodeSpace(space: DemoSpace): string {
-  const json = JSON.stringify(normalizeSpace(space));
-  const bytes = new TextEncoder().encode(json);
-  let binary = "";
-  bytes.forEach((b) => {
-    binary += String.fromCharCode(b);
-  });
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-export function decodeSpace(payload: string): DemoSpace | null {
-  try {
-    const padded = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const pad = padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
-    const binary = atob(padded + pad);
-    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-    const json = new TextDecoder().decode(bytes);
-    return normalizeSpace(JSON.parse(json) as DemoSpace);
-  } catch {
-    return null;
-  }
 }
 
 export function ratingForItem(space: DemoSpace, itemId: string): number | null {

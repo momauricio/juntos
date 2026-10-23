@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Boas-vindas",
 };
 
-// Vitrine pública (PR9). Até lá, a demo estática atual.
+// Vitrine pública (PR9).
 const DEMO_URL =
   process.env.NEXT_PUBLIC_DEMO_URL || "https://momauricio.github.io/juntos/";
 

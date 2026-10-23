@@ -7,17 +7,19 @@ export function DemoHub({
   onTrip,
   onSeeIdeas,
   onSeeTrips,
+  onSettings,
 }: {
   onIdea: () => void;
   onTrip: () => void;
   onSeeIdeas: () => void;
   onSeeTrips: () => void;
+  onSettings: () => void;
 }): JSX.Element {
   return (
     <div className="space-y-8 py-4">
       <section className="space-y-3">
         <p className="text-sm font-medium uppercase tracking-[0.28em] text-cream/60">
-          Juntos · demo
+          Juntos · vitrine
         </p>
         <div>
           <h1 className="font-serif text-4xl leading-tight text-cream">
@@ -52,8 +54,13 @@ export function DemoHub({
           className="hub-card-enter w-full rounded-[2rem] bg-surface-muted p-6 text-left text-[var(--ink-on-surface)] shadow-xl shadow-black/15 transition-transform active:scale-[0.99]"
           onClick={onTrip}
         >
-          <span className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-strong/55">
-            Planejar
+          <span className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-accent-strong/55">
+              Planejar
+            </span>
+            <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-strong">
+              em breve no app
+            </span>
           </span>
           <span className="mt-3 block font-serif text-3xl leading-tight">
             Nova Viagem
@@ -78,6 +85,13 @@ export function DemoHub({
           onClick={onSeeTrips}
         >
           Ver viagens registradas
+        </button>
+        <button
+          type="button"
+          className="w-full text-center text-sm text-cream/70 underline decoration-cream/30 underline-offset-4"
+          onClick={onSettings}
+        >
+          Ajustes
         </button>
       </div>
     </div>

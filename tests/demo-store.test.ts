@@ -5,59 +5,93 @@ import {
   addItem,
   addPackItem,
   addStop,
-  createSpace,
   createTrip,
-  createUser,
-  decodeSpace,
-  encodeSpace,
-  mergeSpaces,
+  normalizeSpace,
+  ratingForItem,
+  sampleState,
   tripDateRange,
   togglePackItem,
+  upsertRating,
+  type DemoState,
 } from "@/lib/demo/store";
 
-describe("demo sync encode/decode", () => {
-  it("round-trips a space payload", () => {
-    const user = createUser("Mauricio");
-    let space = createSpace(user);
-    space = addItem(space, {
-      type: "restaurant",
-      title: "Pizza da esquina",
-      createdBy: user.id,
-    });
+function emptySpace(): DemoState {
+  const { user, space } = sampleState();
+  return { user, space: { ...space, items: [], ratings: [], trips: [] } };
+}
 
-    const encoded = encodeSpace(space);
-    const decoded = decodeSpace(encoded);
-    expect(decoded?.items[0]?.title).toBe("Pizza da esquina");
-    expect(decoded?.members[0]?.name).toBe("Mauricio");
-    expect(decoded?.trips).toEqual([]);
+describe("sampleState", () => {
+  it("has Mauricio and Ana in the space 'Mauricio & Ana'", () => {
+    const { user, space } = sampleState();
+    expect(user.name).toBe("Mauricio");
+    expect(space.name).toBe("Mauricio & Ana");
+    expect(space.members.map((m) => m.name)).toEqual(["Mauricio", "Ana"]);
+    expect(space.members[0].id).toBe(user.id);
   });
 
-  it("merges items from two spaces by updated_at", () => {
-    const a = createUser("A");
-    const b = createUser("B");
-    let left = createSpace(a);
-    left = addItem(left, {
-      type: "movie",
-      title: "Filme A",
-      createdBy: a.id,
-    });
-    let right = { ...left, members: [...left.members, b] };
-    right = addItem(right, {
-      type: "city",
-      title: "Lisboa",
-      createdBy: b.id,
-    });
+  it("has the 3 places from the mockups, all added by Mauricio", () => {
+    const { user, space } = sampleState();
+    expect(
+      space.items.map(({ title, type, notes, status }) => ({ title, type, notes, status })),
+    ).toEqual([
+      { title: "Café da Esquina", type: "food_idea", notes: "São Paulo", status: "want" },
+      { title: "Praia do Félix", type: "tourist_spot", notes: "Ubatuba", status: "want" },
+      { title: "Cantina da Nonna", type: "restaurant", notes: "São Paulo", status: "done" },
+    ]);
+    expect(space.items.every((item) => item.created_by === user.id)).toBe(true);
+    expect(space.items.every((item) => item.space_id === space.id)).toBe(true);
+  });
 
-    const merged = mergeSpaces(left, right);
-    expect(merged.items).toHaveLength(2);
-    expect(merged.members).toHaveLength(2);
+  it("marks only the Cantina as done, with completed_at", () => {
+    const { space } = sampleState();
+    for (const item of space.items) {
+      if (item.title === "Cantina da Nonna") {
+        expect(item.completed_at).not.toBeNull();
+      } else {
+        expect(item.completed_at).toBeNull();
+      }
+    }
+  });
+
+  it("has one rating for the Cantina by Mauricio (9/8/9)", () => {
+    const { user, space } = sampleState();
+    const cantina = space.items.find((item) => item.title === "Cantina da Nonna")!;
+    expect(space.ratings).toHaveLength(1);
+    expect(space.ratings[0]).toMatchObject({
+      item_id: cantina.id,
+      rated_by: user.id,
+      food: 9,
+      service: 8,
+      ambiance: 9,
+      score: null,
+    });
+    expect(ratingForItem(space, cantina.id)).not.toBeNull();
+  });
+
+  it("returns a fresh copy each time", () => {
+    const first = sampleState();
+    first.space.items.pop();
+    expect(sampleState().space.items).toHaveLength(3);
+  });
+
+  it("works with the store helpers", () => {
+    const { user, space } = sampleState();
+    const next = addItem(space, {
+      type: "movie",
+      title: "Filme",
+      createdBy: user.id,
+    });
+    expect(next.items).toHaveLength(4);
+    const praia = space.items.find((item) => item.title === "Praia do Félix")!;
+    const rated = upsertRating(space, { itemId: praia.id, ratedBy: user.id, score: 8 });
+    expect(rated.items.find((item) => item.id === praia.id)?.status).toBe("done");
   });
 });
 
 describe("demo trips", () => {
-  it("creates trip with checklist, stops and docs and round-trips sync", () => {
-    const user = createUser("Mauricio");
-    let space = createSpace(user);
+  it("creates trip with checklist, stops and docs", () => {
+    const { user, space: empty } = emptySpace();
+    let space = empty;
     space = createTrip(space, {
       title: "Chile 2026",
       destinations: [
@@ -84,19 +118,18 @@ describe("demo trips", () => {
       assigneeId: user.id,
     });
 
-    const decoded = decodeSpace(encodeSpace(space));
-    expect(decoded?.trips).toHaveLength(1);
-    expect(decoded?.trips[0].title).toBe("Chile 2026");
-    expect(decoded?.trips[0].packItems[0].done).toBe(true);
-    expect(decoded?.trips[0].packItems[0].assigneeId).toBe(user.id);
-    expect(decoded?.trips[0].stops[0].day).toBe(1);
-    expect(decoded?.trips[0].docs[0].category).toBe("flight");
-    expect(decoded?.trips[0].docs[0].assigneeId).toBe(user.id);
+    expect(space.trips).toHaveLength(1);
+    expect(space.trips[0].title).toBe("Chile 2026");
+    expect(space.trips[0].packItems[0].done).toBe(true);
+    expect(space.trips[0].packItems[0].assigneeId).toBe(user.id);
+    expect(space.trips[0].stops[0].day).toBe(1);
+    expect(space.trips[0].docs[0].category).toBe("flight");
+    expect(space.trips[0].docs[0].assigneeId).toBe(user.id);
   });
 
   it("normalizes legacy pack/docs without assigneeId to shared", () => {
-    const user = createUser("Mauricio");
-    let space = createSpace(user);
+    const { space: empty } = emptySpace();
+    let space = empty;
     space = createTrip(space, {
       title: "Chile",
       destinations: [{ name: "Santiago" }],
@@ -131,37 +164,12 @@ describe("demo trips", () => {
         },
       ],
     };
-    const decoded = decodeSpace(encodeSpace(legacy as never));
-    expect(decoded?.trips[0].packItems[0].assigneeId).toBe("shared");
-    expect(decoded?.trips[0].docs[0].assigneeId).toBe("shared");
+    const normalized = normalizeSpace(legacy as never);
+    expect(normalized.trips[0].packItems[0].assigneeId).toBe("shared");
+    expect(normalized.trips[0].docs[0].assigneeId).toBe("shared");
   });
 
-  it("merges trip nested entities by updatedAt", () => {
-    const user = createUser("A");
-    let left = createSpace(user);
-    left = createTrip(left, {
-      title: "Chile 2026",
-      destinations: [{ name: "Santiago" }],
-    });
-    const tripId = left.trips[0].id;
-    left = addPackItem(left, tripId, "Carregador");
-
-    let right = structuredClone(left);
-    right = addStop(right, tripId, { day: 2, title: "Valparaíso" });
-    right = addDocLink(right, tripId, {
-      title: "Hotel",
-      category: "reservation",
-      url: "https://booking.example",
-    });
-
-    const merged = mergeSpaces(left, right);
-    expect(merged.trips).toHaveLength(1);
-    expect(merged.trips[0].packItems).toHaveLength(1);
-    expect(merged.trips[0].stops).toHaveLength(1);
-    expect(merged.trips[0].docs).toHaveLength(1);
-  });
-
-  it("normalizes legacy spaces without trips on decode", () => {
+  it("normalizes legacy spaces without trips", () => {
     const legacy = {
       id: "space_1",
       name: "Nós dois",
@@ -171,19 +179,8 @@ describe("demo trips", () => {
       ratings: [],
       updatedAt: new Date().toISOString(),
     };
-    const json = JSON.stringify(legacy);
-    const bytes = new TextEncoder().encode(json);
-    let binary = "";
-    bytes.forEach((b) => {
-      binary += String.fromCharCode(b);
-    });
-    const encoded = btoa(binary)
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/g, "");
 
-    const decoded = decodeSpace(encoded);
-    expect(decoded?.trips).toEqual([]);
+    expect(normalizeSpace(legacy as never).trips).toEqual([]);
   });
 });
 
@@ -198,8 +195,8 @@ describe("trip destinations", () => {
   });
 
   it("creates trip with ordered destinations and derived dates", () => {
-    const user = createUser("Mauricio");
-    let space = createSpace(user);
+    const { space: empty } = emptySpace();
+    let space = empty;
     space = createTrip(space, {
       title: "Nordeste final do ano",
       destinations: [
@@ -214,8 +211,7 @@ describe("trip destinations", () => {
   });
 
   it("normalizes legacy single destination into destinations[]", () => {
-    const user = createUser("Mauricio");
-    const space = createSpace(user);
+    const { space } = emptySpace();
     const legacy = {
       ...space,
       trips: [
@@ -234,23 +230,8 @@ describe("trip destinations", () => {
         },
       ],
     };
-    const decoded = decodeSpace(encodeSpace(legacy as never));
-    expect(decoded?.trips[0].destinations).toHaveLength(1);
-    expect(decoded?.trips[0].destinations[0].name).toBe("Santiago");
-  });
-
-  it("round-trips destinations through sync encode", () => {
-    const user = createUser("Mauricio");
-    let space = createSpace(user);
-    space = createTrip(space, {
-      title: "Nordeste",
-      destinations: [
-        { name: "SP", startDate: "2026-12-20", endDate: "2026-12-22" },
-        { name: "Nordeste", startDate: "2026-12-22", endDate: "2026-12-30" },
-      ],
-    });
-    const decoded = decodeSpace(encodeSpace(space));
-    expect(decoded?.trips[0].destinations).toHaveLength(2);
-    expect(decoded?.trips[0].endDate).toBe("2026-12-30");
+    const normalized = normalizeSpace(legacy as never);
+    expect(normalized.trips[0].destinations).toHaveLength(1);
+    expect(normalized.trips[0].destinations[0].name).toBe("Santiago");
   });
 });

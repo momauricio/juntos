@@ -6,6 +6,7 @@ import { signInPathWithNext } from "@/lib/auth-callback";
 import {
   DISPLAY_NAME_SAVE_ERROR,
   googleFirstName,
+  initialDisplayName,
   normalizeSpaceName,
   validateDisplayName,
 } from "@/lib/display-name";
@@ -136,11 +137,12 @@ export default async function NomePage() {
   }
 
   const googleName = googleFirstName(user);
-  // Sem espaço e já onboarded (ex.: saiu do espaço): começa com o nome atual.
-  const initialName =
-    !isMember && profile?.onboarded_at
-      ? (profile.display_name ?? googleName)
-      : googleName;
+  const initialName = initialDisplayName({
+    displayName: profile?.display_name,
+    email: user.email,
+    onboardedAt: profile?.onboarded_at,
+    googleName,
+  });
 
   return (
     <NomeForm

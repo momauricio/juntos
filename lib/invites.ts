@@ -93,7 +93,29 @@ const INVITE_STATUS_COPY: Record<
   full: "Esse espaço já tem duas pessoas. Se isso parece errado, fala com {Anfitrião}.",
 };
 
-const ALREADY_IN_SPACE_COPY =
+export const INVITE_CODE_INVALID =
+  "Esse código não confere. Dá uma olhada de novo?";
+
+export const INVITE_CODE_EXPIRED =
+  "Esse convite expirou. Pede um novo pro seu par?";
+
+// Tela "Entrar com convite": inválido e expirado ficam na própria tela; os
+// outros estados seguem para /c/<código>.
+export function inviteCodeStatusError(
+  status: InvitePreviewStatus,
+): string | null {
+  if (status === "invalid") {
+    return INVITE_CODE_INVALID;
+  }
+
+  if (status === "expired") {
+    return INVITE_CODE_EXPIRED;
+  }
+
+  return null;
+}
+
+const SPACE_HAS_PARTNER_COPY =
   "Você já está num espaço. Para entrar neste, primeiro saia do atual em Ajustes.";
 
 const INVITE_ERROR_COPY: Record<string, string> = {
@@ -101,10 +123,11 @@ const INVITE_ERROR_COPY: Record<string, string> = {
   invite_used: INVITE_STATUS_COPY.used,
   invite_expired: INVITE_STATUS_COPY.expired,
   space_full: INVITE_STATUS_COPY.full,
-  already_in_space: ALREADY_IN_SPACE_COPY,
+  already_in_space:
+    "Você já está num espaço com seu par. Pra entrar neste, primeiro saia do atual em Ajustes.",
   forbidden: INVITE_UNKNOWN_ERROR,
   own_invite: "Esse convite é seu 😉 Mande o link pro seu par.",
-  space_has_partner: ALREADY_IN_SPACE_COPY,
+  space_has_partner: SPACE_HAS_PARTNER_COPY,
 };
 
 function withHost(text: string, host: string | null | undefined) {
@@ -118,14 +141,33 @@ export function inviteStatusMessage(
   return withHost(INVITE_STATUS_COPY[status], host);
 }
 
-export function inviteErrorMessage(
-  error: { message?: string } | null | undefined,
-  host?: string | null,
-): string {
+type InviteError = { message?: string } | null | undefined;
+
+function inviteErrorKey(error: InviteError) {
   const message = error?.message ?? "";
-  const key = Object.keys(INVITE_ERROR_COPY).find((errorKey) =>
+
+  return Object.keys(INVITE_ERROR_COPY).find((errorKey) =>
     message.includes(errorKey),
   );
+}
+
+export function inviteErrorMessage(
+  error: InviteError,
+  host?: string | null,
+): string {
+  const key = inviteErrorKey(error);
 
   return key ? withHost(INVITE_ERROR_COPY[key], host) : INVITE_UNKNOWN_ERROR;
+}
+
+export type InviteErrorAction = { label: string; href: string };
+
+const INVITE_ERROR_ACTIONS: Record<string, InviteErrorAction> = {
+  already_in_space: { label: "Ir pro meu espaço", href: "/" },
+};
+
+export function inviteErrorAction(error: InviteError): InviteErrorAction | null {
+  const key = inviteErrorKey(error);
+
+  return (key && INVITE_ERROR_ACTIONS[key]) || null;
 }

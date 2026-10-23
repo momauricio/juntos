@@ -11,7 +11,12 @@ import {
   postLoginCallbackPath,
   signInPathWithNext,
 } from "@/lib/auth-callback";
-import { HOST_FALLBACK, inviteErrorMessage } from "@/lib/invites";
+import {
+  HOST_FALLBACK,
+  type InviteErrorAction,
+  inviteErrorAction,
+  inviteErrorMessage,
+} from "@/lib/invites";
 import { createClient } from "@/lib/supabase/client";
 
 const PRIMARY_BUTTON =
@@ -28,6 +33,25 @@ function ErrorText({ children }: { children: React.ReactNode }) {
     <p role="alert" className="text-center text-sm font-medium text-danger">
       {children}
     </p>
+  );
+}
+
+type RedeemError = { message: string; action: InviteErrorAction | null };
+
+function RedeemErrorBlock({ error }: { error: RedeemError | null }) {
+  if (!error) {
+    return null;
+  }
+
+  return (
+    <>
+      <ErrorText>{error.message}</ErrorText>
+      {error.action ? (
+        <Link href={error.action.href} className={SECONDARY_BUTTON}>
+          {error.action.label}
+        </Link>
+      ) : null}
+    </>
   );
 }
 
@@ -98,7 +122,7 @@ function useRedeem({ host, successPath }: RedeemProps) {
   const router = useRouter();
   const online = useOnline();
   const [isPending, setIsPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RedeemError | null>(null);
 
   async function run(call: () => PromiseLike<{ error: { message: string } | null }>) {
     setIsPending(true);
@@ -114,7 +138,11 @@ function useRedeem({ host, successPath }: RedeemProps) {
       router.replace(successPath);
       router.refresh();
     } catch (caught) {
-      setError(inviteErrorMessage(caught as { message?: string }, host));
+      const rpcError = caught as { message?: string };
+      setError({
+        message: inviteErrorMessage(rpcError, host),
+        action: inviteErrorAction(rpcError),
+      });
       setIsPending(false);
     }
   }
@@ -147,12 +175,12 @@ export function InviteJoinActions(props: RedeemProps) {
       >
         Entrar no espaço de {host}
       </button>
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      <RedeemErrorBlock error={error} />
       <button
         type="button"
         disabled={!online || isPending}
         onClick={handleSwitchAccount}
-        className="mx-auto block h-11 text-lg text-foreground/70 underline underline-offset-4 transition hover:text-foreground disabled:opacity-60"
+        className={SECONDARY_BUTTON}
       >
         Trocar de conta
       </button>
@@ -192,7 +220,7 @@ export function InviteSwitchActions(props: RedeemProps) {
       >
         Entrar sem trazer (apaga o meu)
       </button>
-      {error ? <ErrorText>{error}</ErrorText> : null}
+      <RedeemErrorBlock error={error} />
       <Link
         href="/"
         className="mx-auto block w-fit text-lg text-foreground/70 underline underline-offset-4 transition hover:text-foreground"

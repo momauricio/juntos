@@ -53,6 +53,39 @@ export function googleFirstName(user: UserLike) {
   return "";
 }
 
+// O que o trigger handle_new_user grava quando não há nome do Google:
+// a parte do e-mail antes do @, só a primeira palavra, até 40 caracteres.
+export function emailFallbackName(email: string | null | undefined) {
+  return firstName((email ?? "").split("@")[0]) || "eu";
+}
+
+type InitialDisplayNameInput = {
+  displayName: string | null | undefined;
+  email: string | null | undefined;
+  onboardedAt: string | null | undefined;
+  googleName: string;
+};
+
+// Valor inicial do campo "Seu nome": o nome que a pessoa já escolheu (ou que
+// não é só o fallback do e-mail); senão, o nome do Google ou vazio.
+export function initialDisplayName({
+  displayName,
+  email,
+  onboardedAt,
+  googleName,
+}: InitialDisplayNameInput) {
+  const current = displayName?.trim() ?? "";
+
+  if (!current) {
+    return googleName;
+  }
+
+  const isEmailFallback =
+    current.toLowerCase() === emailFallbackName(email).toLowerCase();
+
+  return onboardedAt || !isEmailFallback ? current : googleName;
+}
+
 export type DisplayNameResult =
   | { ok: true; value: string }
   | { ok: false; error: string };

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  INVITE_CODE_EXPIRED,
+  INVITE_CODE_INVALID,
   INVITE_UNKNOWN_ERROR,
   formatInviteCode,
   generateInviteCode,
+  inviteCodeStatusError,
+  inviteErrorAction,
   inviteErrorMessage,
   inviteExpiresAt,
   inviteLink,
@@ -107,7 +111,7 @@ describe("invite messages", () => {
     ],
     [
       "already_in_space",
-      "Você já está num espaço. Para entrar neste, primeiro saia do atual em Ajustes.",
+      "Você já está num espaço com seu par. Pra entrar neste, primeiro saia do atual em Ajustes.",
     ],
     ["forbidden", INVITE_UNKNOWN_ERROR],
   ])("maps %s", (code, text) => {
@@ -141,4 +145,40 @@ describe("invite messages", () => {
       "Esse espaço já tem duas pessoas. Se isso parece errado, fala com quem te chamou.",
     );
   });
+});
+
+describe("inviteErrorAction", () => {
+  it("offers the way back to the board when already in a space", () => {
+    expect(inviteErrorAction({ message: "already_in_space" })).toEqual({
+      label: "Ir pro meu espaço",
+      href: "/",
+    });
+  });
+
+  it("has no action for other errors", () => {
+    expect(inviteErrorAction({ message: "space_has_partner" })).toBeNull();
+    expect(inviteErrorAction({ message: "invite_used" })).toBeNull();
+    expect(inviteErrorAction({ message: "boom" })).toBeNull();
+    expect(inviteErrorAction(null)).toBeNull();
+  });
+});
+
+describe("inviteCodeStatusError", () => {
+  it("keeps invalid and expired codes on the form", () => {
+    expect(inviteCodeStatusError("invalid")).toBe(INVITE_CODE_INVALID);
+    expect(INVITE_CODE_INVALID).toBe(
+      "Esse código não confere. Dá uma olhada de novo?",
+    );
+    expect(inviteCodeStatusError("expired")).toBe(INVITE_CODE_EXPIRED);
+    expect(INVITE_CODE_EXPIRED).toBe(
+      "Esse convite expirou. Pede um novo pro seu par?",
+    );
+  });
+
+  it.each(["valid", "used", "full"] as const)(
+    "lets %s go to the invite screen",
+    (status) => {
+      expect(inviteCodeStatusError(status)).toBeNull();
+    },
+  );
 });

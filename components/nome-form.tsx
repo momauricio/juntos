@@ -173,7 +173,7 @@ export function NomeForm({
           href="/onboarding/codigo"
           className="mx-auto mt-6 text-foreground/70 underline-offset-4 transition hover:text-foreground hover:underline"
         >
-          Recebi um código de convite
+          Recebeu um convite? Digite o código
         </Link>
       ) : null}
     </main>

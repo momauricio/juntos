@@ -117,7 +117,7 @@ export function InviteShare({ message, link, code }: InviteShareProps) {
       </button>
 
       <p className="mt-5 text-center text-foreground/60">
-        Código de reserva:{" "}
+        Código do convite:{" "}
         <strong className="tracking-[0.15em] text-foreground/80">{code}</strong>{" "}
         · vale 7 dias
       </p>

@@ -62,7 +62,7 @@ export default async function SettingsPage() {
       <section className="mx-auto w-full max-w-4xl space-y-6">
         <div className="space-y-3">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-            Configurações
+            Ajustes
           </p>
           <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             Seu espaço

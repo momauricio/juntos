@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  INVITE_UNKNOWN_ERROR,
+  formatInviteCode,
   generateInviteCode,
+  inviteErrorMessage,
   inviteExpiresAt,
+  inviteLink,
+  inviteMessage,
+  inviteStatusMessage,
   isInviteExpired,
+  normalizeInviteCode,
+  spaceDisplayName,
+  whatsappUrl,
 } from "@/lib/invites";
 
 describe("generateInviteCode", () => {
@@ -31,6 +40,105 @@ describe("invite expiry", () => {
     );
     expect(isInviteExpired("2026-08-01T00:00:00.000Z", new Date("2026-07-28"))).toBe(
       false,
+    );
+  });
+});
+
+describe("invite code format", () => {
+  it("normalizes case, hyphens and spaces", () => {
+    expect(normalizeInviteCode(" abcd-2345 ")).toBe("ABCD2345");
+    expect(normalizeInviteCode("ab cd 23 45")).toBe("ABCD2345");
+  });
+
+  it("formats as XXXX-XXXX", () => {
+    expect(formatInviteCode("ABCD2345")).toBe("ABCD-2345");
+    expect(formatInviteCode("abcd-2345")).toBe("ABCD-2345");
+  });
+});
+
+describe("invite sharing", () => {
+  it("builds the short link", () => {
+    expect(inviteLink("https://juntos.example", "abcd-2345")).toBe(
+      "https://juntos.example/c/ABCD2345",
+    );
+  });
+
+  it("builds the message with the link on the last line", () => {
+    expect(inviteMessage("Mauricio", "https://j.example/c/ABCD2345")).toBe(
+      "Mauricio te chamou pro Juntos 💛\nBora guardar os lugares que a gente quer viver?\nhttps://j.example/c/ABCD2345",
+    );
+  });
+
+  it("encodes the message for WhatsApp", () => {
+    expect(whatsappUrl("Oi & tchau 💛\nhttps://j.example/c/X")).toBe(
+      "https://wa.me/?text=Oi%20%26%20tchau%20%F0%9F%92%9B%0Ahttps%3A%2F%2Fj.example%2Fc%2FX",
+    );
+  });
+});
+
+describe("spaceDisplayName", () => {
+  it("uses the name the couple picked", () => {
+    expect(spaceDisplayName("  Nós  ", ["Ana", "Bia"])).toBe("Nós");
+  });
+
+  it("falls back to the member names", () => {
+    expect(spaceDisplayName(null, ["Ana", "Bia"])).toBe("Ana & Bia");
+    expect(spaceDisplayName("   ", ["Ana"])).toBe("Ana");
+    expect(spaceDisplayName(undefined, [])).toBe("");
+  });
+});
+
+describe("invite messages", () => {
+  it.each([
+    ["invalid_invite", "Não achamos esse convite. Confere se o link veio inteiro?"],
+    ["invite_used", "Esse convite já foi usado. Peça pra Ana mandar um novo 💛"],
+    [
+      "invite_expired",
+      "Esse convite passou da validade (7 dias). Peça pra Ana mandar um novo.",
+    ],
+    [
+      "space_full",
+      "Esse espaço já tem duas pessoas. Se isso parece errado, fala com Ana.",
+    ],
+    ["own_invite", "Esse convite é seu 😉 Mande o link pro seu par."],
+    [
+      "space_has_partner",
+      "Você já está num espaço. Para entrar neste, primeiro saia do atual em Ajustes.",
+    ],
+    [
+      "already_in_space",
+      "Você já está num espaço. Para entrar neste, primeiro saia do atual em Ajustes.",
+    ],
+    ["forbidden", INVITE_UNKNOWN_ERROR],
+  ])("maps %s", (code, text) => {
+    expect(inviteErrorMessage({ message: code }, "Ana")).toBe(text);
+  });
+
+  it("uses a fallback when the host is unknown", () => {
+    expect(inviteErrorMessage({ message: "invite_used" }, null)).toBe(
+      "Esse convite já foi usado. Peça pra quem te chamou mandar um novo 💛",
+    );
+  });
+
+  it("maps unknown errors to the generic text", () => {
+    expect(inviteErrorMessage({ message: "boom" }, "Ana")).toBe(
+      "Algo saiu do roteiro. Tenta de novo em instantes.",
+    );
+    expect(inviteErrorMessage(null)).toBe(INVITE_UNKNOWN_ERROR);
+  });
+
+  it("maps preview statuses", () => {
+    expect(inviteStatusMessage("used", "Ana")).toBe(
+      "Esse convite já foi usado. Peça pra Ana mandar um novo 💛",
+    );
+    expect(inviteStatusMessage("expired", "Ana")).toBe(
+      "Esse convite passou da validade (7 dias). Peça pra Ana mandar um novo.",
+    );
+    expect(inviteStatusMessage("invalid", null)).toBe(
+      "Não achamos esse convite. Confere se o link veio inteiro?",
+    );
+    expect(inviteStatusMessage("full", " ")).toBe(
+      "Esse espaço já tem duas pessoas. Se isso parece errado, fala com quem te chamou.",
     );
   });
 });

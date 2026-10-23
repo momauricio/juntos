@@ -67,3 +67,12 @@ export function validateDisplayName(value: string): DisplayNameResult {
 
   return { ok: true, value: trimmed };
 }
+
+// "Como chamamos vocês dois?" (spaces.name). Vazio = nome calculado.
+export const SPACE_NAME_MAX = 40;
+
+export function normalizeSpaceName(value: string | null | undefined) {
+  const trimmed = (value ?? "").trim();
+
+  return trimmed ? codePoints(trimmed).slice(0, SPACE_NAME_MAX).join("") : null;
+}

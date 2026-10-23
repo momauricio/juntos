@@ -11,6 +11,7 @@ import {
   inviteExpiresAt,
   inviteLink,
   inviteMessage,
+  inviteStatusAction,
   inviteStatusMessage,
   isInviteExpired,
   normalizeInviteCode,
@@ -102,12 +103,12 @@ describe("invite messages", () => {
     ],
     [
       "space_full",
-      "Esse espaço já tem duas pessoas. Se isso parece errado, fala com Ana.",
+      "Esse espaço já está completo, com duas pessoas. Confere com Ana se o convite está certo.",
     ],
     ["own_invite", "Esse convite é seu 😉 Mande o link pro seu par."],
     [
       "space_has_partner",
-      "Você já está num espaço. Para entrar neste, primeiro saia do atual em Ajustes.",
+      "Você já está num espaço com seu par. Pra entrar neste, primeiro saia do atual em Ajustes.",
     ],
     [
       "already_in_space",
@@ -141,8 +142,11 @@ describe("invite messages", () => {
     expect(inviteStatusMessage("invalid", null)).toBe(
       "Não achamos esse convite. Confere se o link veio inteiro?",
     );
+    expect(inviteStatusMessage("full", "Ana")).toBe(
+      "Esse espaço já está completo, com duas pessoas. Confere com Ana se o convite está certo.",
+    );
     expect(inviteStatusMessage("full", " ")).toBe(
-      "Esse espaço já tem duas pessoas. Se isso parece errado, fala com quem te chamou.",
+      "Esse espaço já está completo, com duas pessoas. Confere com quem te chamou se o convite está certo.",
     );
   });
 });
@@ -155,12 +159,41 @@ describe("inviteErrorAction", () => {
     });
   });
 
+  it("opens settings when the space already has a partner", () => {
+    expect(inviteErrorAction({ message: "space_has_partner" })).toEqual({
+      label: "Abrir Ajustes",
+      href: "/settings",
+    });
+  });
+
+  it("offers a new space when the invited space is full", () => {
+    expect(inviteErrorAction({ message: "space_full" })).toEqual({
+      label: "Criar meu próprio espaço",
+      href: "/onboarding/nome",
+    });
+  });
+
   it("has no action for other errors", () => {
-    expect(inviteErrorAction({ message: "space_has_partner" })).toBeNull();
     expect(inviteErrorAction({ message: "invite_used" })).toBeNull();
     expect(inviteErrorAction({ message: "boom" })).toBeNull();
     expect(inviteErrorAction(null)).toBeNull();
   });
+});
+
+describe("inviteStatusAction", () => {
+  it("offers a new space when the invited space is full", () => {
+    expect(inviteStatusAction("full")).toEqual({
+      label: "Criar meu próprio espaço",
+      href: "/onboarding/nome",
+    });
+  });
+
+  it.each(["valid", "used", "expired", "invalid"] as const)(
+    "has no action for %s",
+    (status) => {
+      expect(inviteStatusAction(status)).toBeNull();
+    },
+  );
 });
 
 describe("inviteCodeStatusError", () => {

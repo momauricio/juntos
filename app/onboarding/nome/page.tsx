@@ -14,7 +14,7 @@ import { generateInviteCode, inviteErrorMessage } from "@/lib/invites";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Seu nome · Juntos",
+  title: "Seu nome",
 };
 
 const NOME_PATH = "/onboarding/nome";

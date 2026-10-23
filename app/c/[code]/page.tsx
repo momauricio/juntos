@@ -14,6 +14,7 @@ import {
   INVITE_UNKNOWN_ERROR,
   type InvitePreview,
   inviteLink,
+  inviteStatusAction,
   inviteStatusMessage,
   normalizeInviteCode,
 } from "@/lib/invites";
@@ -24,8 +25,11 @@ import { createClient } from "@/lib/supabase/server";
 import type { ItemType } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Convite · Juntos",
+  title: "Convite",
 };
+
+const PRIMARY_LINK =
+  "mt-8 flex h-14 w-full items-center justify-center rounded-3xl bg-accent px-4 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110";
 
 type InvitePageProps = {
   params: Promise<{ code: string }>;
@@ -161,6 +165,8 @@ export default async function InvitePage({ params }: InvitePageProps) {
   });
 
   if (state.startsWith("error:")) {
+    const action = inviteStatusAction(preview.status);
+
     return (
       <Frame>
         <Message>
@@ -169,6 +175,11 @@ export default async function InvitePage({ params }: InvitePageProps) {
             preview.host_first_name,
           )}
         </Message>
+        {action ? (
+          <Link href={action.href} className={PRIMARY_LINK}>
+            {action.label}
+          </Link>
+        ) : null}
       </Frame>
     );
   }
@@ -259,10 +270,7 @@ export default async function InvitePage({ params }: InvitePageProps) {
         Você já está num espaço com {partnerName ?? "seu par"}. Para entrar neste, primeiro
         saia do atual em Ajustes.
       </Message>
-      <Link
-        href="/settings"
-        className="mt-8 flex h-14 w-full items-center justify-center rounded-3xl bg-accent px-4 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110"
-      >
+      <Link href="/settings" className={PRIMARY_LINK}>
         Abrir Ajustes
       </Link>
     </Frame>

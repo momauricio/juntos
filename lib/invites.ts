@@ -90,7 +90,8 @@ const INVITE_STATUS_COPY: Record<
   expired:
     "Esse convite passou da validade (7 dias). Peça pra {Anfitrião} mandar um novo.",
   invalid: "Não achamos esse convite. Confere se o link veio inteiro?",
-  full: "Esse espaço já tem duas pessoas. Se isso parece errado, fala com {Anfitrião}.",
+  full:
+    "Esse espaço já está completo, com duas pessoas. Confere com {Anfitrião} se o convite está certo.",
 };
 
 export const INVITE_CODE_INVALID =
@@ -115,19 +116,18 @@ export function inviteCodeStatusError(
   return null;
 }
 
-const SPACE_HAS_PARTNER_COPY =
-  "Você já está num espaço. Para entrar neste, primeiro saia do atual em Ajustes.";
+const ALREADY_IN_SPACE_COPY =
+  "Você já está num espaço com seu par. Pra entrar neste, primeiro saia do atual em Ajustes.";
 
 const INVITE_ERROR_COPY: Record<string, string> = {
   invalid_invite: INVITE_STATUS_COPY.invalid,
   invite_used: INVITE_STATUS_COPY.used,
   invite_expired: INVITE_STATUS_COPY.expired,
   space_full: INVITE_STATUS_COPY.full,
-  already_in_space:
-    "Você já está num espaço com seu par. Pra entrar neste, primeiro saia do atual em Ajustes.",
+  already_in_space: ALREADY_IN_SPACE_COPY,
   forbidden: INVITE_UNKNOWN_ERROR,
   own_invite: "Esse convite é seu 😉 Mande o link pro seu par.",
-  space_has_partner: SPACE_HAS_PARTNER_COPY,
+  space_has_partner: ALREADY_IN_SPACE_COPY,
 };
 
 function withHost(text: string, host: string | null | undefined) {
@@ -162,12 +162,25 @@ export function inviteErrorMessage(
 
 export type InviteErrorAction = { label: string; href: string };
 
+const CREATE_OWN_SPACE: InviteErrorAction = {
+  label: "Criar meu próprio espaço",
+  href: "/onboarding/nome",
+};
+
 const INVITE_ERROR_ACTIONS: Record<string, InviteErrorAction> = {
+  space_full: CREATE_OWN_SPACE,
   already_in_space: { label: "Ir pro meu espaço", href: "/" },
+  space_has_partner: { label: "Abrir Ajustes", href: "/settings" },
 };
 
 export function inviteErrorAction(error: InviteError): InviteErrorAction | null {
   const key = inviteErrorKey(error);
 
   return (key && INVITE_ERROR_ACTIONS[key]) || null;
+}
+
+export function inviteStatusAction(
+  status: InvitePreviewStatus,
+): InviteErrorAction | null {
+  return status === "full" ? CREATE_OWN_SPACE : null;
 }

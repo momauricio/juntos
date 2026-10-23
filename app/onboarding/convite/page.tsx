@@ -16,7 +16,7 @@ import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Chamar seu par · Juntos",
+  title: "Chamar seu par",
 };
 
 type ConvitePageProps = {

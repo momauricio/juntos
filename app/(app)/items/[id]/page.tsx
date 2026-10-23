@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -68,6 +69,20 @@ function restaurantDetails(rating: Rating) {
   return `Comida ${rating.food} · Atendimento ${rating.service} · Ambiente ${
     rating.ambiance
   } · Média ${formatRating(average)}`;
+}
+
+export async function generateMetadata({
+  params,
+}: ItemPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("items")
+    .select("title")
+    .eq("id", id)
+    .maybeSingle();
+
+  return { title: data?.title?.trim() || "Ideia" };
 }
 
 export default async function ItemPage({ params }: ItemPageProps) {

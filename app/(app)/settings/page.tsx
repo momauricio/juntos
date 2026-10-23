@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -6,6 +7,10 @@ import { signInPathWithNext } from "@/lib/auth-callback";
 import { spaceDisplayName } from "@/lib/invites";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Ajustes",
+};
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Responsável",

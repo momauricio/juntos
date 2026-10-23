@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -11,6 +12,10 @@ import { signInPathWithNext } from "@/lib/auth-callback";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
 import type { ItemStatus, ItemType } from "@/lib/types";
+
+export const metadata: Metadata = {
+  title: "Lista",
+};
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 const ITEM_STATUSES = Object.keys(STATUS_LABELS).filter(

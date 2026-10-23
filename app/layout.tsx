@@ -15,7 +15,7 @@ const sourceSans = Source_Sans_3({
 });
 
 export const metadata: Metadata = {
-  title: "Juntos",
+  title: { default: "Juntos", template: "%s · Juntos" },
   description: "Juntos",
 };
 

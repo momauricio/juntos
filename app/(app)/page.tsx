@@ -1,11 +1,21 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { Avatar, initial } from "@/components/avatar";
 import { UrlItemFilters } from "@/components/item-filters";
 import { ItemList, type ItemWithRatings } from "@/components/item-list";
+import { WelcomeToast } from "@/components/welcome-toast";
+import { spaceDisplayName } from "@/lib/invites";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { signInPathWithNext } from "@/lib/auth-callback";
+import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
 import type { ItemStatus, ItemType } from "@/lib/types";
+
+export const metadata: Metadata = {
+  title: "Lista",
+};
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 const ITEM_STATUSES = Object.keys(STATUS_LABELS).filter(
@@ -16,6 +26,7 @@ type HomePageProps = {
   searchParams: Promise<{
     type?: string | string[];
     status?: string | string[];
+    "bem-vindo"?: string | string[];
   }>;
 };
 
@@ -53,20 +64,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     redirect(signInPathWithNext(null));
   }
 
-  const { data: membership } = await supabase
-    .from("space_members")
-    .select("space_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const space = await loadMySpace(supabase, user.id);
 
-  if (!membership) {
+  if (!space) {
     redirect("/onboarding");
   }
 
   let query = supabase
     .from("items")
     .select("*, ratings(*)")
-    .eq("space_id", membership.space_id)
+    .eq("space_id", space.id)
     .order("created_at", { ascending: false });
 
   if (selectedType !== "all") {
@@ -84,31 +91,55 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   const items = (data ?? []) as ItemWithRatings[];
+  const memberNames = space.members.map((member) => member.displayName);
+  const isWaiting = space.members.length < 2;
 
   return (
     <main className="px-4 pb-24 pt-8 sm:pb-12">
       <section className="mx-auto w-full max-w-4xl space-y-6">
-        <div className="space-y-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-            Lista
-          </p>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-                Ideias para vocês
-              </h1>
-              <p className="mt-3 max-w-2xl text-base leading-7 text-foreground/70">
-                Filtre a lista compartilhada por tipo ou status e mantenha os
-                próximos planos fáceis de encontrar.
-              </p>
-            </div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-foreground/60">
+              Juntos
+            </p>
+            <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+              {spaceDisplayName(space.name, memberNames)}
+            </h1>
+          </div>
+          <div aria-hidden="true" className="flex -space-x-2 pt-6">
+            {memberNames.map((name, index) => (
+              <Avatar
+                key={index}
+                label={initial(name)}
+                className="ring-2 ring-background"
+              />
+            ))}
+            {isWaiting ? (
+              <Avatar label="?" dashed className="bg-background" />
+            ) : null}
           </div>
         </div>
+
+        {isWaiting ? (
+          <p className="flex flex-wrap items-center justify-between gap-2 rounded-3xl border border-accent/50 bg-accent/15 px-5 py-4 text-lg">
+            <span>
+              <span aria-hidden="true">⏳</span> Esperando seu par entrar
+            </span>
+            <Link
+              href="/onboarding/convite"
+              className="font-semibold text-accent-soft underline underline-offset-4"
+            >
+              Reenviar convite
+            </Link>
+          </p>
+        ) : null}
 
         <UrlItemFilters type={selectedType} status={selectedStatus} />
 
         <ItemList items={items} />
       </section>
+
+      {firstParam(params["bem-vindo"]) === "1" ? <WelcomeToast /> : null}
     </main>
   );
 }

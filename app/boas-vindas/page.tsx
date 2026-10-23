@@ -4,7 +4,7 @@ import Link from "next/link";
 import { signInPathWithNext } from "@/lib/auth-callback";
 
 export const metadata: Metadata = {
-  title: "Juntos",
+  title: "Boas-vindas",
 };
 
 // Vitrine pública (PR9). Até lá, a demo estática atual.

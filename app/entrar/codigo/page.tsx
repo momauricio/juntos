@@ -7,7 +7,7 @@ import { safeRedirectPath } from "@/lib/auth-redirect";
 import { isValidEmail, normalizeEmail } from "@/lib/otp";
 
 export const metadata: Metadata = {
-  title: "Confere seu e-mail · Juntos",
+  title: "Confere seu e-mail",
 };
 
 type CodigoPageProps = {

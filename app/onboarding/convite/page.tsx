@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 
 import { Avatar, initial } from "@/components/avatar";
 import { InviteShare } from "@/components/invite-share";
+import { SavedToast } from "@/components/saved-toast";
 import { StepProgress } from "@/components/step-progress";
 import { signInPathWithNext } from "@/lib/auth-callback";
+import { parseSavedStatus } from "@/lib/capture-link";
 import {
   formatInviteCode,
   generateInviteCode,
@@ -22,12 +24,14 @@ export const metadata: Metadata = {
 type ConvitePageProps = {
   searchParams: Promise<{
     passo?: string | string[];
+    salvo?: string | string[];
   }>;
 };
 
 export default async function ConvitePage({ searchParams }: ConvitePageProps) {
   const params = await searchParams;
   const passo = Array.isArray(params.passo) ? params.passo[0] : params.passo;
+  const saved = parseSavedStatus(params.salvo);
   const supabase = await createClient();
   const {
     data: { user },
@@ -116,6 +120,8 @@ export default async function ConvitePage({ searchParams }: ConvitePageProps) {
         link={link}
         code={formatInviteCode(code)}
       />
+
+      {saved ? <SavedToast status={saved} /> : null}
     </main>
   );
 }

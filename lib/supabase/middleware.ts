@@ -1,18 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { authRedirectPath, safeRedirectPath } from "@/lib/auth-redirect";
+import {
+  postLoginCallbackPath,
+  signInPathWithNext,
+} from "@/lib/auth-callback";
+import { safeRedirectPath } from "@/lib/auth-redirect";
 import { isDemoMode } from "@/lib/demo-mode";
 
-const AUTH_ROUTES = ["/login", "/signup"];
+// Telas antigas de login com senha: viram redirect para /entrar.
+const LEGACY_AUTH_ROUTES = ["/login", "/signup"];
+// Telas de quem ainda não entrou; logado, segue para o destino pós-login.
+const AUTH_ROUTES = ["/boas-vindas", "/entrar"];
 const PUBLIC_ROUTES = [
   ...AUTH_ROUTES,
-  "/boas-vindas",
-  "/entrar",
   "/c",
   "/auth/callback",
   "/auth/erro",
   "/demo",
+  "/termos",
+  "/privacidade",
 ];
 const PUBLIC_EXACT_ROUTES = ["/"];
 const SUPABASE_CACHE_HEADERS = ["Cache-Control", "Expires", "Pragma"];
@@ -64,6 +71,19 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(demoUrl);
   }
 
+  const { pathname, searchParams } = request.nextUrl;
+
+  if (isRouteMatch(pathname, LEGACY_AUTH_ROUTES)) {
+    const url = request.nextUrl.clone();
+    const destination = new URL(
+      signInPathWithNext(searchParams.get("next"), searchParams.get("code")),
+      request.url,
+    );
+    url.pathname = destination.pathname;
+    url.search = destination.search;
+    return NextResponse.redirect(url);
+  }
+
   let response = NextResponse.next({
     request,
   });
@@ -100,17 +120,21 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
 
   const isAuthenticated = Boolean(data?.claims);
-  const { pathname } = request.nextUrl;
 
   if (isRouteMatch(pathname, AUTH_ROUTES) && isAuthenticated) {
+    // O /auth/callback sem `code` consulta o banco e decide o destino.
     return redirectWithSupabaseState(
       request,
       response,
-      authRedirectPath({
-        next: request.nextUrl.searchParams.get("next"),
-        code: request.nextUrl.searchParams.get("code"),
-        fallback: "/",
-      }),
+      postLoginCallbackPath(searchParams.get("next"), searchParams.get("code")),
+    );
+  }
+
+  if (pathname === "/" && !isAuthenticated) {
+    return redirectWithSupabaseState(
+      request,
+      response,
+      `/boas-vindas${request.nextUrl.search}`,
     );
   }
 
@@ -119,14 +143,10 @@ export async function updateSession(request: NextRequest) {
     isRouteMatch(pathname, PUBLIC_ROUTES);
 
   if (!isPublicRoute && !isAuthenticated) {
-    const params = new URLSearchParams({
-      next: `${pathname}${request.nextUrl.search}`,
-    });
-
     return redirectWithSupabaseState(
       request,
       response,
-      `/login?${params.toString()}`,
+      signInPathWithNext(`${pathname}${request.nextUrl.search}`),
     );
   }
 

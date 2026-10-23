@@ -5,34 +5,83 @@ import {
   authErrorPath,
   reasonFromCallbackParams,
   reasonFromExchangeError,
+  signInPathWithNext,
 } from "@/lib/auth-callback";
-import { authRedirectPath } from "@/lib/auth-redirect";
+import {
+  authRedirectPath,
+  postLoginPath,
+  safeRedirectPath,
+} from "@/lib/auth-redirect";
 import { createClient } from "@/lib/supabase/server";
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+// Consulta se o usuário já tem espaço e se já passou pela tela "Seu nome".
+// Devolve null se o banco falhar, para o login não quebrar.
+async function loadOnboardingState(
+  supabase: SupabaseServerClient,
+  userId: string,
+) {
+  try {
+    const [membership, profile] = await Promise.all([
+      supabase
+        .from("space_members")
+        .select("space_id")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("onboarded_at")
+        .eq("id", userId)
+        .maybeSingle(),
+    ]);
+
+    if (membership.error || profile.error) {
+      return null;
+    }
+
+    return {
+      hasSpace: Boolean(membership.data),
+      onboarded: Boolean(profile.data?.onboarded_at),
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(request: NextRequest) {
   const requestUrl = request.nextUrl.clone();
   const { searchParams, origin } = requestUrl;
   const code = searchParams.get("code");
   const inviteCode = searchParams.get("invite_code");
+  const rawNext = safeRedirectPath(searchParams.get("next"), "");
   const next = authRedirectPath({
-    next: searchParams.get("next"),
+    next: rawNext,
     code: inviteCode,
     fallback: "",
   });
 
+  const redirectTo = (path: string) =>
+    NextResponse.redirect(new URL(path, origin));
+
   const callbackReason = reasonFromCallbackParams(searchParams);
 
   if (callbackReason) {
-    return NextResponse.redirect(
-      new URL(authErrorPath(callbackReason, next), origin),
-    );
+    return redirectTo(authErrorPath(callbackReason, next));
+  }
+
+  let supabase: SupabaseServerClient;
+
+  try {
+    supabase = await createClient();
+  } catch {
+    return redirectTo(authErrorPath("desconhecido", next));
   }
 
   if (code) {
     let exchangeReason: AuthErrorReason | null = null;
 
     try {
-      const supabase = await createClient();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
@@ -43,16 +92,46 @@ export async function GET(request: NextRequest) {
     }
 
     if (exchangeReason) {
-      return NextResponse.redirect(
-        new URL(authErrorPath(exchangeReason, next), origin),
-      );
+      return redirectTo(authErrorPath(exchangeReason, next));
     }
   }
 
-  const destination = new URL(
-    authRedirectPath({ next, code: inviteCode, fallback: "/" }),
-    origin,
-  );
+  let userId: string | null = null;
 
-  return NextResponse.redirect(destination);
+  try {
+    const { data } = await supabase.auth.getUser();
+    userId = data.user?.id ?? null;
+  } catch {
+    userId = null;
+  }
+
+  if (!userId) {
+    // Sem `code` e sem sessão: volta para a tela de entrar.
+    if (!code) {
+      return redirectTo(signInPathWithNext(rawNext, inviteCode));
+    }
+
+    // O exchange deu certo, mas a sessão não pôde ser lida agora: segue para
+    // um destino seguro (as páginas protegidas checam a sessão de novo).
+    return redirectTo(
+      authRedirectPath({ next, code: inviteCode, fallback: "/onboarding" }),
+    );
+  }
+
+  const state = await loadOnboardingState(supabase, userId);
+
+  if (!state) {
+    return redirectTo(
+      authRedirectPath({ next, code: inviteCode, fallback: "/onboarding" }),
+    );
+  }
+
+  return redirectTo(
+    postLoginPath({
+      next: rawNext,
+      inviteCode,
+      hasSpace: state.hasSpace,
+      onboarded: state.onboarded,
+    }),
+  );
 }

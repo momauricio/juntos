@@ -22,3 +22,31 @@ accounts in the same couple space and a third account outside it.
      invite code for that space.
    - Confirm the RPC rejects the request and C has no `space_members` row for
      the full space.
+
+4. **Space member limit is enforced by the database**
+   - With A and B already in the same space, open the SQL editor as `postgres`
+     (which bypasses RLS) and insert a third `space_members` row for that space.
+   - Confirm the insert fails with `space_full`.
+   - Create a space with only one member and an open invite. Sign in as
+     accounts C and D and call `redeem_invite` concurrently with that code.
+   - Confirm only one call succeeds, the other gets `space_full`, and the space
+     ends up with exactly two `space_members` rows.
+
+5. **Functions are not executable by anon**
+   - Using only the anon key and no session, call `rpc('redeem_invite')`,
+     `rpc('create_space_with_invite')`, `rpc('regenerate_invite')`,
+     `rpc('complete_item_with_rating')`, and `rpc('is_space_member')`.
+   - Confirm each returns `permission denied for function ...`.
+   - Confirm signed-in users can still call them.
+   - As `postgres` (the role that runs migrations), create a new function in
+     `public` after the migration and confirm anon calling it gets
+     `permission denied for function ...`.
+   - Note: anon reading a table whose policy uses `is_space_member` now gets
+     `permission denied for function is_space_member` instead of empty rows.
+     This is expected; the app only queries those tables with a session.
+
+6. **Smoke test after the grants change**
+   - Sign in as A and create a space.
+   - Copy the invite and sign in as B to accept it.
+   - Create an item and rate it.
+   - Confirm every step succeeds without permission errors.

@@ -8,6 +8,7 @@ export const EMPTY_CLIPBOARD_COPY =
 export const TRELLO_SOON_COPY =
   "Já já chega! Por enquanto, cola um link ou pula 💛";
 export const PICK_TYPE_COPY = "Escolhe um tipo pra salvar.";
+export const SAVED_DONE_RATING_PROMPT = `Salvo em ${STATUS_LABELS.done} 💛 Que nota você dá?`;
 
 export type ParsedLink =
   | { ok: true; url: string }
@@ -79,5 +80,5 @@ export function savedToastCopy(status: ItemStatus): string {
 
 // "Já fizemos" vai pro detalhe (a nota abre ali); "Quero ir" volta pro quadro.
 export function savedRedirectPath(status: ItemStatus, id: string): string {
-  return status === "done" ? `/items/${id}` : `/?salvo=${status}`;
+  return status === "done" ? `/items/${id}?salvo=done` : `/?salvo=${status}`;
 }

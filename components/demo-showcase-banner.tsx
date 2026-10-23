@@ -5,7 +5,27 @@ const SIGNUP_HREF = showcaseSignupHref({
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
 });
 
-export function DemoShowcaseBanner() {
+// Sem NEXT_PUBLIC_APP_URL no build de produção, o Next fixa a condição em false
+// e o botão nem entra no bundle da vitrine (fora de produção fica disponível).
+const SignupLink =
+  process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_APP_URL
+    ? function SignupLink({ href }: { href: string }) {
+        return (
+          <a
+            href={href}
+            className="shrink-0 rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-accent-contrast"
+          >
+            Criar nossa conta
+          </a>
+        );
+      }
+    : null;
+
+export function DemoShowcaseBanner({
+  signupHref = SIGNUP_HREF,
+}: {
+  signupHref?: string | null;
+}) {
   return (
     <div
       role="region"
@@ -17,12 +37,7 @@ export function DemoShowcaseBanner() {
           Você está na vitrine do Juntos. Pra usar a dois de verdade, crie a
           conta de vocês.
         </p>
-        <a
-          href={SIGNUP_HREF}
-          className="shrink-0 rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-accent-contrast"
-        >
-          Criar nossa conta
-        </a>
+        {signupHref && SignupLink && <SignupLink href={signupHref} />}
       </div>
     </div>
   );

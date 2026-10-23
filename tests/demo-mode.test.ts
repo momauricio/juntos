@@ -1,4 +1,8 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { DemoShowcaseBanner } from "@/components/demo-showcase-banner";
 
 import {
   MISSING_SUPABASE_ENV_ERROR,
@@ -107,8 +111,36 @@ describe("showcaseSignupHref", () => {
     ).toBe("https://juntos.app/entrar");
   });
 
-  it("falls back to a relative /entrar without the env", () => {
-    expect(showcaseSignupHref({})).toBe("/entrar");
-    expect(showcaseSignupHref({ NEXT_PUBLIC_APP_URL: "" })).toBe("/entrar");
+  it("is null without the env", () => {
+    expect(showcaseSignupHref({})).toBeNull();
+    expect(showcaseSignupHref({ NEXT_PUBLIC_APP_URL: undefined })).toBeNull();
+  });
+
+  it("is null with an empty or blank env", () => {
+    expect(showcaseSignupHref({ NEXT_PUBLIC_APP_URL: "" })).toBeNull();
+    expect(showcaseSignupHref({ NEXT_PUBLIC_APP_URL: "   " })).toBeNull();
+  });
+});
+
+describe("DemoShowcaseBanner", () => {
+  it("shows only the text, without a link, when there is no signup href", () => {
+    const html = renderToStaticMarkup(
+      createElement(DemoShowcaseBanner, { signupHref: null }),
+    );
+    expect(html).toContain("Você está na vitrine do Juntos");
+    expect(html).not.toContain("Criar nossa conta");
+    expect(html).not.toContain("<a");
+  });
+
+  it("shows the signup link to /entrar of the real app", () => {
+    const html = renderToStaticMarkup(
+      createElement(DemoShowcaseBanner, {
+        signupHref: showcaseSignupHref({
+          NEXT_PUBLIC_APP_URL: "https://juntos.app/",
+        }),
+      }),
+    );
+    expect(html).toContain('href="https://juntos.app/entrar"');
+    expect(html).toContain("Criar nossa conta");
   });
 });

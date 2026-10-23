@@ -21,15 +21,15 @@ function emptySpace(): DemoState {
 }
 
 describe("sampleState", () => {
-  it("has Mauricio and Ana in the space 'Mauricio & Ana'", () => {
+  it("has Lucas and Ana in the space 'Lucas & Ana'", () => {
     const { user, space } = sampleState();
-    expect(user.name).toBe("Mauricio");
-    expect(space.name).toBe("Mauricio & Ana");
-    expect(space.members.map((m) => m.name)).toEqual(["Mauricio", "Ana"]);
+    expect(user.name).toBe("Lucas");
+    expect(space.name).toBe("Lucas & Ana");
+    expect(space.members.map((m) => m.name)).toEqual(["Lucas", "Ana"]);
     expect(space.members[0].id).toBe(user.id);
   });
 
-  it("has the 3 places from the mockups, all added by Mauricio", () => {
+  it("has the 3 places from the mockups, all added by Lucas", () => {
     const { user, space } = sampleState();
     expect(
       space.items.map(({ title, type, notes, status }) => ({ title, type, notes, status })),
@@ -53,7 +53,7 @@ describe("sampleState", () => {
     }
   });
 
-  it("has one rating for the Cantina by Mauricio (9/8/9)", () => {
+  it("has one rating for the Cantina by Lucas (9/8/9)", () => {
     const { user, space } = sampleState();
     const cantina = space.items.find((item) => item.title === "Cantina da Nonna")!;
     expect(space.ratings).toHaveLength(1);

@@ -10,8 +10,8 @@ Vitrine pública, para quem "só quer dar uma olhada":
 
 A vitrine **não** é um modo de uso do app:
 
-- Abre direto no quadro com dados de exemplo ("Mauricio & Ana": Café da Esquina, Praia do Félix e Cantina da Nonna já com nota)
-- Uma faixa fixa no topo convida a criar a conta de vocês; o botão **Criar nossa conta** leva ao `/entrar` do app real
+- Abre direto no quadro com dados de exemplo ("Lucas & Ana": Café da Esquina, Praia do Félix e Cantina da Nonna já com nota)
+- Uma faixa fixa no topo convida a criar a conta de vocês; o botão **Criar nossa conta** leva ao `/entrar` do app real (só aparece com `NEXT_PUBLIC_APP_URL` definido)
 - Os dados ficam só no aparelho (`localStorage`); **Ajustes → Limpar dados deste aparelho** volta para os dados de exemplo
 - Não há sincronização nem convite do par na vitrine (links com `?sync=` são ignorados)
 - **Viagens** (checklist, roteiro por dia e documentos) existem só na vitrine, com o selo "em breve no app"
@@ -21,11 +21,11 @@ A vitrine só liga com `NEXT_PUBLIC_DEMO_MODE=true`. Sem essa flag o app nunca c
 ```bash
 # .env.local
 NEXT_PUBLIC_DEMO_MODE=true
-# Destino do "Criar nossa conta" (o app real); sem ele, o link vira /entrar relativo
+# Destino do "Criar nossa conta" (o app real); sem ele, o botão some
 NEXT_PUBLIC_APP_URL=https://seu-app.vercel.app
 ```
 
-Build estático para GitHub Pages (já liga `NEXT_PUBLIC_DEMO_MODE=true` sozinho; defina `NEXT_PUBLIC_APP_URL` antes):
+Build estático para GitHub Pages (já liga `NEXT_PUBLIC_DEMO_MODE=true` sozinho; defina `NEXT_PUBLIC_APP_URL` antes, senão o botão "Criar nossa conta" some):
 
 ```bash
 NEXT_PUBLIC_APP_URL=https://seu-app.vercel.app npm run build:demo-static
@@ -45,7 +45,7 @@ Preencha `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` e deixe `N
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | App real. **Obrigatórias no build de produção**: `npm run build` sem elas (ou com a URL de exemplo `YOUR_PROJECT`) e sem `NEXT_PUBLIC_DEMO_MODE=true` falha com "Faltam NEXT_PUBLIC_SUPABASE_URL/ANON_KEY (ou defina NEXT_PUBLIC_DEMO_MODE=true para a vitrine)". `npm run dev` e `npm run start` não fazem essa checagem. |
 | `NEXT_PUBLIC_DEMO_MODE` | `true` liga a vitrine (obrigatório para ela). Qualquer outro valor = app real. |
-| `NEXT_PUBLIC_APP_URL` | Só na vitrine: URL do app real, destino do botão "Criar nossa conta" (`<APP_URL>/entrar`). |
+| `NEXT_PUBLIC_APP_URL` | Só na vitrine: URL do app real, destino do botão "Criar nossa conta" (`<APP_URL>/entrar`). Sem ela (ou vazia), o botão some e a faixa fica só com o texto. |
 | `NEXT_PUBLIC_DEMO_URL` | Só no app real: destino do link "Só quero dar uma olhada" da tela de boas-vindas (padrão: a vitrine pública). |
 
 ### 2. Supabase project

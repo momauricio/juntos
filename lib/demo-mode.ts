@@ -14,8 +14,9 @@ export function missingSupabaseEnv(env: Env): boolean {
   return !url || !anonKey || url.includes("YOUR_PROJECT");
 }
 
-/** "Criar nossa conta" da vitrine: `/entrar` do app real. */
-export function showcaseSignupHref(env: Env): string {
-  const appUrl = (env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
+/** "Criar nossa conta" da vitrine: `/entrar` do app real; null sem NEXT_PUBLIC_APP_URL. */
+export function showcaseSignupHref(env: Env): string | null {
+  const appUrl = (env.NEXT_PUBLIC_APP_URL ?? "").trim().replace(/\/+$/, "");
+  if (!appUrl) return null;
   return `${appUrl}/entrar`;
 }

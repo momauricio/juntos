@@ -193,7 +193,7 @@ export function sampleState(): DemoState {
   const now = Date.now();
   const at = (hoursAgo: number) => new Date(now - hoursAgo * HOUR_MS).toISOString();
   const spaceId = "space_vitrine";
-  const mauricio: DemoUser = { id: "user_mauricio", name: "Mauricio" };
+  const lucas: DemoUser = { id: "user_lucas", name: "Lucas" };
   const ana: DemoUser = { id: "user_ana", name: "Ana" };
 
   const item = (
@@ -209,7 +209,7 @@ export function sampleState(): DemoState {
     url: null,
     notes: input.notes,
     status: input.completedAt ? "done" : "want",
-    created_by: mauricio.id,
+    created_by: lucas.id,
     completed_at: input.completedAt ?? null,
     created_at: input.createdAt,
     updated_at: input.completedAt ?? input.createdAt,
@@ -246,7 +246,7 @@ export function sampleState(): DemoState {
     {
       id: "rating_cantina_da_nonna",
       item_id: "item_cantina_da_nonna",
-      rated_by: mauricio.id,
+      rated_by: lucas.id,
       food: 9,
       service: 8,
       ambiance: 9,
@@ -257,11 +257,11 @@ export function sampleState(): DemoState {
   ];
 
   return {
-    user: mauricio,
+    user: lucas,
     space: {
       id: spaceId,
-      name: "Mauricio & Ana",
-      members: [mauricio, ana],
+      name: "Lucas & Ana",
+      members: [lucas, ana],
       items,
       ratings,
       trips: [],

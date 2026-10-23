@@ -90,6 +90,9 @@ try {
       JUNTOS_STATIC_DEMO: "true",
       NEXT_PUBLIC_DEMO_MODE: "true",
       NEXT_PUBLIC_BASE_PATH: "/juntos",
+      // Sempre definida (vazia se ausente) para o Next fixá-la no bundle e
+      // remover o botão "Criar nossa conta" quando não há app real.
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "",
       NEXT_PUBLIC_SUPABASE_URL: "https://YOUR_PROJECT.supabase.co",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "your_anon_key",
     },

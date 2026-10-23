@@ -1,21 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 import { TYPE_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { assertScore } from "@/lib/ratings";
 import type { Item, ItemStatus, ItemType } from "@/lib/types";
 import {
   addItem,
-  createSpace,
   createTrip,
-  createUser,
-  decodeSpace,
   loadState,
   memberName,
-  mergeSpaces,
   ratingForItem,
+  sampleState,
   saveState,
   upsertRating,
   type DemoSpace,
@@ -23,6 +19,7 @@ import {
   type DemoUser,
 } from "@/lib/demo/store";
 import { DemoHub } from "@/components/demo-hub";
+import { DemoShowcaseBanner } from "@/components/demo-showcase-banner";
 import { IdeaWizard } from "@/components/demo-idea-wizard";
 import { TripWizard } from "@/components/demo-trip-wizard";
 import { TripDetail, TripsHome } from "@/components/demo-trips";
@@ -30,7 +27,6 @@ import { TripDetail, TripsHome } from "@/components/demo-trips";
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 
 type Screen =
-  | { name: "welcome" }
   | { name: "hub" }
   | { name: "ideas" }
   | { name: "idea-wizard" }
@@ -49,51 +45,16 @@ function formatScore(value: number | null) {
 }
 
 export function DemoApp() {
-  const searchParams = useSearchParams();
-  const initialSync = searchParams.get("sync") ?? undefined;
-  const [ready, setReady] = useState(false);
-  const [state, setState] = useState<DemoState>({ user: null, space: null });
-  const [screen, setScreen] = useState<Screen>({ name: "welcome" });
-  const [name, setName] = useState("");
+  const [state, setState] = useState<DemoState | null>(null);
+  const [screen, setScreen] = useState<Screen>({ name: "hub" });
   const [message, setMessage] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<ItemType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<ItemStatus | "all">("want");
 
   useEffect(() => {
-    const loaded = loadState();
-    let next = loaded;
-
-    if (initialSync) {
-      const incoming = decodeSpace(initialSync);
-      if (incoming) {
-        if (loaded.space) {
-          next = {
-            ...loaded,
-            space: mergeSpaces(loaded.space, incoming),
-          };
-          setMessage("Lista sincronizada com o link recebido.");
-        } else if (loaded.user) {
-          const alreadyMember = incoming.members.some((m) => m.id === loaded.user!.id);
-          const members = alreadyMember
-            ? incoming.members
-            : [...incoming.members, loaded.user].slice(0, 2);
-          next = {
-            user: loaded.user,
-            space: { ...incoming, members },
-          };
-          setMessage("Você entrou no espaço pelo link.");
-        } else {
-          next = { user: null, space: incoming };
-          setMessage("Link de sync recebido. Entre com seu nome para continuar.");
-        }
-        saveState(next);
-      }
-    }
-
-    setState(next);
-    setScreen(next.user && next.space ? { name: "hub" } : { name: "welcome" });
-    setReady(true);
-  }, [initialSync]);
+    // localStorage só existe no cliente; o primeiro render é o do servidor.
+    setState(loadState());
+  }, []);
 
   function persist(next: DemoState) {
     setState(next);
@@ -101,79 +62,22 @@ export function DemoApp() {
   }
 
   const filteredItems = useMemo(() => {
-    if (!state.space) return [];
+    if (!state) return [];
     return state.space.items.filter((item) => {
       const typeOk = typeFilter === "all" || item.type === typeFilter;
       const statusOk = statusFilter === "all" || item.status === statusFilter;
       return typeOk && statusOk;
     });
-  }, [state.space, typeFilter, statusFilter]);
+  }, [state, typeFilter, statusFilter]);
 
-  if (!ready) {
+  if (!state) {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-lg items-center justify-center px-4">
-        <p className="text-sm text-cream/70">Carregando Juntos…</p>
-      </main>
-    );
-  }
-
-  if (screen.name === "welcome" || !state.user) {
-    return (
-      <Welcome
-        name={name}
-        setName={setName}
-        message={message}
-        pendingSpace={state.space}
-        onContinue={(userName) => {
-          const user = createUser(userName);
-          if (state.space) {
-            const already = state.space.members.some((m) => m.name === user.name);
-            const members = already
-              ? state.space.members
-              : [...state.space.members, user].slice(0, 2);
-            const space = { ...state.space, members };
-            persist({ user, space });
-          } else {
-            persist({ user, space: null });
-          }
-          setScreen({ name: "hub" });
-          setMessage(null);
-        }}
-        onCreate={(userName) => {
-          const user = createUser(userName);
-          const space = createSpace(user);
-          persist({ user, space });
-          setScreen({ name: "hub" });
-          setMessage("Espaço criado.");
-        }}
-      />
-    );
-  }
-
-  if (!state.space) {
-    return (
-      <NoSpace
-        user={state.user}
-        onCreate={() => {
-          const space = createSpace(state.user!);
-          persist({ ...state, space });
-          setScreen({ name: "hub" });
-        }}
-        onPasteSync={(payload) => {
-          const incoming = decodeSpace(payload.trim());
-          if (!incoming) {
-            setMessage("Código inválido.");
-            return;
-          }
-          const members = incoming.members.some((m) => m.id === state.user!.id)
-            ? incoming.members
-            : [...incoming.members, state.user!].slice(0, 2);
-          persist({ user: state.user, space: { ...incoming, members } });
-          setScreen({ name: "hub" });
-          setMessage("Espaço importado.");
-        }}
-        message={message}
-      />
+      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
+        <DemoShowcaseBanner />
+        <main className="flex flex-1 items-center justify-center px-4">
+          <p className="text-sm text-cream/70">Carregando Juntos…</p>
+        </main>
+      </div>
     );
   }
 
@@ -182,6 +86,7 @@ export function DemoApp() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
+      <DemoShowcaseBanner />
       {message ? (
         <div className="mx-4 mt-4 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-strong">
           {message}
@@ -195,6 +100,7 @@ export function DemoApp() {
             onTrip={() => setScreen({ name: "trip-new" })}
             onSeeIdeas={() => setScreen({ name: "ideas" })}
             onSeeTrips={() => setScreen({ name: "trips" })}
+            onSettings={() => setScreen({ name: "settings" })}
           />
         ) : null}
 
@@ -317,127 +223,14 @@ export function DemoApp() {
             user={user}
             onBack={() => setScreen({ name: "hub" })}
             onReset={() => {
-              persist({ user: null, space: null });
-              setScreen({ name: "welcome" });
+              persist(sampleState());
+              setScreen({ name: "hub" });
+              setMessage("Dados de exemplo restaurados.");
             }}
           />
         ) : null}
       </main>
     </div>
-  );
-}
-
-function Welcome({
-  name,
-  setName,
-  onContinue,
-  onCreate,
-  pendingSpace,
-  message,
-}: {
-  name: string;
-  setName: (v: string) => void;
-  onContinue: (name: string) => void;
-  onCreate: (name: string) => void;
-  pendingSpace: DemoSpace | null;
-  message: string | null;
-}) {
-  return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center px-4 py-8">
-      <p className="font-serif text-4xl text-cream">Juntos</p>
-      <p className="mt-2 text-base text-cream/80">
-        Modo demo no celular: salve ideias, dê nota e planejem juntos.
-      </p>
-      {message ? (
-        <p className="mt-4 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-strong">
-          {message}
-        </p>
-      ) : null}
-      <label className="mt-8 block text-sm font-medium text-cream">
-        Seu nome
-        <input
-          className="mt-2 h-12 w-full rounded-xl border border-border bg-surface px-3"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Ex.: Mauricio"
-          autoComplete="name"
-        />
-      </label>
-      <div className="mt-6 flex flex-col gap-3">
-        {pendingSpace ? (
-          <button
-            type="button"
-            className="h-12 rounded-xl bg-accent font-medium text-accent-contrast"
-            onClick={() => onContinue(name)}
-            disabled={!name.trim()}
-          >
-            Entrar no espaço recebido
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="h-12 rounded-xl bg-accent font-medium text-accent-contrast disabled:opacity-50"
-            onClick={() => onCreate(name)}
-            disabled={!name.trim()}
-          >
-            Criar nosso espaço
-          </button>
-        )}
-      </div>
-      <p className="mt-6 text-xs leading-5 text-cream/65">
-        Os dados ficam neste aparelho por enquanto (modo demo).
-      </p>
-    </main>
-  );
-}
-
-function NoSpace({
-  user,
-  onCreate,
-  onPasteSync,
-  message,
-}: {
-  user: DemoUser;
-  onCreate: () => void;
-  onPasteSync: (payload: string) => void;
-  message: string | null;
-}) {
-  const [paste, setPaste] = useState("");
-  return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-4 py-8">
-      <p className="font-serif text-3xl text-cream">Olá, {user.name}</p>
-      {message ? (
-        <p className="mt-3 rounded-xl bg-accent-soft px-3 py-2 text-sm">{message}</p>
-      ) : null}
-      <button
-        type="button"
-        className="mt-8 h-12 rounded-xl bg-accent font-medium text-accent-contrast"
-        onClick={onCreate}
-      >
-        Criar nosso espaço
-      </button>
-      <label className="mt-8 block text-sm font-medium text-cream">
-        Ou cole um código recebido
-        <textarea
-          className="mt-2 min-h-28 w-full rounded-xl border border-border bg-surface p-3 text-sm"
-          value={paste}
-          onChange={(e) => setPaste(e.target.value)}
-          placeholder="Cole o código ou o trecho sync=..."
-        />
-      </label>
-      <button
-        type="button"
-        className="mt-3 h-12 rounded-xl bg-accent-soft font-medium text-accent-strong"
-        onClick={() => {
-          const raw = paste.includes("sync=")
-            ? (new URL(paste, "https://example.com").searchParams.get("sync") ?? paste)
-            : paste;
-          onPasteSync(raw);
-        }}
-      >
-        Importar
-      </button>
-    </main>
   );
 }
 
@@ -690,7 +483,8 @@ function Settings({
         </p>
       </div>
       <p className="text-xs leading-5 text-cream/65">
-        Modo demo local. Quando tivermos projeto Supabase, migraremos para conta real.
+        Isto é a vitrine: os dados ficam só neste aparelho e não vão para a
+        conta de vocês. Limpar volta para os dados de exemplo.
       </p>
       <button
         type="button"

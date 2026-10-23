@@ -22,8 +22,10 @@ export default async function PrimeiroLugarPage() {
         <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
           Bora começar com um lugar?
         </h1>
+        {/* TODO(P1): voltar para "A gente preenche o resto." quando o extrator entrar. */}
         <p className="text-lg leading-8 text-foreground/70">
-          Cola o link de um post que vocês salvaram. A gente preenche o resto.
+          Cola o link de um post que vocês salvaram. O link fica guardado no
+          card. Você só completa o nome e o tipo.
         </p>
       </section>
 

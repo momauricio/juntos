@@ -9,9 +9,6 @@ export const TRELLO_SOON_COPY =
   "Já já chega! Por enquanto, cola um link ou pula 💛";
 export const PICK_TYPE_COPY = "Escolhe um tipo pra salvar.";
 
-// Coluna "want" no onboarding e no quadro novo (STATUS_LABELS.want segue igual).
-export const WANT_LABEL = "Quero ir";
-
 export type ParsedLink =
   | { ok: true; url: string }
   | { ok: false; error: "not_a_link" };
@@ -77,5 +74,10 @@ export function parseSavedStatus(
 }
 
 export function savedToastCopy(status: ItemStatus): string {
-  return `Salvo em ${status === "done" ? STATUS_LABELS.done : WANT_LABEL} 💛`;
+  return `Salvo em ${status === "done" ? STATUS_LABELS.done : STATUS_LABELS.want} 💛`;
+}
+
+// "Já fizemos" vai pro detalhe (a nota abre ali); "Quero ir" volta pro quadro.
+export function savedRedirectPath(status: ItemStatus, id: string): string {
+  return status === "done" ? `/items/${id}` : `/?salvo=${status}`;
 }

@@ -5,7 +5,7 @@ import {
   PlaceReviewCard,
   type PlaceReviewState,
 } from "@/components/place-review-card";
-import { captureLink } from "@/lib/capture-link";
+import { captureLink, savedRedirectPath } from "@/lib/capture-link";
 import { savePlace } from "@/lib/save-place";
 
 export const metadata: Metadata = {
@@ -26,7 +26,7 @@ async function save(
     return { error: result.error };
   }
 
-  redirect(`/?salvo=${result.status}`);
+  redirect(savedRedirectPath(result.status, result.id));
 }
 
 type ColarRevisarPageProps = {

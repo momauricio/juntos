@@ -37,7 +37,7 @@ function formValue(formData: FormData, key: string) {
 }
 
 export type SavePlaceResult =
-  | { ok: true; status: ItemStatus }
+  | { ok: true; status: ItemStatus; id: string }
   | { ok: false; error: string };
 
 export async function savePlace(
@@ -59,14 +59,20 @@ export async function savePlace(
   }
 
   const { supabase, spaceId } = await requireSpace(path);
-  const { error } = await supabase.from("items").insert({
-    space_id: spaceId,
-    type: type as ItemType,
-    title,
-    url,
-    status,
-    completed_at: status === "done" ? new Date().toISOString() : null,
-  });
+  const { data, error } = await supabase
+    .from("items")
+    .insert({
+      space_id: spaceId,
+      type: type as ItemType,
+      title,
+      url,
+      status,
+      completed_at: status === "done" ? new Date().toISOString() : null,
+    })
+    .select("id")
+    .single();
 
-  return error ? { ok: false, error: INVITE_UNKNOWN_ERROR } : { ok: true, status };
+  return error || !data
+    ? { ok: false, error: INVITE_UNKNOWN_ERROR }
+    : { ok: true, status, id: data.id as string };
 }

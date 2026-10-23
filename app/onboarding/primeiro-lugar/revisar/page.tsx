@@ -26,6 +26,8 @@ async function save(
     return { error: result.error };
   }
 
+  // Mantém o passo 3; se salvou em "Já fizemos", a nota abre sozinha (PR3)
+  // na primeira vez que a pessoa abrir o item.
   redirect(`/onboarding/convite?passo=3&salvo=${result.status}`);
 }
 

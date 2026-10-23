@@ -5,6 +5,7 @@ import {
   normalizeLink,
   parseLink,
   parseSavedStatus,
+  savedRedirectPath,
   savedToastCopy,
 } from "@/lib/capture-link";
 
@@ -127,5 +128,15 @@ describe("saved toast", () => {
     expect(parseSavedStatus(["done", "want"])).toBe("done");
     expect(parseSavedStatus("all")).toBeNull();
     expect(parseSavedStatus(undefined)).toBeNull();
+  });
+});
+
+describe("savedRedirectPath", () => {
+  it("opens the item when saved as done", () => {
+    expect(savedRedirectPath("done", "abc-123")).toBe("/items/abc-123");
+  });
+
+  it("goes back to the board with the toast when saved as want", () => {
+    expect(savedRedirectPath("want", "abc-123")).toBe("/?salvo=want");
   });
 });

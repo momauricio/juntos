@@ -5,7 +5,7 @@ import { type FormEvent, useActionState, useState } from "react";
 
 import { useOnline } from "@/components/auth-hooks";
 import { BackLink, OfflineBanner } from "@/components/auth-ui";
-import { PICK_TYPE_COPY, WANT_LABEL } from "@/lib/capture-link";
+import { PICK_TYPE_COPY } from "@/lib/capture-link";
 import { STATUS_LABELS, TYPE_EMOJI, TYPE_LABELS } from "@/lib/labels";
 import type { ItemStatus, ItemType } from "@/lib/types";
 
@@ -24,7 +24,7 @@ type PlaceReviewCardProps = {
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 const STATUS_OPTIONS: { value: ItemStatus; label: string }[] = [
-  { value: "want", label: `💛 ${WANT_LABEL}` },
+  { value: "want", label: `💛 ${STATUS_LABELS.want}` },
   { value: "done", label: STATUS_LABELS.done },
 ];
 const INITIAL_STATE: PlaceReviewState = { error: null };

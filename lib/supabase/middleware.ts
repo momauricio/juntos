@@ -5,7 +5,16 @@ import { authRedirectPath, safeRedirectPath } from "@/lib/auth-redirect";
 import { isDemoMode } from "@/lib/demo-mode";
 
 const AUTH_ROUTES = ["/login", "/signup"];
-const PUBLIC_ROUTES = [...AUTH_ROUTES, "/auth/callback", "/demo"];
+const PUBLIC_ROUTES = [
+  ...AUTH_ROUTES,
+  "/boas-vindas",
+  "/entrar",
+  "/c",
+  "/auth/callback",
+  "/auth/erro",
+  "/demo",
+];
+const PUBLIC_EXACT_ROUTES = ["/"];
 const SUPABASE_CACHE_HEADERS = ["Cache-Control", "Expires", "Pragma"];
 
 function isRouteMatch(pathname: string, routes: string[]) {
@@ -105,7 +114,11 @@ export async function updateSession(request: NextRequest) {
     );
   }
 
-  if (!isRouteMatch(pathname, PUBLIC_ROUTES) && !isAuthenticated) {
+  const isPublicRoute =
+    PUBLIC_EXACT_ROUTES.includes(pathname) ||
+    isRouteMatch(pathname, PUBLIC_ROUTES);
+
+  if (!isPublicRoute && !isAuthenticated) {
     const params = new URLSearchParams({
       next: `${pathname}${request.nextUrl.search}`,
     });

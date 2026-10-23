@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { ItemForm, type ItemFormState } from "@/components/item-form";
+import { RatingDisclosure } from "@/components/rating-disclosure";
 import { RatingForm, type RatingFormState } from "@/components/rating-form";
-import { TYPE_LABELS } from "@/lib/labels";
+import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import {
   assertScore,
   COMMENT_MAX_LENGTH,
@@ -312,7 +313,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
             href="/?status=done"
             className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-strong transition hover:text-accent"
           >
-            ← Já fomos
+            ← {STATUS_LABELS.done}
           </Link>
         ) : (
           <Link
@@ -326,7 +327,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
         <div className="space-y-3">
           {item.status === "done" && item.completed_at ? (
             <span className="inline-flex rounded-2xl bg-accent-soft px-3 py-1 text-sm font-semibold text-accent-strong">
-              ✓ Já fomos · {formatDayMonth(item.completed_at)}
+              ✓ {STATUS_LABELS.done} · {formatDayMonth(item.completed_at)}
             </span>
           ) : null}
           <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
@@ -417,12 +418,15 @@ export default async function ItemPage({ params }: ItemPageProps) {
           )}
         </div>
 
-        <details className="space-y-4">
-          <summary className="flex h-12 cursor-pointer list-none items-center justify-center rounded-2xl bg-accent-soft px-5 text-base font-semibold text-accent-strong transition hover:bg-accent hover:text-accent-contrast [&::-webkit-details-marker]:hidden">
-            {myRating ? "✎ Editar minha nota" : "Dar minha nota"}
-          </summary>
+        <RatingDisclosure
+          summary={myRating ? "✎ Editar minha nota" : "Dar minha nota"}
+          status={item.status}
+          hasMyRating={myRating != null}
+          userId={user.id}
+          itemId={item.id}
+        >
           <RatingForm action={saveRating} item={item} rating={myRating} />
-        </details>
+        </RatingDisclosure>
 
         <ItemForm action={updateItem} item={item} mode="edit" />
       </section>

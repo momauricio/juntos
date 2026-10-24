@@ -91,8 +91,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   const items = (data ?? []) as ItemWithRatings[];
-  const memberNames = space.members.map((member) => member.displayName);
+  const memberDisplayNames = space.members.map((member) => member.displayName);
   const isWaiting = space.members.length < 2;
+  // Nomes de quem divide o espaço: autoria das ideias e iniciais de quem deu nota.
+  const memberNames: Record<string, string> = Object.fromEntries(
+    space.members.map((member) => [member.userId, member.displayName]),
+  );
 
   return (
     <main className="px-4 pb-24 pt-8 sm:pb-12">
@@ -103,11 +107,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               Juntos
             </p>
             <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-              {spaceDisplayName(space.name, memberNames)}
+              {spaceDisplayName(space.name, memberDisplayNames)}
             </h1>
           </div>
           <div aria-hidden="true" className="flex -space-x-2 pt-6">
-            {memberNames.map((name, index) => (
+            {memberDisplayNames.map((name, index) => (
               <Avatar
                 key={index}
                 label={initial(name)}
@@ -136,7 +140,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
         <UrlItemFilters type={selectedType} status={selectedStatus} />
 
-        <ItemList items={items} />
+        <ItemList items={items} memberNames={memberNames} />
       </section>
 
       {firstParam(params["bem-vindo"]) === "1" ? <WelcomeToast /> : null}

@@ -36,3 +36,11 @@ export type Rating = {
   created_at: string;
   updated_at: string;
 };
+
+export type Profile = {
+  id: string;
+  display_name: string;
+  // Quando a pessoa passou pela tela "Seu nome" (null = ainda não passou).
+  onboarded_at: string | null;
+  created_at: string;
+};

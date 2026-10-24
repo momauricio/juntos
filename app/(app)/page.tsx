@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { UrlItemFilters } from "@/components/item-filters";
 import { ItemList, type ItemWithRatings } from "@/components/item-list";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 import type { ItemStatus, ItemType } from "@/lib/types";
 
@@ -49,7 +50,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(signInPathWithNext(null));
   }
 
   const { data: membership } = await supabase

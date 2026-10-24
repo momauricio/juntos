@@ -44,3 +44,18 @@ accounts in the same couple space and a third account outside it.
      `updated_by`/`updated_at` are unchanged (only the rating row changes).
    - As B, move an item to a space B is not a member of and confirm it fails
      with a row-level security violation; the item stays in its space.
+
+5. **Ratings use the 1–10 scale**
+   - Apply `20261020120000_ratings_scale_1_10.sql` and sign in as account A.
+   - Call `complete_item_with_rating` on a non-restaurant item with
+     `p_score = 10`. Confirm it saves and the item is marked done.
+   - Call it with `p_score = 0` and with `p_score = 11`. Confirm both raise
+     `standard_rating_shape`.
+   - Call it on a restaurant item with `p_food = 9`, `p_service = 10`,
+     `p_ambiance = 6`. Confirm it saves and the item list shows "Nota 8,3".
+   - Call it on a restaurant item with `p_food = 11`. Confirm it raises
+     `restaurant_rating_shape`.
+   - Directly insert or update a `ratings` row with `food`, `service`,
+     `ambiance`, or `score` set to 11. Confirm it violates the matching
+     `ratings_*_check` constraint.
+   - Confirm pre-existing ratings with values 1–5 are unchanged and still valid.

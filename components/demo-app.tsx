@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { TYPE_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { assertScore } from "@/lib/ratings";
+import {
+  filterItems,
+  ratingSavedMessage,
+  statusFilterAfterRating,
+  typeFilterAfterRating,
+} from "@/lib/demo/after-rating";
 import type { Item, ItemStatus, ItemType } from "@/lib/types";
 import {
   addItem,
@@ -36,6 +42,10 @@ type Screen =
   | { name: "trip-detail"; tripId: string }
   | { name: "settings" };
 
+type MessageAction = { forMessage: string; label: string; onClick: () => void };
+
+const HIGHLIGHT_MS = 2000;
+
 function formatScore(value: number | null) {
   if (value == null) return null;
   return value.toLocaleString("pt-BR", {
@@ -48,8 +58,10 @@ export function DemoApp() {
   const [state, setState] = useState<DemoState | null>(null);
   const [screen, setScreen] = useState<Screen>({ name: "hub" });
   const [message, setMessage] = useState<string | null>(null);
+  const [messageAction, setMessageAction] = useState<MessageAction | null>(null);
   const [typeFilter, setTypeFilter] = useState<ItemType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<ItemStatus | "all">("want");
+  const [highlightItemId, setHighlightItemId] = useState<string | null>(null);
 
   useEffect(() => {
     // localStorage só existe no cliente; o primeiro render é o do servidor.
@@ -63,11 +75,7 @@ export function DemoApp() {
 
   const filteredItems = useMemo(() => {
     if (!state) return [];
-    return state.space.items.filter((item) => {
-      const typeOk = typeFilter === "all" || item.type === typeFilter;
-      const statusOk = statusFilter === "all" || item.status === statusFilter;
-      return typeOk && statusOk;
-    });
+    return filterItems(state.space.items, typeFilter, statusFilter);
   }, [state, typeFilter, statusFilter]);
 
   if (!state) {
@@ -89,7 +97,21 @@ export function DemoApp() {
       <DemoShowcaseBanner />
       {message ? (
         <div className="mx-4 mt-4 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-strong">
-          {message}
+          <div className="flex items-center justify-between gap-3">
+            <span>{message}</span>
+            {messageAction && messageAction.forMessage === message ? (
+              <button
+                type="button"
+                className="shrink-0 rounded-lg px-2 py-1 font-medium underline"
+                onClick={() => {
+                  messageAction.onClick();
+                  setMessageAction(null);
+                }}
+              >
+                {messageAction.label}
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -112,6 +134,8 @@ export function DemoApp() {
             statusFilter={statusFilter}
             onTypeFilter={setTypeFilter}
             onStatusFilter={setStatusFilter}
+            highlightItemId={highlightItemId}
+            onHighlightDone={() => setHighlightItemId(null)}
             onOpen={(itemId) => setScreen({ name: "detail", itemId })}
             onBack={() => setScreen({ name: "hub" })}
           />
@@ -144,13 +168,22 @@ export function DemoApp() {
                 if (payload.food != null) assertScore(payload.food);
                 if (payload.service != null) assertScore(payload.service);
                 if (payload.ambiance != null) assertScore(payload.ambiance);
+                const item = space.items.find((i) => i.id === screen.itemId);
+                const wasWant = item?.status === "want";
                 const nextSpace = upsertRating(space, {
                   itemId: screen.itemId,
                   ratedBy: user.id,
                   ...payload,
                 });
                 persist({ user, space: nextSpace });
-                setMessage("Nota salva.");
+                if (item) {
+                  setStatusFilter(statusFilterAfterRating(statusFilter));
+                  setTypeFilter(typeFilterAfterRating(typeFilter, item.type));
+                  setHighlightItemId(item.id);
+                }
+                const text = ratingSavedMessage(item?.title ?? "", wasWant);
+                setMessage(text);
+                setMessageAction(wasWant ? { forMessage: text, label: "Ver Queremos", onClick: () => setStatusFilter("want") } : null);
                 setScreen({ name: "ideas" });
               } catch (error) {
                 setMessage(
@@ -241,6 +274,8 @@ function Home({
   statusFilter,
   onTypeFilter,
   onStatusFilter,
+  highlightItemId,
+  onHighlightDone,
   onOpen,
   onBack,
 }: {
@@ -250,9 +285,26 @@ function Home({
   statusFilter: ItemStatus | "all";
   onTypeFilter: (v: ItemType | "all") => void;
   onStatusFilter: (v: ItemStatus | "all") => void;
+  highlightItemId: string | null;
+  onHighlightDone: () => void;
   onOpen: (id: string) => void;
   onBack: () => void;
 }) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const onHighlightDoneRef = useRef(onHighlightDone);
+  useEffect(() => {
+    onHighlightDoneRef.current = onHighlightDone;
+  });
+
+  useEffect(() => {
+    if (!highlightItemId) return;
+    const el = listRef.current?.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(highlightItemId)}"]`);
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+    const timeout = window.setTimeout(() => onHighlightDoneRef.current(), HIGHLIGHT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [highlightItemId]);
+
   return (
     <div className="space-y-4">
       <button type="button" className="text-sm text-cream/70" onClick={onBack}>
@@ -289,15 +341,15 @@ function Home({
           Nenhuma ideia ainda
         </p>
       ) : (
-        <ul className="space-y-2">
+        <ul ref={listRef} className="space-y-2">
           {items.map((item) => {
             const score = ratingForItem(space, item.id);
             return (
-              <li key={item.id}>
+              <li key={item.id} data-item-id={item.id}>
                 <button
                   type="button"
                   onClick={() => onOpen(item.id)}
-                  className="flex w-full items-start justify-between gap-3 rounded-2xl bg-surface px-4 py-3 text-left shadow-sm shadow-accent-strong/5"
+                  className={`flex w-full items-start justify-between gap-3 rounded-2xl bg-surface px-4 py-3 text-left shadow-sm shadow-accent-strong/5 transition-shadow duration-300 ${item.id === highlightItemId ? "ring-2 ring-accent" : ""}`}
                 >
                   <div>
                     <p className="font-medium text-accent-strong">{item.title}</p>

@@ -340,6 +340,7 @@ export function upsertRating(
     service: input.service ?? null,
     ambiance: input.ambiance ?? null,
     score: input.score ?? null,
+    comment: null,
     created_at: existing?.created_at ?? stamp,
     updated_at: stamp,
   };

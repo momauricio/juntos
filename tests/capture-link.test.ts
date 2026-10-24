@@ -5,6 +5,7 @@ import {
   normalizeLink,
   parseLink,
   parseSavedStatus,
+  SAVED_DONE_RATING_PROMPT,
   savedRedirectPath,
   savedToastCopy,
 } from "@/lib/capture-link";
@@ -123,6 +124,12 @@ describe("saved toast", () => {
     expect(savedToastCopy("done")).toBe("Salvo em Já fizemos 💛");
   });
 
+  it("asks for the rating after saving as done", () => {
+    expect(SAVED_DONE_RATING_PROMPT).toBe(
+      "Salvo em Já fizemos 💛 Que nota você dá?",
+    );
+  });
+
   it("parses the salvo param", () => {
     expect(parseSavedStatus("want")).toBe("want");
     expect(parseSavedStatus(["done", "want"])).toBe("done");
@@ -133,7 +140,9 @@ describe("saved toast", () => {
 
 describe("savedRedirectPath", () => {
   it("opens the item when saved as done", () => {
-    expect(savedRedirectPath("done", "abc-123")).toBe("/items/abc-123");
+    expect(savedRedirectPath("done", "abc-123")).toBe(
+      "/items/abc-123?salvo=done",
+    );
   });
 
   it("goes back to the board with the toast when saved as want", () => {

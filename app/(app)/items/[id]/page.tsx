@@ -3,9 +3,18 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { ItemForm, type ItemFormState } from "@/components/item-form";
+import { RatingDisclosure } from "@/components/rating-disclosure";
 import { RatingForm, type RatingFormState } from "@/components/rating-form";
+import { SavedRatingPrompt } from "@/components/saved-rating-prompt";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
-import { assertScore, displayRating, restaurantAverage } from "@/lib/ratings";
+import {
+  assertScore,
+  COMMENT_MAX_LENGTH,
+  coupleScore,
+  formatScore,
+  personAverage,
+} from "@/lib/ratings";
+import { addedByLabel, editedByLabel } from "@/lib/relative-time";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 import type { Item, Rating } from "@/lib/types";
@@ -32,43 +41,28 @@ function scoreValue(formData: FormData, key: string) {
   return value;
 }
 
-function formatRating(value: number) {
-  return value.toLocaleString("pt-BR", {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: 0,
-  });
-}
-
-function ratingLabel(item: Pick<Item, "type">, rating: Rating) {
-  const value = displayRating(rating);
-
-  if (value == null) {
-    return null;
-  }
-
-  return `${item.type === "restaurant" ? "Média" : "Nota"} ${formatRating(
-    value,
-  )}`;
-}
-
-function restaurantDetails(rating: Rating) {
+function ratingChips(rating: Rating) {
   if (
-    rating.food == null ||
-    rating.service == null ||
-    rating.ambiance == null
+    rating.food != null &&
+    rating.service != null &&
+    rating.ambiance != null
   ) {
-    return null;
+    return [
+      `Comida ${rating.food}`,
+      `Atendimento ${rating.service}`,
+      `Ambiente ${rating.ambiance}`,
+    ];
   }
 
-  const average = restaurantAverage(
-    rating.food,
-    rating.service,
-    rating.ambiance,
-  );
+  return rating.score != null ? [`Nota ${rating.score}`] : [];
+}
 
-  return `Comida ${rating.food} · Atendimento ${rating.service} · Ambiente ${
-    rating.ambiance
-  } · Média ${formatRating(average)}`;
+function formatDayMonth(timestamp: string) {
+  return new Date(timestamp).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
 }
 
 export async function generateMetadata({
@@ -122,36 +116,62 @@ export default async function ItemPage({ params }: ItemPageProps) {
   }
 
   const item = data as Item;
-  const rating = ((data as Item & { ratings: Rating[] | null }).ratings ??
-    [])[0] ?? null;
-  const currentRatingLabel = rating ? ratingLabel(item, rating) : null;
-  const currentRestaurantDetails =
-    item.type === "restaurant" && rating ? restaurantDetails(rating) : null;
-  const profileIds = Array.from(
-    new Set(
-      [item.created_by, rating?.rated_by].filter(
-        (profileId): profileId is string => Boolean(profileId),
-      ),
-    ),
-  );
-  let profiles: ProfileRow[] = [];
+  const ratings = (data as Item & { ratings: Rating[] | null }).ratings ?? [];
 
-  if (profileIds.length > 0) {
-    const { data: profileRows } = await supabase
-      .from("profiles")
-      .select("id,display_name")
-      .in("id", profileIds);
+  const { data: memberRows, error: membersError } = await supabase
+    .from("space_members")
+    .select("user_id")
+    .eq("space_id", membership.space_id)
+    .order("joined_at", { ascending: true });
 
-    profiles = (profileRows ?? []) as ProfileRow[];
+  if (membersError) {
+    throw new Error("Não foi possível carregar os membros.");
   }
 
-  const profilesById = new Map(
-    profiles.map((profile) => [profile.id, profile.display_name]),
+  const memberIds = (memberRows ?? []).map(
+    (member) => member.user_id as string,
   );
-  const creatorName = profilesById.get(item.created_by) ?? "Pessoa do espaço";
-  const lastRaterName = rating
-    ? (profilesById.get(rating.rated_by) ?? "Pessoa do espaço")
-    : null;
+  const personIds = Array.from(
+    new Set([
+      ...memberIds,
+      ...ratings.map((rating) => rating.rated_by),
+      item.created_by,
+      ...(item.updated_by ? [item.updated_by] : []),
+    ]),
+  );
+  const { data: profileRows } = await supabase
+    .from("profiles")
+    .select("id,display_name")
+    .in("id", personIds);
+
+  const profilesById = new Map(
+    ((profileRows ?? []) as ProfileRow[]).map((profile) => [
+      profile.id,
+      profile.display_name,
+    ]),
+  );
+  const nameOf = (profileId: string) =>
+    profilesById.get(profileId) ??
+    (profileId === user.id ? "Você" : "Pessoa do espaço");
+  const creatorName = nameOf(item.created_by);
+  const editedLabel = editedByLabel(item, profilesById);
+  const ratingsByPerson = new Map(
+    ratings.map((rating) => [rating.rated_by, rating]),
+  );
+  const people = Array.from(
+    new Set([...memberIds, ...ratings.map((rating) => rating.rated_by)]),
+  ).map((personId) => ({
+    id: personId,
+    name: nameOf(personId),
+    rating: ratingsByPerson.get(personId) ?? null,
+  }));
+  const raters = people.filter((person) => person.rating);
+  const myRating = ratingsByPerson.get(user.id) ?? null;
+  const couple = coupleScore(ratings);
+  const coupleCaption =
+    raters.length === 1
+      ? `só ${raters[0].name} deu nota até agora`
+      : "média de vocês dois";
 
   async function updateItem(
     _state: ItemFormState,
@@ -244,6 +264,14 @@ export default async function ItemPage({ params }: ItemPageProps) {
       notFound();
     }
 
+    const comment = formValue(formData, "comment");
+
+    if (comment.length > COMMENT_MAX_LENGTH) {
+      return {
+        error: `O comentário pode ter até ${COMMENT_MAX_LENGTH} caracteres.`,
+      };
+    }
+
     let ratingParams:
       | {
           p_item_id: string;
@@ -251,6 +279,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
           p_service: number;
           p_ambiance: number;
           p_score: null;
+          p_comment: string | null;
         }
       | {
           p_item_id: string;
@@ -258,6 +287,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
           p_service: null;
           p_ambiance: null;
           p_score: number;
+          p_comment: string | null;
         };
 
     try {
@@ -269,6 +299,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
               p_service: scoreValue(formData, "service"),
               p_ambiance: scoreValue(formData, "ambiance"),
               p_score: null,
+              p_comment: comment || null,
             }
           : {
               p_item_id: actionItem.id as string,
@@ -276,6 +307,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
               p_service: null,
               p_ambiance: null,
               p_score: scoreValue(formData, "score"),
+              p_comment: comment || null,
             };
     } catch {
       return { error: "Informe uma nota de 1 a 10." };
@@ -296,45 +328,111 @@ export default async function ItemPage({ params }: ItemPageProps) {
   return (
     <main className="px-4 pb-24 pt-8 sm:pb-12">
       <section className="mx-auto w-full max-w-2xl space-y-6">
-        <Link
-          href="/"
-          className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-strong transition hover:text-accent"
-        >
-          Voltar para a lista
-        </Link>
+        {item.status === "done" ? (
+          <Link
+            href="/?status=done"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-strong transition hover:text-accent"
+          >
+            ← {STATUS_LABELS.done}
+          </Link>
+        ) : (
+          <Link
+            href="/"
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-strong transition hover:text-accent"
+          >
+            Voltar para a lista
+          </Link>
+        )}
 
         <div className="space-y-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-            {TYPE_LABELS[item.type]} · {STATUS_LABELS[item.status]}
-          </p>
+          {item.status === "done" && item.completed_at ? (
+            <span className="inline-flex rounded-2xl bg-accent-soft px-3 py-1 text-sm font-semibold text-accent-strong">
+              ✓ {STATUS_LABELS.done} · {formatDayMonth(item.completed_at)}
+            </span>
+          ) : null}
           <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             {item.title}
           </h1>
-          <p className="text-base leading-7 text-foreground/70">
-            Marque como feito, salve a nota compartilhada e ajuste título, URL
-            ou notas quando precisarem.
+          <p className="text-base text-foreground/70">
+            {TYPE_LABELS[item.type]}
           </p>
           <div className="flex flex-col gap-1 text-sm text-foreground/65 sm:flex-row sm:gap-4">
-            <p>Criada por {creatorName}</p>
-            {lastRaterName ? <p>Última nota por {lastRaterName}</p> : null}
+            <p>{addedByLabel(creatorName, item.created_at)}</p>
+            {editedLabel ? <p>{editedLabel}</p> : null}
           </div>
         </div>
 
         <div className="rounded-3xl bg-surface p-6 ring-1 ring-border">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-            Nota atual
-          </p>
-          {currentRatingLabel ? (
-            <div className="mt-3 space-y-2">
-              <p className="font-serif text-2xl font-semibold tracking-tight">
-                {currentRatingLabel}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
+                Nota do casal
               </p>
-              {currentRestaurantDetails ? (
-                <p className="text-sm leading-6 text-foreground/70">
-                  {currentRestaurantDetails}
+              {couple != null ? (
+                <p className="mt-1 text-sm text-foreground/70">
+                  {coupleCaption}
                 </p>
               ) : null}
             </div>
+            {couple != null ? (
+              <p className="font-serif text-5xl font-semibold tracking-tight text-accent">
+                {formatScore(couple)}
+              </p>
+            ) : null}
+          </div>
+
+          {couple != null ? (
+            <ul className="mt-5 divide-y divide-border border-t border-border">
+              {people.map((person) => {
+                const average = person.rating
+                  ? personAverage(person.rating)
+                  : null;
+
+                return (
+                  <li key={person.id} className="space-y-3 py-4 last:pb-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span
+                          aria-hidden
+                          className="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-contrast"
+                        >
+                          {person.name.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="font-semibold">{person.name}</span>
+                      </div>
+                      {average != null ? (
+                        <span className="rounded-2xl bg-accent-soft px-3 py-1 text-sm font-semibold text-accent-strong">
+                          {formatScore(average)}
+                        </span>
+                      ) : null}
+                    </div>
+                    {person.rating ? (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          {ratingChips(person.rating).map((chip) => (
+                            <span
+                              key={chip}
+                              className="rounded-2xl bg-surface-muted px-3 py-1 text-sm font-medium text-foreground/80"
+                            >
+                              {chip}
+                            </span>
+                          ))}
+                        </div>
+                        {person.rating.comment ? (
+                          <p className="text-sm italic leading-6 text-foreground/70">
+                            “{person.rating.comment}”
+                          </p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p className="text-sm text-foreground/65">
+                        {person.name} ainda não deu nota
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           ) : (
             <p className="mt-3 text-sm leading-6 text-foreground/70">
               Ainda sem nota. Salvem a primeira avaliação quando fizerem esta
@@ -343,7 +441,16 @@ export default async function ItemPage({ params }: ItemPageProps) {
           )}
         </div>
 
-        <RatingForm action={saveRating} item={item} rating={rating} />
+        <RatingDisclosure
+          summary={myRating ? "✎ Editar minha nota" : "Dar minha nota"}
+          status={item.status}
+          hasMyRating={myRating != null}
+          userId={user.id}
+          itemId={item.id}
+        >
+          <SavedRatingPrompt />
+          <RatingForm action={saveRating} item={item} rating={myRating} />
+        </RatingDisclosure>
 
         <ItemForm action={updateItem} item={item} mode="edit" />
       </section>

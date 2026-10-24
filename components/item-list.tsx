@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { displayRating } from "@/lib/ratings";
+import { addedByLabel, UNKNOWN_AUTHOR_NAME } from "@/lib/relative-time";
 import type { Item, Rating } from "@/lib/types";
 
 export type ItemWithRatings = Item & {
@@ -10,6 +11,7 @@ export type ItemWithRatings = Item & {
 
 type ItemListProps = {
   items: ItemWithRatings[];
+  authorNames?: Record<string, string>;
 };
 
 function ratingLabel(rating: Rating) {
@@ -25,7 +27,7 @@ function ratingLabel(rating: Rating) {
   })}`;
 }
 
-export function ItemList({ items }: ItemListProps) {
+export function ItemList({ items, authorNames }: ItemListProps) {
   if (items.length === 0) {
     return (
       <div className="rounded-3xl bg-surface px-6 py-12 text-center ring-1 ring-border">
@@ -59,6 +61,12 @@ export function ItemList({ items }: ItemListProps) {
                 </h2>
                 <p className="mt-2 text-sm text-foreground/65">
                   {TYPE_LABELS[item.type]}
+                </p>
+                <p className="mt-1 text-xs text-foreground/60">
+                  {addedByLabel(
+                    authorNames?.[item.created_by] ?? UNKNOWN_AUTHOR_NAME,
+                    item.created_at,
+                  )}
                 </p>
               </div>
               <span className="shrink-0 rounded-2xl bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-strong">

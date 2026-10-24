@@ -33,6 +33,7 @@ export type Rating = {
   service: number | null;
   ambiance: number | null;
   score: number | null;
+  comment: string | null;
   created_at: string;
   updated_at: string;
 };

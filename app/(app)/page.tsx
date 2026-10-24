@@ -92,7 +92,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const memberIds = (memberRows ?? []).map(
     (member) => member.user_id as string,
   );
-  const authorNames: Record<string, string> = {};
+  // Nomes de quem divide o espaço: autoria das ideias e iniciais de quem deu nota.
+  const memberNames: Record<string, string> = {};
 
   if (memberIds.length > 0) {
     const { data: profileRows } = await supabase
@@ -101,7 +102,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       .in("id", memberIds);
 
     for (const profile of profileRows ?? []) {
-      authorNames[profile.id as string] = profile.display_name as string;
+      memberNames[profile.id as string] = profile.display_name as string;
     }
   }
 
@@ -127,7 +128,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
         <UrlItemFilters type={selectedType} status={selectedStatus} />
 
-        <ItemList items={items} authorNames={authorNames} />
+        <ItemList items={items} memberNames={memberNames} />
       </section>
     </main>
   );

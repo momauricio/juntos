@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
-import { displayRating } from "@/lib/ratings";
+import { coupleScore, formatScore } from "@/lib/ratings";
 import { addedByLabel, UNKNOWN_AUTHOR_NAME } from "@/lib/relative-time";
 import type { Item, Rating } from "@/lib/types";
 
@@ -11,23 +11,10 @@ export type ItemWithRatings = Item & {
 
 type ItemListProps = {
   items: ItemWithRatings[];
-  authorNames?: Record<string, string>;
+  memberNames: Record<string, string>;
 };
 
-function ratingLabel(rating: Rating) {
-  const value = displayRating(rating);
-
-  if (value == null) {
-    return null;
-  }
-
-  return `Nota ${value.toLocaleString("pt-BR", {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: 0,
-  })}`;
-}
-
-export function ItemList({ items, authorNames }: ItemListProps) {
+export function ItemList({ items, memberNames }: ItemListProps) {
   if (items.length === 0) {
     return (
       <div className="rounded-3xl bg-surface px-6 py-12 text-center ring-1 ring-border">
@@ -45,8 +32,8 @@ export function ItemList({ items, authorNames }: ItemListProps) {
   return (
     <div className="space-y-3">
       {items.map((item) => {
-        const rating = item.ratings?.[0];
-        const ratingText = rating ? ratingLabel(rating) : null;
+        const ratings = item.ratings ?? [];
+        const couple = coupleScore(ratings);
 
         return (
           <Link
@@ -64,7 +51,7 @@ export function ItemList({ items, authorNames }: ItemListProps) {
                 </p>
                 <p className="mt-1 text-xs text-foreground/60">
                   {addedByLabel(
-                    authorNames?.[item.created_by] ?? UNKNOWN_AUTHOR_NAME,
+                    memberNames[item.created_by] ?? UNKNOWN_AUTHOR_NAME,
                     item.created_at,
                   )}
                 </p>
@@ -74,10 +61,27 @@ export function ItemList({ items, authorNames }: ItemListProps) {
               </span>
             </div>
 
-            {ratingText ? (
-              <p className="mt-4 text-sm font-medium text-foreground/75">
-                {ratingText}
-              </p>
+            {couple != null ? (
+              <div className="mt-4 flex items-center gap-3">
+                <p className="text-sm font-medium text-foreground/75">
+                  Nota do casal {formatScore(couple)}
+                </p>
+                <div className="flex -space-x-1.5">
+                  {ratings.map((rating) => {
+                    const name = memberNames[rating.rated_by];
+
+                    return (
+                      <span
+                        key={rating.id}
+                        title={name}
+                        className="flex size-6 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-accent-contrast ring-2 ring-surface"
+                      >
+                        {name ? name.charAt(0).toUpperCase() : "?"}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
             ) : null}
           </Link>
         );

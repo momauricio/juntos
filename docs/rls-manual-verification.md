@@ -80,10 +80,37 @@ accounts in the same couple space and a third account outside it.
    - Call it with `p_score = 0` and with `p_score = 11`. Confirm both raise
      `standard_rating_shape`.
    - Call it on a restaurant item with `p_food = 9`, `p_service = 10`,
-     `p_ambiance = 6`. Confirm it saves and the item list shows "Nota 8,3".
+     `p_ambiance = 6`. Confirm it saves and the item list shows "Nota do casal
+     8,3".
    - Call it on a restaurant item with `p_food = 11`. Confirm it raises
      `restaurant_rating_shape`.
    - Directly insert or update a `ratings` row with `food`, `service`,
      `ambiance`, or `score` set to 11. Confirm it violates the matching
      `ratings_*_check` constraint.
    - Confirm pre-existing ratings with values 1–5 are unchanged and still valid.
+
+9. **Each person has their own rating**
+   - Apply `20261022120000_ratings_per_person.sql`. Confirm a rating saved
+     before the migration still shows as the rating of whoever saved it
+     (`rated_by` and values unchanged, `comment` null).
+   - As A, call `complete_item_with_rating` on a `want` restaurant with
+     `p_food = 9`, `p_service = 8`, `p_ambiance = 9`. Confirm the item is
+     marked done, the detail shows "8,7" and "{B} ainda não deu nota".
+   - As B, call it on the same item with `p_food = 9`, `p_service = 7`,
+     `p_ambiance = 8` and a `p_comment`. Confirm there are two `ratings` rows,
+     the detail shows "Nota do casal 8,3" with both rows and chips, and the
+     item's `completed_at` did not change.
+   - As A, rate the same item again. Confirm it still has two rows and A's
+     row was updated.
+   - Call it with a `p_comment` longer than 280 characters. Confirm it raises
+     `comment_too_long`. A comment with only spaces is saved as null.
+   - As B, `update` and `delete` A's row by `id` through the API. Confirm no
+     rows are affected and A's row is unchanged. B can update and delete B's
+     own row.
+   - As B, insert a row with `rated_by` set to A. Confirm the saved row has
+     `rated_by` = B.
+   - As C, confirm no rows are returned for A/B's ratings and that both the
+     RPC (`forbidden`) and a direct insert on A/B's item fail.
+   - Without a session (anon), confirm calling `complete_item_with_rating`
+     returns permission denied, and that the old 5-argument signature no
+     longer exists.

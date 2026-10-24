@@ -251,6 +251,7 @@ export function sampleState(): DemoState {
       service: 8,
       ambiance: 9,
       score: null,
+      comment: "Massa caseira impecável, vale voltar só pelo tiramisù.",
       created_at: cantinaDoneAt,
       updated_at: cantinaDoneAt,
     },

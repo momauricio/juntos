@@ -12,6 +12,8 @@ import {
   formatScore,
   personAverage,
 } from "@/lib/ratings";
+import { addedByLabel, editedByLabel } from "@/lib/relative-time";
+import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 import type { Item, Rating } from "@/lib/types";
 
@@ -69,7 +71,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(signInPathWithNext(`/items/${id}`));
   }
 
   const { data: membership } = await supabase
@@ -118,6 +120,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
       ...memberIds,
       ...ratings.map((rating) => rating.rated_by),
       item.created_by,
+      ...(item.updated_by ? [item.updated_by] : []),
     ]),
   );
   const { data: profileRows } = await supabase
@@ -135,6 +138,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
     profilesById.get(profileId) ??
     (profileId === user.id ? "Você" : "Pessoa do espaço");
   const creatorName = nameOf(item.created_by);
+  const editedLabel = editedByLabel(item, profilesById);
   const ratingsByPerson = new Map(
     ratings.map((rating) => [rating.rated_by, rating]),
   );
@@ -173,7 +177,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
     } = await actionSupabase.auth.getUser();
 
     if (!actionUser) {
-      redirect("/login");
+      redirect(signInPathWithNext(`/items/${id}`));
     }
 
     const { data: actionMembership } = await actionSupabase
@@ -216,7 +220,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
     } = await actionSupabase.auth.getUser();
 
     if (!actionUser) {
-      redirect("/login");
+      redirect(signInPathWithNext(`/items/${id}`));
     }
 
     const { data: actionMembership } = await actionSupabase
@@ -336,7 +340,10 @@ export default async function ItemPage({ params }: ItemPageProps) {
           <p className="text-base text-foreground/70">
             {TYPE_LABELS[item.type]}
           </p>
-          <p className="text-sm text-foreground/65">Criada por {creatorName}</p>
+          <div className="flex flex-col gap-1 text-sm text-foreground/65 sm:flex-row sm:gap-4">
+            <p>{addedByLabel(creatorName, item.created_at)}</p>
+            {editedLabel ? <p>{editedLabel}</p> : null}
+          </div>
         </div>
 
         <div className="rounded-3xl bg-surface p-6 ring-1 ring-border">

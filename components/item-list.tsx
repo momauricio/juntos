@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { coupleScore, formatScore } from "@/lib/ratings";
+import { addedByLabel, UNKNOWN_AUTHOR_NAME } from "@/lib/relative-time";
 import type { Item, Rating } from "@/lib/types";
 
 export type ItemWithRatings = Item & {
@@ -47,6 +48,12 @@ export function ItemList({ items, memberNames }: ItemListProps) {
                 </h2>
                 <p className="mt-2 text-sm text-foreground/65">
                   {TYPE_LABELS[item.type]}
+                </p>
+                <p className="mt-1 text-xs text-foreground/60">
+                  {addedByLabel(
+                    memberNames[item.created_by] ?? UNKNOWN_AUTHOR_NAME,
+                    item.created_at,
+                  )}
                 </p>
               </div>
               <span className="shrink-0 rounded-2xl bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-strong">

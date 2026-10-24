@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { ItemForm, type ItemFormState } from "@/components/item-form";
 import { RatingDisclosure } from "@/components/rating-disclosure";
 import { RatingForm, type RatingFormState } from "@/components/rating-form";
+import { SavedRatingPrompt } from "@/components/saved-rating-prompt";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import {
   assertScore,
@@ -447,6 +448,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
           userId={user.id}
           itemId={item.id}
         >
+          <SavedRatingPrompt />
           <RatingForm action={saveRating} item={item} rating={myRating} />
         </RatingDisclosure>
 

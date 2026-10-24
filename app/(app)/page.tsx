@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { Avatar, initial } from "@/components/avatar";
 import { UrlItemFilters } from "@/components/item-filters";
 import { ItemList, type ItemWithRatings } from "@/components/item-list";
+import { SavedToast } from "@/components/saved-toast";
 import { WelcomeToast } from "@/components/welcome-toast";
+import { parseSavedStatus } from "@/lib/capture-link";
 import { spaceDisplayName } from "@/lib/invites";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { signInPathWithNext } from "@/lib/auth-callback";
@@ -27,6 +29,7 @@ type HomePageProps = {
     type?: string | string[];
     status?: string | string[];
     "bem-vindo"?: string | string[];
+    salvo?: string | string[];
   }>;
 };
 
@@ -54,6 +57,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const selectedType = parseType(params.type);
   const selectedStatus = parseStatus(params.status);
+  const saved = parseSavedStatus(params.salvo);
 
   const supabase = await createClient();
   const {
@@ -143,7 +147,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <ItemList items={items} memberNames={memberNames} />
       </section>
 
+      <Link
+        href="/colar"
+        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 items-center gap-2 rounded-3xl bg-accent px-6 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110 sm:right-8"
+      >
+        <span aria-hidden="true">＋</span>
+        Colar link
+      </Link>
+
       {firstParam(params["bem-vindo"]) === "1" ? <WelcomeToast /> : null}
+      {saved ? <SavedToast status={saved} /> : null}
     </main>
   );
 }

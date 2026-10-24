@@ -14,3 +14,12 @@ export const STATUS_LABELS: Record<ItemStatus | "all", string> = {
   want: "Queremos",
   done: "Já fizemos",
 };
+
+export const TYPE_EMOJI: Record<ItemType, string> = {
+  restaurant: "🍝",
+  food_idea: "☕",
+  tourist_spot: "🏖️",
+  movie: "🎬",
+  city: "🏙️",
+  event: "🎟️",
+};

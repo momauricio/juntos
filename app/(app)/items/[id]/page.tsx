@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -61,6 +62,20 @@ function formatDayMonth(timestamp: string) {
     month: "2-digit",
     timeZone: "America/Sao_Paulo",
   });
+}
+
+export async function generateMetadata({
+  params,
+}: ItemPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("items")
+    .select("title")
+    .eq("id", id)
+    .maybeSingle();
+
+  return { title: data?.title?.trim() || "Ideia" };
 }
 
 export default async function ItemPage({ params }: ItemPageProps) {

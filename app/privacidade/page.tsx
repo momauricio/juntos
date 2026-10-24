@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { BackLink } from "@/components/auth-ui";
 
 export const metadata: Metadata = {
-  title: "Privacidade · Juntos",
+  title: "Privacidade",
 };
 
 // Página provisória: o texto jurídico fica fora do escopo do PR2.

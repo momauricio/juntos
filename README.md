@@ -97,8 +97,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 For a quick end-to-end check with two people or two browser profiles:
 
 1. Create account A and account B (or use demo names).
-2. Sign in as A, create a space, and share the Sync link.
-3. Sign in as B and join/merge with that link.
+2. Sign in as A, go through "Seu nome" (which creates the space) and share the invite link (`/c/<code>`) from "Agora chama seu par".
+3. Open the link as B, sign in and tap "Entrar no espaço de A" (in demo mode, use the Sync link instead).
 4. Add a restaurant idea from an Instagram paste or URL.
 5. Open the item, mark it done, and save the 3 restaurant scores.
 6. Filter the list by **Já fizemos** and confirm the completed item appears.

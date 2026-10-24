@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import {
@@ -6,6 +7,10 @@ import {
   parseAuthErrorReason,
   signInPathWithNext,
 } from "@/lib/auth-callback";
+
+export const metadata: Metadata = {
+  title: "Erro ao entrar",
+};
 
 type AuthErrorPageProps = {
   searchParams: Promise<{

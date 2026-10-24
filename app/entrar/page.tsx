@@ -4,7 +4,7 @@ import { EntrarForm } from "@/components/entrar-form";
 import { safeRedirectPath } from "@/lib/auth-redirect";
 
 export const metadata: Metadata = {
-  title: "Entrar · Juntos",
+  title: "Entrar",
 };
 
 type EntrarPageProps = {

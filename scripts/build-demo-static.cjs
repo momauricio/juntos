@@ -51,6 +51,7 @@ moveAside("app/entrar");
 moveAside("app/termos");
 moveAside("app/privacidade");
 moveAside("app/onboarding");
+moveAside("app/c");
 moveAside("app/settings");
 moveAside("app/auth");
 moveAside("app/demo");

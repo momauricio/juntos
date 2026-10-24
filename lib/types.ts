@@ -19,6 +19,7 @@ export type Item = {
   notes: string | null;
   status: ItemStatus;
   created_by: string;
+  updated_by?: string | null;
   completed_at: string | null;
   created_at: string;
   updated_at: string;

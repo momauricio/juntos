@@ -5,6 +5,7 @@ import { ItemForm, type ItemFormState } from "@/components/item-form";
 import { RatingForm, type RatingFormState } from "@/components/rating-form";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { assertScore, displayRating, restaurantAverage } from "@/lib/ratings";
+import { addedByLabel, editedByLabel } from "@/lib/relative-time";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 import type { Item, Rating } from "@/lib/types";
@@ -114,7 +115,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
     item.type === "restaurant" && rating ? restaurantDetails(rating) : null;
   const profileIds = Array.from(
     new Set(
-      [item.created_by, rating?.rated_by].filter(
+      [item.created_by, item.updated_by, rating?.rated_by].filter(
         (profileId): profileId is string => Boolean(profileId),
       ),
     ),
@@ -137,6 +138,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
   const lastRaterName = rating
     ? (profilesById.get(rating.rated_by) ?? "Pessoa do espaço")
     : null;
+  const editedLabel = editedByLabel(item, profilesById);
 
   async function updateItem(
     _state: ItemFormState,
@@ -300,7 +302,8 @@ export default async function ItemPage({ params }: ItemPageProps) {
             ou notas quando precisarem.
           </p>
           <div className="flex flex-col gap-1 text-sm text-foreground/65 sm:flex-row sm:gap-4">
-            <p>Criada por {creatorName}</p>
+            <p>{addedByLabel(creatorName, item.created_at)}</p>
+            {editedLabel ? <p>{editedLabel}</p> : null}
             {lastRaterName ? <p>Última nota por {lastRaterName}</p> : null}
           </div>
         </div>

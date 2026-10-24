@@ -85,6 +85,26 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const items = (data ?? []) as ItemWithRatings[];
 
+  const { data: memberRows } = await supabase
+    .from("space_members")
+    .select("user_id")
+    .eq("space_id", membership.space_id);
+  const memberIds = (memberRows ?? []).map(
+    (member) => member.user_id as string,
+  );
+  const authorNames: Record<string, string> = {};
+
+  if (memberIds.length > 0) {
+    const { data: profileRows } = await supabase
+      .from("profiles")
+      .select("id,display_name")
+      .in("id", memberIds);
+
+    for (const profile of profileRows ?? []) {
+      authorNames[profile.id as string] = profile.display_name as string;
+    }
+  }
+
   return (
     <main className="px-4 pb-24 pt-8 sm:pb-12">
       <section className="mx-auto w-full max-w-4xl space-y-6">
@@ -107,7 +127,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
         <UrlItemFilters type={selectedType} status={selectedStatus} />
 
-        <ItemList items={items} />
+        <ItemList items={items} authorNames={authorNames} />
       </section>
     </main>
   );

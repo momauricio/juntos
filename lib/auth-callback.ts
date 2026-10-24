@@ -77,13 +77,48 @@ export function authErrorPath(reason: AuthErrorReason, next: string) {
   return `/auth/erro?${params.toString()}`;
 }
 
-// Vira "/entrar" no PR2, quando a nova tela de entrada existir.
-export function signInPathWithNext(next: string | null | undefined) {
-  const safeNext = safeRedirectPath(next, "");
+// Caminho único da tela de login. Preserva o `next` (filtrado) e o código de
+// convite, quando houver.
+export const SIGN_IN_PATH = "/entrar";
 
-  if (!safeNext) {
-    return "/login";
+export function signInPathWithNext(
+  next: string | null | undefined,
+  code?: string | null,
+) {
+  const params = new URLSearchParams();
+  const safeNext = safeRedirectPath(next, "");
+  const inviteCode = code?.trim();
+
+  if (safeNext) {
+    params.set("next", safeNext);
   }
 
-  return `/login?${new URLSearchParams({ next: safeNext }).toString()}`;
+  if (inviteCode) {
+    params.set("code", inviteCode);
+  }
+
+  const query = params.toString();
+  return query ? `${SIGN_IN_PATH}?${query}` : SIGN_IN_PATH;
+}
+
+// Volta pelo /auth/callback para que o roteamento pós-login (que consulta o
+// banco) fique num lugar só, no servidor.
+export function postLoginCallbackPath(
+  next: string | null | undefined,
+  inviteCode?: string | null,
+) {
+  const params = new URLSearchParams();
+  const safeNext = safeRedirectPath(next, "");
+  const code = inviteCode?.trim();
+
+  if (safeNext) {
+    params.set("next", safeNext);
+  }
+
+  if (code) {
+    params.set("invite_code", code);
+  }
+
+  const query = params.toString();
+  return query ? `/auth/callback?${query}` : "/auth/callback";
 }

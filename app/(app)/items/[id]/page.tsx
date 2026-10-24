@@ -5,6 +5,7 @@ import { ItemForm, type ItemFormState } from "@/components/item-form";
 import { RatingForm, type RatingFormState } from "@/components/rating-form";
 import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
 import { assertScore, displayRating, restaurantAverage } from "@/lib/ratings";
+import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 import type { Item, Rating } from "@/lib/types";
 
@@ -77,7 +78,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(signInPathWithNext(`/items/${id}`));
   }
 
   const { data: membership } = await supabase
@@ -157,7 +158,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
     } = await actionSupabase.auth.getUser();
 
     if (!actionUser) {
-      redirect("/login");
+      redirect(signInPathWithNext(`/items/${id}`));
     }
 
     const { data: actionMembership } = await actionSupabase
@@ -200,7 +201,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
     } = await actionSupabase.auth.getUser();
 
     if (!actionUser) {
-      redirect("/login");
+      redirect(signInPathWithNext(`/items/${id}`));
     }
 
     const { data: actionMembership } = await actionSupabase

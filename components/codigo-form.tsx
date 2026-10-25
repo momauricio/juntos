@@ -12,6 +12,16 @@ import {
 import { useCountdown, useOnline } from "@/components/auth-hooks";
 import { BackLink, OfflineBanner } from "@/components/auth-ui";
 import {
+  BTN_PRIMARY,
+  BTN_WHITE,
+  CARD,
+  ERROR_TEXT,
+  SCREEN,
+  SUBTITLE,
+  TEXT_LINK,
+  TITLE,
+} from "@/components/ui-classes";
+import {
   postLoginCallbackPath,
   signInPathWithNext,
 } from "@/lib/auth-callback";
@@ -35,6 +45,14 @@ type CodigoFormProps = {
   next: string;
   code: string;
 };
+
+// Mockup: "Entrar" desabilitado bem apagado (opacidade .45, sem sombra).
+function dimDisabled(classes: string) {
+  return classes.replace(
+    "disabled:opacity-60",
+    "disabled:opacity-45 disabled:shadow-none",
+  );
+}
 
 const EMPTY_DIGITS = Array.from({ length: OTP_LENGTH }, () => "");
 
@@ -276,19 +294,17 @@ export function CodigoForm({ email, next, code }: CodigoFormProps) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8 text-foreground">
+    <main className={SCREEN}>
       <BackLink href={signInHref} />
 
-      <section className="mt-8 space-y-4">
-        <p aria-hidden="true" className="text-6xl">
+      <section className="mt-2.5">
+        <p aria-hidden="true" className="text-[44px] leading-none">
           📬
         </p>
-        <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          Confere seu e-mail
-        </h1>
-        <p className="text-lg leading-8 text-foreground/70">
+        <h1 className={`${TITLE} mt-2.5`}>Confere seu e-mail</h1>
+        <p className={`${SUBTITLE} mt-3`}>
           Mandamos um código de 6 números para{" "}
-          <strong className="[overflow-wrap:anywhere] font-semibold text-foreground">
+          <strong className="[overflow-wrap:anywhere] font-semibold text-cream">
             {email}
           </strong>
           .
@@ -296,16 +312,16 @@ export function CodigoForm({ email, next, code }: CodigoFormProps) {
       </section>
 
       {isOffline || networkFailed ? (
-        <div className="mt-6">
+        <div className="mt-5">
           <OfflineBanner />
         </div>
       ) : null}
 
-      <div className="mt-8 space-y-5 rounded-[28px] bg-surface p-5 sm:p-6">
+      <div className={`${CARD} mt-7 space-y-4 px-4 py-[22px]`}>
         <div
           role="group"
           aria-label="Código de 6 números"
-          className="flex justify-between gap-2"
+          className="flex justify-between gap-1.5"
         >
           {digits.map((digit, index) => (
             <input
@@ -325,13 +341,13 @@ export function CodigoForm({ email, next, code }: CodigoFormProps) {
               onChange={(event) => handleChange(index, event.target.value)}
               onPaste={(event) => handlePaste(index, event)}
               onKeyDown={(event) => handleKeyDown(index, event)}
-              className="h-16 w-full min-w-0 rounded-2xl border border-[#1a2238]/15 bg-[#fbf8f4] text-center text-3xl font-bold outline-none transition focus:border-2 focus:border-accent read-only:opacity-60"
+              className="h-[58px] w-full min-w-0 max-w-[46px] rounded-[14px] border border-ink/15 bg-[#fbf7f2] text-center text-[28px] font-bold text-ink caret-accent outline-none transition focus:border-2 focus:border-accent read-only:opacity-60"
             />
           ))}
         </div>
 
         {message ? (
-          <p role="alert" className="text-center text-sm font-medium text-[#a3402a]">
+          <p role="alert" className={`${ERROR_TEXT} text-center`}>
             {message}
           </p>
         ) : null}
@@ -341,7 +357,7 @@ export function CodigoForm({ email, next, code }: CodigoFormProps) {
             type="button"
             onClick={resend}
             disabled={isOffline || isResending || resendRemaining > 0}
-            className="flex h-14 w-full items-center justify-center rounded-3xl bg-accent px-4 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110 disabled:opacity-45 disabled:shadow-none"
+            className={dimDisabled(BTN_PRIMARY)}
           >
             {isResending
               ? "Mandando..."
@@ -351,10 +367,10 @@ export function CodigoForm({ email, next, code }: CodigoFormProps) {
           </button>
         ) : null}
 
-        <p className="text-center text-base text-[#1a2238]/70">
+        <p className="text-center text-sm text-ink/65">
           Não chegou? Olha o spam ou{" "}
           {resendRemaining > 0 ? (
-            <strong className="font-semibold text-accent">
+            <strong className="font-bold text-accent">
               reenviar em {formatCountdown(resendRemaining)}
             </strong>
           ) : (
@@ -362,7 +378,7 @@ export function CodigoForm({ email, next, code }: CodigoFormProps) {
               type="button"
               onClick={resend}
               disabled={isOffline || isResending}
-              className="font-semibold text-accent underline underline-offset-2 disabled:opacity-60"
+              className="font-bold text-accent underline underline-offset-2 disabled:opacity-60"
             >
               reenviar
             </button>
@@ -374,23 +390,19 @@ export function CodigoForm({ email, next, code }: CodigoFormProps) {
         type="button"
         onClick={() => verify(token)}
         disabled={!isComplete || isVerifying || isOffline}
-        className={`mt-6 flex h-14 w-full items-center justify-center rounded-3xl px-4 text-lg font-semibold transition disabled:opacity-45 ${
-          isExpired
-            ? "border border-[#1a2238]/15 bg-surface text-foreground hover:brightness-95"
-            : "bg-accent text-accent-contrast shadow-lg shadow-accent/30 hover:brightness-110 disabled:shadow-none"
-        }`}
+        className={`mt-[22px] ${dimDisabled(isExpired ? BTN_WHITE : BTN_PRIMARY)}`}
       >
         {isVerifying ? "Entrando..." : "Entrar"}
       </button>
 
       <Link
         href={signInHref}
-        className="mx-auto mt-6 block w-fit border-b border-foreground/60 pb-0.5 text-base font-semibold text-foreground"
+        className={`${TEXT_LINK} mt-5`}
       >
         Usar outro e-mail
       </Link>
 
-      <p className="mt-6 text-center text-sm text-foreground/60">
+      <p className="mt-[18px] text-center text-[13px] text-cream/55">
         Dica: no celular, o código aparece sozinho acima do teclado.
       </p>
     </main>

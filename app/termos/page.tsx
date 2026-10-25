@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { BackLink } from "@/components/auth-ui";
+import { SCREEN, SUBTITLE, TITLE } from "@/components/ui-classes";
 
 export const metadata: Metadata = {
   title: "Termos",
@@ -9,12 +10,10 @@ export const metadata: Metadata = {
 // Página provisória: o texto jurídico fica fora do escopo do PR2.
 export default function TermosPage() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8 text-foreground">
+    <main className={SCREEN}>
       <BackLink href="/entrar" />
-      <h1 className="mt-8 font-serif text-4xl font-semibold tracking-tight">
-        Termos de uso
-      </h1>
-      <p className="mt-4 text-lg leading-8 text-foreground/70">
+      <h1 className={`${TITLE} mt-2.5`}>Termos de uso</h1>
+      <p className={`${SUBTITLE} mt-3`}>
         Estamos preparando este texto. Em breve ele aparece aqui.
       </p>
     </main>

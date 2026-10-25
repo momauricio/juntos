@@ -30,37 +30,37 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-dvh text-foreground">
-      <header className="sticky top-0 z-20 border-b border-border bg-surface/85 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-4">
+      {/* Navegação discreta, integrada ao gradiente (mockups 06/08/09 não têm barra) */}
+      <header className="px-5 pt-2">
+        <nav
+          aria-label="Navegação principal"
+          className="mx-auto flex w-full max-w-lg items-center justify-end gap-1 text-[13px] font-semibold text-cream/60"
+        >
           <Link
             href="/"
-            className="font-serif text-xl font-semibold tracking-tight text-accent-strong"
+            className="flex h-11 items-center rounded-full px-2.5 transition hover:text-cream"
           >
-            Juntos
+            Lista
           </Link>
-
-          <nav className="flex items-center gap-2 text-sm font-semibold">
-            <Link
-              href="/"
-              className="flex h-11 items-center rounded-2xl px-3 text-foreground/80 transition hover:bg-accent-soft hover:text-accent-strong"
-            >
-              Lista
-            </Link>
-            <Link
-              href="/items/new"
-              aria-label="Nova ideia"
-              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-strong text-2xl leading-none text-accent-contrast transition hover:bg-accent"
+          <Link
+            href="/items/new"
+            aria-label="Nova ideia"
+            className="group flex h-11 w-11 items-center justify-center rounded-full transition hover:text-cream"
+          >
+            <span
+              aria-hidden="true"
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-cream/25 text-lg leading-none transition group-hover:border-cream/50"
             >
               +
-            </Link>
-            <Link
-              href="/settings"
-              className="flex h-11 items-center rounded-2xl px-3 text-foreground/80 transition hover:bg-accent-soft hover:text-accent-strong"
-            >
-              Ajustes
-            </Link>
-          </nav>
-        </div>
+            </span>
+          </Link>
+          <Link
+            href="/settings"
+            className="flex h-11 items-center rounded-full px-2.5 transition hover:text-cream"
+          >
+            Ajustes
+          </Link>
+        </nav>
       </header>
 
       {children}

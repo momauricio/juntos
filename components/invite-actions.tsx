@@ -7,6 +7,12 @@ import { useState } from "react";
 import { useOnline } from "@/components/auth-hooks";
 import { GoogleIcon, OfflineBanner } from "@/components/auth-ui";
 import {
+  BTN_OUTLINE_LG,
+  BTN_PRIMARY,
+  BTN_WHITE,
+  TEXT_LINK_QUIET,
+} from "@/components/ui-classes";
+import {
   AUTH_ERROR_COPY,
   postLoginCallbackPath,
   signInPathWithNext,
@@ -18,11 +24,6 @@ import {
   inviteErrorMessage,
 } from "@/lib/invites";
 import { createClient } from "@/lib/supabase/client";
-
-const PRIMARY_BUTTON =
-  "flex h-14 w-full items-center justify-center gap-3 rounded-3xl bg-accent px-4 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110 disabled:opacity-60";
-const SECONDARY_BUTTON =
-  "flex h-14 w-full items-center justify-center gap-2 rounded-3xl border border-foreground/30 px-4 text-lg font-semibold transition hover:bg-foreground/5 disabled:opacity-60";
 
 function onboardingNext(code: string) {
   return `/onboarding?code=${encodeURIComponent(code)}`;
@@ -47,7 +48,7 @@ function RedeemErrorBlock({ error }: { error: RedeemError | null }) {
     <>
       <ErrorText>{error.message}</ErrorText>
       {error.action ? (
-        <Link href={error.action.href} className={SECONDARY_BUTTON}>
+        <Link href={error.action.href} className={BTN_OUTLINE_LG}>
           {error.action.label}
         </Link>
       ) : null}
@@ -85,25 +86,25 @@ export function InviteSignInActions({ code }: { code: string }) {
   }
 
   return (
-    <div className="mt-auto space-y-4 pt-10">
+    <div className="mt-auto space-y-3 pt-8">
       {!online ? <OfflineBanner /> : null}
       <button
         type="button"
         onClick={handleGoogle}
         disabled={!online || isLoading}
-        className="flex h-14 w-full items-center justify-center gap-3 rounded-3xl bg-surface px-4 text-lg font-semibold text-[#1a2238] transition hover:bg-cream disabled:opacity-60"
+        className={BTN_WHITE}
       >
-        <GoogleIcon />
+        <GoogleIcon className="h-[22px] w-[22px]" />
         Continuar com Google
       </button>
       {failed ? <ErrorText>{AUTH_ERROR_COPY.desconhecido}</ErrorText> : null}
       {online ? (
-        <Link href={signInPathWithNext(next, code)} className={SECONDARY_BUTTON}>
+        <Link href={signInPathWithNext(next, code)} className={BTN_OUTLINE_LG}>
           <span aria-hidden="true">✉️</span>
           Entrar com código no e-mail
         </Link>
       ) : (
-        <button type="button" disabled className={SECONDARY_BUTTON}>
+        <button type="button" disabled className={BTN_OUTLINE_LG}>
           <span aria-hidden="true">✉️</span>
           Entrar com código no e-mail
         </button>
@@ -163,7 +164,7 @@ export function InviteJoinActions(props: RedeemProps) {
   }
 
   return (
-    <div className="mt-auto space-y-4 pt-10">
+    <div className="mt-auto space-y-3 pt-8">
       {!online ? <OfflineBanner /> : null}
       <button
         type="button"
@@ -171,7 +172,7 @@ export function InviteJoinActions(props: RedeemProps) {
         onClick={() =>
           run(() => createClient().rpc("redeem_invite", { p_code: props.code }))
         }
-        className={PRIMARY_BUTTON}
+        className={BTN_PRIMARY}
       >
         Entrar no espaço de {host}
       </button>
@@ -180,7 +181,7 @@ export function InviteJoinActions(props: RedeemProps) {
         type="button"
         disabled={!online || isPending}
         onClick={handleSwitchAccount}
-        className={SECONDARY_BUTTON}
+        className={BTN_OUTLINE_LG}
       >
         Trocar de conta
       </button>
@@ -202,13 +203,13 @@ export function InviteSwitchActions(props: RedeemProps) {
   }
 
   return (
-    <div className="mt-auto space-y-4 pt-10">
+    <div className="mt-auto space-y-3 pt-8">
       {!online ? <OfflineBanner /> : null}
       <button
         type="button"
         disabled={!online || isPending}
         onClick={() => handleSwitch(true)}
-        className={PRIMARY_BUTTON}
+        className={BTN_PRIMARY}
       >
         Trazer e entrar
       </button>
@@ -216,14 +217,14 @@ export function InviteSwitchActions(props: RedeemProps) {
         type="button"
         disabled={!online || isPending}
         onClick={() => handleSwitch(false)}
-        className={SECONDARY_BUTTON}
+        className={BTN_OUTLINE_LG}
       >
         Entrar sem trazer (apaga o meu)
       </button>
       <RedeemErrorBlock error={error} />
       <Link
         href="/"
-        className="mx-auto block w-fit text-lg text-foreground/70 underline underline-offset-4 transition hover:text-foreground"
+        className={TEXT_LINK_QUIET}
       >
         Agora não
       </Link>

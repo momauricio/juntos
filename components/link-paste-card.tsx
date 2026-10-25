@@ -5,6 +5,7 @@ import { type FormEvent, useRef, useState, useTransition } from "react";
 
 import { useOnline } from "@/components/auth-hooks";
 import { OfflineBanner } from "@/components/auth-ui";
+import { CARD, ERROR_TEXT, INPUT } from "@/components/ui-classes";
 import {
   captureLink,
   EMPTY_CLIPBOARD_COPY,
@@ -74,7 +75,7 @@ export function LinkPasteCard({ reviewPath }: { reviewPath: string }) {
   return (
     <>
       {!online ? (
-        <div className="mt-8">
+        <div className="mt-5">
           <OfflineBanner />
         </div>
       ) : null}
@@ -82,19 +83,19 @@ export function LinkPasteCard({ reviewPath }: { reviewPath: string }) {
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="mt-8 space-y-4 rounded-[28px] bg-surface p-6 text-[#1a2238]"
+        className={`${CARD} mt-[22px]`}
       >
         <label
           htmlFor="capture_link"
-          className="flex items-center gap-3 text-xl font-semibold"
+          className="flex items-center gap-2 text-[17px] font-bold"
         >
-          <span aria-hidden="true" className="text-3xl">
+          <span aria-hidden="true" className="text-[22px]">
             📸
           </span>
           Link do Instagram
         </label>
 
-        <div className="flex gap-3">
+        <div className="mt-3 flex gap-2">
           <input
             ref={inputRef}
             id="capture_link"
@@ -114,13 +115,13 @@ export function LinkPasteCard({ reviewPath }: { reviewPath: string }) {
             placeholder="instagram.com/p/…"
             aria-invalid={Boolean(notice?.isError)}
             aria-describedby="capture_link-help"
-            className="h-14 min-w-0 flex-1 rounded-2xl border border-[#1a2238]/15 bg-[#fbf8f4] px-4 text-lg outline-none transition placeholder:text-[#1a2238]/40 focus:border-accent focus:ring-4 focus:ring-accent-soft"
+            className={`${INPUT} min-w-0 flex-1`}
           />
           <button
             type="button"
             onClick={handlePaste}
             disabled={disabled}
-            className="h-14 shrink-0 rounded-2xl bg-accent px-6 text-lg font-semibold text-accent-contrast transition hover:brightness-110 disabled:opacity-60"
+            className="h-[50px] w-[88px] shrink-0 rounded-xl bg-accent text-base font-semibold text-accent-contrast transition hover:brightness-110 disabled:opacity-60"
           >
             Colar
           </button>
@@ -131,15 +132,15 @@ export function LinkPasteCard({ reviewPath }: { reviewPath: string }) {
             role={notice.isError ? "alert" : "status"}
             className={
               notice.isError
-                ? "text-sm font-medium text-[#a3402a]"
-                : "font-semibold"
+                ? `${ERROR_TEXT} mt-2.5`
+                : "mt-2.5 text-sm font-semibold"
             }
           >
             {notice.text}
           </p>
         ) : null}
 
-        <p id="capture_link-help" className="text-[#1a2238]/70">
+        <p id="capture_link-help" className="mt-2.5 text-[13px] text-ink/65">
           No Instagram: toque em ⋯ no post →{" "}
           <strong className="font-semibold">Copiar link</strong>
         </p>

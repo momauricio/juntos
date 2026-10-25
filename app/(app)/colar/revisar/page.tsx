@@ -47,7 +47,7 @@ export default async function ColarRevisarPage({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col px-6 pb-24 pt-6">
+    <main className="mx-auto flex w-full max-w-md flex-col px-5 pb-24 pt-2">
       <PlaceReviewCard url={url} backHref={COLAR_PATH} saveAction={save} />
     </main>
   );

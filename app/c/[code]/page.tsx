@@ -8,6 +8,15 @@ import {
   InviteSwitchActions,
 } from "@/components/invite-actions";
 import { CopyLinkButton } from "@/components/invite-share";
+import { typeGradient } from "@/components/item-visuals";
+import {
+  BTN_PRIMARY,
+  CARD,
+  EYEBROW_ACCENT,
+  SCREEN,
+  SUBTITLE,
+  TITLE,
+} from "@/components/ui-classes";
 import { inviteFlowState } from "@/lib/invite-flow";
 import {
   HOST_FALLBACK,
@@ -28,18 +37,11 @@ export const metadata: Metadata = {
   title: "Convite",
 };
 
-const PRIMARY_LINK =
-  "mt-8 flex h-14 w-full items-center justify-center rounded-3xl bg-accent px-4 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110";
+const PRIMARY_LINK = `${BTN_PRIMARY} mt-8`;
 
 type InvitePageProps = {
   params: Promise<{ code: string }>;
 };
-
-const THUMBNAIL_GRADIENTS = [
-  "bg-gradient-to-br from-[#f0c3a4] via-[#b8573c] to-[#7a3424]",
-  "bg-gradient-to-br from-[#e9dca8] via-[#5f9bb0] to-[#3f6f86]",
-  "bg-gradient-to-br from-[#e0a35f] via-[#c47f4c] to-[#8e4a2b]",
-];
 
 const BENEFITS = [
   ["📸", "Salvem do Instagram em segundos"],
@@ -49,10 +51,8 @@ const BENEFITS = [
 
 function Frame({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-12 text-foreground">
-      <p className="text-sm font-semibold uppercase tracking-[0.3em] text-accent">
-        Juntos · Convite
-      </p>
+    <main className={SCREEN}>
+      <p className={EYEBROW_ACCENT}>Juntos · Convite</p>
       {children}
     </main>
   );
@@ -61,12 +61,14 @@ function Frame({ children }: { children: React.ReactNode }) {
 function InviteHeader({ host }: { host: string }) {
   return (
     <>
-      <div aria-hidden="true" className="mt-6 flex items-center gap-4">
+      <div aria-hidden="true" className="mt-[18px] flex items-center gap-3">
         <Avatar label={initial(host)} size="lg" />
-        <span className="text-5xl">💛</span>
-        <Avatar label="você" size="lg" dashed className="text-lg" />
+        <span className="text-[26px]">💛</span>
+        <span className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-cream/50 text-sm font-bold text-cream/70">
+          você
+        </span>
       </div>
-      <h1 className="mt-6 font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+      <h1 className="mt-[18px] text-[32px] font-medium leading-[1.12] text-cream">
         {host} te chamou pro espaço de vocês
       </h1>
     </>
@@ -76,7 +78,7 @@ function InviteHeader({ host }: { host: string }) {
 function InvitePreviewBlock({ preview }: { preview: InvitePreview }) {
   if (preview.item_count === 0) {
     return (
-      <p className="mt-4 text-lg leading-8 text-foreground/70">
+      <p className={`${SUBTITLE} mt-3`}>
         Ainda está tudo em branco — bora começar juntos?
       </p>
     );
@@ -84,26 +86,24 @@ function InvitePreviewBlock({ preview }: { preview: InvitePreview }) {
 
   return (
     <>
-      <p className="mt-4 text-lg leading-8 text-foreground/70">
-        Já tem lugar esperando vocês dois:
-      </p>
-      <div className="mt-4 grid grid-cols-3 gap-3 rounded-[28px] bg-surface p-3">
+      <p className={`${SUBTITLE} mt-3`}>Já tem lugar esperando vocês dois:</p>
+      <div className={`${CARD} mt-3.5 grid grid-cols-3 gap-2 p-3`}>
         {preview.thumbnails.slice(0, 3).map((type, index) => (
           <div
             key={index}
-            className={`flex aspect-[5/4] items-center justify-center rounded-2xl ${THUMBNAIL_GRADIENTS[index]}`}
+            className={`flex h-[84px] items-center justify-center rounded-[14px] ${typeGradient(type)}`}
           >
-            <span aria-hidden="true" className="text-4xl drop-shadow-md">
+            <span aria-hidden="true" className="text-[32px]">
               {TYPE_EMOJI[type as ItemType] ?? "📍"}
             </span>
           </div>
         ))}
       </div>
-      <p className="mt-3 text-lg text-foreground/70">
+      <p className="mt-2 text-sm text-cream/70">
         {preview.item_count === 1
           ? "1 lugar"
           : `${preview.item_count} lugares`}{" "}
-        em <strong className="text-foreground">Quero ir</strong>
+        em <strong className="text-cream">Quero ir</strong>
       </p>
     </>
   );
@@ -111,7 +111,7 @@ function InvitePreviewBlock({ preview }: { preview: InvitePreview }) {
 
 function Message({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-6 font-serif text-3xl font-semibold leading-tight tracking-tight">
+    <p className="mt-6 font-serif text-[28px] font-medium leading-[1.15] text-cream">
       {children}
     </p>
   );
@@ -189,10 +189,10 @@ export default async function InvitePage({ params }: InvitePageProps) {
       <Frame>
         <InviteHeader host={host} />
         <InvitePreviewBlock preview={preview} />
-        <ul className="mt-8 space-y-4 text-lg">
+        <ul className="mt-[22px] space-y-2.5 text-[15px] text-cream/85">
           {BENEFITS.map(([icon, text]) => (
-            <li key={text} className="flex items-center gap-4">
-              <span aria-hidden="true" className="text-2xl">
+            <li key={text} className="flex items-center gap-2.5">
+              <span aria-hidden="true">
                 {icon}
               </span>
               {text}
@@ -200,7 +200,7 @@ export default async function InvitePage({ params }: InvitePageProps) {
           ))}
         </ul>
         <InviteSignInActions code={code} />
-        <p className="mt-6 text-center text-sm text-foreground/60">
+        <p className="mt-4 text-center text-[12.5px] text-cream/55">
           Você entra com a sua própria conta. Os dois mexem em tudo, do mesmo
           jeito.
         </p>
@@ -233,9 +233,12 @@ export default async function InvitePage({ params }: InvitePageProps) {
       <Frame>
         <InviteHeader host={host} />
         <InvitePreviewBlock preview={preview} />
-        <p className="mt-8 text-lg text-foreground/80">
+        <p className="mt-6 text-[15px] text-cream/80">
           Você está entrando como{" "}
-          <strong className="text-foreground">{user!.email}</strong>.
+          <strong className="[overflow-wrap:anywhere] text-cream">
+            {user!.email}
+          </strong>
+          .
         </p>
         <InviteJoinActions
           code={code}
@@ -249,10 +252,8 @@ export default async function InvitePage({ params }: InvitePageProps) {
   if (state === "switch_alone") {
     return (
       <Frame>
-        <h1 className="mt-6 font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          Você já começou um espaço
-        </h1>
-        <p className="mt-4 text-lg leading-8 text-foreground/70">
+        <h1 className={`${TITLE} mt-6`}>Você já começou um espaço</h1>
+        <p className={`${SUBTITLE} mt-3`}>
           Quer trazer seus {myItemCount} lugares e entrar no espaço de {host}?
         </p>
         <InviteSwitchActions

@@ -6,7 +6,7 @@ export function BackLink({ href }: { href: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex h-11 items-center text-lg text-foreground/80 transition hover:text-foreground"
+      className="inline-flex min-h-11 w-fit items-center text-[15px] text-cream/70 transition hover:text-cream"
     >
       <span aria-hidden="true" className="mr-1.5">
         ←
@@ -20,7 +20,7 @@ export function OfflineBanner() {
   return (
     <p
       role="status"
-      className="rounded-2xl bg-surface-strong px-4 py-3 text-center text-sm font-semibold"
+      className="rounded-2xl bg-surface-strong px-4 py-3 text-center text-sm font-semibold text-ink"
     >
       {OTP_COPY.offline}
     </p>
@@ -52,5 +52,19 @@ export function GoogleIcon({ className = "h-6 w-6" }: { className?: string }) {
         d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"
       />
     </svg>
+  );
+}
+
+// Divisor "── ou ──" entre as opções.
+export function OrDivider({ className = "" }: { className?: string }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={`flex items-center gap-3 text-sm text-cream/50 ${className}`}
+    >
+      <span className="h-px flex-1 bg-cream/20" />
+      ou
+      <span className="h-px flex-1 bg-cream/20" />
+    </div>
   );
 }

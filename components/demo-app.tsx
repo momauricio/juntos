@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { TYPE_LABELS, STATUS_LABELS } from "@/lib/labels";
-import { assertScore } from "@/lib/ratings";
+import { STATUS_LABELS } from "@/lib/labels";
+import { assertScore, coupleScore, personAverage } from "@/lib/ratings";
+import { addedByLabel } from "@/lib/relative-time";
 import {
   filterItems,
   ratingSavedMessage,
@@ -24,13 +25,32 @@ import {
   type DemoState,
   type DemoUser,
 } from "@/lib/demo/store";
+import { Avatar, initial, memberTone } from "@/components/avatar";
 import { DemoHub } from "@/components/demo-hub";
+import { ItemFilters } from "@/components/item-filters";
+import {
+  formatDayMonth,
+  ITEM_CARD_CLASS,
+  ItemCardContent,
+  ItemHero,
+  itemSubtitle,
+  CoupleScoreCard,
+  ratingChips,
+} from "@/components/item-visuals";
+import {
+  BACK_LINK,
+  BTN_OUTLINE,
+  BTN_PRIMARY,
+  BTN_SOFT,
+  CARD,
+  FAB,
+  FIELD_LABEL,
+  INPUT,
+} from "@/components/ui-classes";
 import { DemoShowcaseBanner } from "@/components/demo-showcase-banner";
 import { IdeaWizard } from "@/components/demo-idea-wizard";
 import { TripWizard } from "@/components/demo-trip-wizard";
 import { TripDetail, TripsHome } from "@/components/demo-trips";
-
-const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 
 type Screen =
   | { name: "hub" }
@@ -45,14 +65,6 @@ type Screen =
 type MessageAction = { forMessage: string; label: string; onClick: () => void };
 
 const HIGHLIGHT_MS = 2000;
-
-function formatScore(value: number | null) {
-  if (value == null) return null;
-  return value.toLocaleString("pt-BR", {
-    minimumFractionDigits: Number.isInteger(value) ? 0 : 1,
-    maximumFractionDigits: 1,
-  });
-}
 
 export function DemoApp() {
   const [state, setState] = useState<DemoState | null>(null);
@@ -96,7 +108,7 @@ export function DemoApp() {
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
       <DemoShowcaseBanner />
       {message ? (
-        <div className="mx-4 mt-4 rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-strong">
+        <div role="status" className="mx-4 mt-4 rounded-[18px] bg-cream px-3.5 py-3 text-[15px] font-semibold text-ink shadow-[0_14px_30px_rgba(0,0,0,0.35)]">
           <div className="flex items-center justify-between gap-3">
             <span>{message}</span>
             {messageAction && messageAction.forMessage === message ? (
@@ -138,6 +150,7 @@ export function DemoApp() {
             onHighlightDone={() => setHighlightItemId(null)}
             onOpen={(itemId) => setScreen({ name: "detail", itemId })}
             onBack={() => setScreen({ name: "hub" })}
+            onNewIdea={() => setScreen({ name: "idea-wizard" })}
           />
         ) : null}
 
@@ -278,6 +291,7 @@ function Home({
   onHighlightDone,
   onOpen,
   onBack,
+  onNewIdea,
 }: {
   space: DemoSpace;
   items: Item[];
@@ -289,6 +303,7 @@ function Home({
   onHighlightDone: () => void;
   onOpen: (id: string) => void;
   onBack: () => void;
+  onNewIdea: () => void;
 }) {
   const listRef = useRef<HTMLUListElement>(null);
   const onHighlightDoneRef = useRef(onHighlightDone);
@@ -305,71 +320,90 @@ function Home({
     return () => window.clearTimeout(timeout);
   }, [highlightItemId]);
 
+  // Contagem das abas: respeita o tipo escolhido, ignora o status.
+  const typeItems = filterItems(space.items, typeFilter, "all");
+  const counts = {
+    all: typeItems.length,
+    want: typeItems.filter((item) => item.status === "want").length,
+    done: typeItems.filter((item) => item.status === "done").length,
+  };
+
   return (
-    <div className="space-y-4">
-      <button type="button" className="text-sm text-cream/70" onClick={onBack}>
+    <div className="space-y-3.5 pb-20">
+      <button type="button" className={BACK_LINK} onClick={onBack}>
         ← Voltar
       </button>
-      <div className="grid grid-cols-2 gap-2">
-        <select
-          className="h-12 rounded-xl border border-border bg-surface px-3 text-sm"
-          value={typeFilter}
-          onChange={(e) => onTypeFilter(e.target.value as ItemType | "all")}
-        >
-          <option value="all">Todos os tipos</option>
-          {ITEM_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {TYPE_LABELS[type]}
-            </option>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cream/60">
+            Juntos
+          </p>
+          <h1 className="mt-1 text-[28px] font-medium leading-tight text-cream">
+            {space.name}
+          </h1>
+        </div>
+        <div aria-hidden="true" className="flex shrink-0 -space-x-2">
+          {space.members.map((member, index) => (
+            <Avatar
+              key={member.id}
+              label={initial(member.name)}
+              size="md"
+              tone={memberTone(index)}
+            />
           ))}
-        </select>
-        <select
-          className="h-12 rounded-xl border border-border bg-surface px-3 text-sm"
-          value={statusFilter}
-          onChange={(e) => onStatusFilter(e.target.value as ItemStatus | "all")}
-        >
-          {(["all", "want", "done"] as const).map((status) => (
-            <option key={status} value={status}>
-              {STATUS_LABELS[status]}
-            </option>
-          ))}
-        </select>
+        </div>
       </div>
 
+      <ItemFilters
+        type={typeFilter}
+        status={statusFilter}
+        counts={counts}
+        onTypeChange={onTypeFilter}
+        onStatusChange={onStatusFilter}
+      />
+
       {items.length === 0 ? (
-        <p className="rounded-xl bg-surface-muted px-4 py-8 text-center text-sm text-accent-strong/70">
+        <p className={`${CARD} px-4 py-8 text-center text-sm text-ink/70`}>
           Nenhuma ideia ainda
         </p>
       ) : (
-        <ul ref={listRef} className="space-y-2">
+        <ul ref={listRef} className="flex flex-col gap-2.5">
           {items.map((item) => {
-            const score = ratingForItem(space, item.id);
+            const authorName = memberName(space, item.created_by);
             return (
               <li key={item.id} data-item-id={item.id}>
                 <button
                   type="button"
                   onClick={() => onOpen(item.id)}
-                  className={`flex w-full items-start justify-between gap-3 rounded-2xl bg-surface px-4 py-3 text-left shadow-sm shadow-accent-strong/5 transition-shadow duration-300 ${item.id === highlightItemId ? "ring-2 ring-accent" : ""}`}
+                  className={`${ITEM_CARD_CLASS} duration-300 ${item.id === highlightItemId ? "ring-2 ring-accent" : ""}`}
                 >
-                  <div>
-                    <p className="font-medium text-accent-strong">{item.title}</p>
-                    <p className="mt-1 text-xs text-accent-strong/65">
-                      {TYPE_LABELS[item.type]} · {STATUS_LABELS[item.status]}
-                    </p>
-                  </div>
-                  {score != null ? (
-                    <span className="rounded-lg bg-accent-soft px-2 py-1 text-sm font-semibold text-accent-strong">
-                      {formatScore(score)}
-                    </span>
-                  ) : null}
+                  <ItemCardContent
+                    item={item}
+                    subtitle={itemSubtitle(item.type, item.notes)}
+                    author={{
+                      name: authorName,
+                      tone: memberTone(memberIndex(space, item.created_by)),
+                    }}
+                    addedLabel={addedByLabel(authorName, item.created_at)}
+                    score={ratingForItem(space, item.id)}
+                  />
                 </button>
               </li>
             );
           })}
         </ul>
       )}
+
+      <button type="button" className={FAB} onClick={onNewIdea}>
+        <span aria-hidden="true">＋</span>
+        Nova ideia
+      </button>
     </div>
   );
+}
+
+function memberIndex(space: DemoSpace, userId: string) {
+  return space.members.findIndex((member) => member.id === userId);
 }
 
 function Detail({
@@ -396,10 +430,11 @@ function Detail({
   const [service, setService] = useState(rating?.service ?? 7);
   const [ambiance, setAmbiance] = useState(rating?.ambiance ?? 7);
   const [score, setScore] = useState(rating?.score ?? 7);
+  const [formOpen, setFormOpen] = useState(!rating);
 
   if (!item) {
     return (
-      <div>
+      <div className="text-cream">
         <p>Item não encontrado.</p>
         <button type="button" className="mt-4 underline" onClick={onBack}>
           Voltar
@@ -408,66 +443,109 @@ function Detail({
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <button type="button" className="text-sm text-cream/70" onClick={onBack}>
-        ← Voltar
-      </button>
-      <h1 className="font-serif text-3xl text-cream">{item.title}</h1>
-      <p className="text-sm text-cream/70">
-        {TYPE_LABELS[item.type]} · {STATUS_LABELS[item.status]}
-      </p>
-      <p className="text-sm text-cream/70">
-        Criado por {memberName(space, item.created_by)}
-        {rating ? ` · Nota por ${memberName(space, rating.rated_by)}` : ""}
-      </p>
-      {item.url ? (
-        <a
-          href={item.url}
-          target="_blank"
-          rel="noreferrer"
-          className="block break-all text-sm text-cream underline decoration-cream/40"
-        >
-          {item.url}
-        </a>
-      ) : null}
-      {item.notes ? <p className="text-sm text-cream/80">{item.notes}</p> : null}
+  const raterName = rating ? memberName(space, rating.rated_by) : null;
+  const couple = coupleScore(rating ? [rating] : []);
 
-      <div className="rounded-2xl bg-surface p-4">
-        <h2 className="font-medium">
-          {rating ? "Editar nota" : "Marcar como feito e dar nota"}
-        </h2>
-        {item.type === "restaurant" ? (
-          <div className="mt-3 space-y-3">
-            <ScoreSelect label="Comida" value={food} onChange={setFood} />
-            <ScoreSelect label="Atendimento" value={service} onChange={setService} />
-            <ScoreSelect label="Ambiente" value={ambiance} onChange={setAmbiance} />
-            <button
-              type="button"
-              className="mt-2 h-12 w-full rounded-xl bg-accent font-medium text-accent-contrast"
-              onClick={() =>
-                onRate({ food, service, ambiance, score: null })
-              }
-            >
-              Salvar nota
-            </button>
-          </div>
-        ) : (
-          <div className="mt-3 space-y-3">
-            <ScoreSelect label="Nota" value={score} onChange={setScore} />
-            <button
-              type="button"
-              className="mt-2 h-12 w-full rounded-xl bg-accent font-medium text-accent-contrast"
-              onClick={() =>
-                onRate({ score, food: null, service: null, ambiance: null })
-              }
-            >
-              Salvar nota
-            </button>
-          </div>
-        )}
-        <p className="mt-3 text-xs text-accent-strong/60">Logado como {user.name}</p>
-      </div>
+  return (
+    <div className="space-y-3.5">
+      <button type="button" className={BACK_LINK} onClick={onBack}>
+        ← {STATUS_LABELS[item.status]}
+      </button>
+
+      <ItemHero
+        type={item.type}
+        title={item.title}
+        subtitle={itemSubtitle(item.type, item.notes)}
+        badge={
+          item.status === "done" && item.completed_at
+            ? `✓ ${STATUS_LABELS.done} · ${formatDayMonth(item.completed_at)}`
+            : null
+        }
+      >
+        <p className="mt-1 text-[13px] text-cream/55">
+          {addedByLabel(memberName(space, item.created_by), item.created_at)}
+        </p>
+        {item.url ? (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-1 block break-all text-sm text-cream underline decoration-cream/40"
+          >
+            {item.url}
+          </a>
+        ) : null}
+      </ItemHero>
+
+      <CoupleScoreCard
+        couple={couple}
+        caption={
+          raterName ? `só ${raterName} deu nota até agora` : "média de vocês dois"
+        }
+        emptyText="Ainda sem nota. Salvem a primeira avaliação quando fizerem esta ideia."
+        people={space.members.map((member, index) => {
+          const mine = rating?.rated_by === member.id ? rating : null;
+          return {
+            id: member.id,
+            name: member.name,
+            tone: memberTone(index),
+            average: mine ? personAverage(mine) : null,
+            chips: mine ? ratingChips(mine) : [],
+            comment: mine?.comment ?? null,
+          };
+        })}
+      />
+
+      {formOpen ? (
+        <div className={`${CARD} space-y-4`}>
+          <h2 className="text-2xl leading-tight">
+            {rating ? "Editar nota" : "Marcar como feito e dar nota"}
+          </h2>
+          {item.type === "restaurant" ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-2.5">
+                <ScoreSelect label="Comida" value={food} onChange={setFood} />
+                <ScoreSelect label="Atendimento" value={service} onChange={setService} />
+                <ScoreSelect label="Ambiente" value={ambiance} onChange={setAmbiance} />
+              </div>
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                onClick={() =>
+                  onRate({ food, service, ambiance, score: null })
+                }
+              >
+                Salvar nota
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <ScoreSelect label="Nota" value={score} onChange={setScore} />
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                onClick={() =>
+                  onRate({ score, food: null, service: null, ambiance: null })
+                }
+              >
+                Salvar nota
+              </button>
+            </div>
+          )}
+          <p className="text-xs text-ink/60">Logado como {user.name}</p>
+        </div>
+      ) : null}
+
+      {rating ? (
+        <button
+          type="button"
+          className={formOpen ? BTN_OUTLINE : BTN_SOFT}
+          aria-expanded={formOpen}
+          onClick={() => setFormOpen((open) => !open)}
+        >
+          {formOpen ? "Depois" : "✎ Editar minha nota"}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -482,10 +560,10 @@ function ScoreSelect({
   onChange: (n: number) => void;
 }) {
   return (
-    <label className="block text-sm">
-      {label}
+    <label className={FIELD_LABEL}>
+      <span>{label}</span>
       <select
-        className="mt-1 h-12 w-full rounded-xl border border-border bg-surface px-3"
+        className={INPUT}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       >

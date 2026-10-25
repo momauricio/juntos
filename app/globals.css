@@ -17,6 +17,7 @@
   --indigo-deep: #12182b;
   --indigo: #1a2238;
   --terracotta: #c45c3e;
+  --sage: #8fa58a;
 }
 
 @theme inline {
@@ -32,6 +33,9 @@
   --color-accent-contrast: var(--accent-contrast);
   --color-danger: var(--danger);
   --color-cream: var(--cream);
+  --color-ink: var(--ink-on-surface);
+  --color-terracotta: var(--terracotta);
+  --color-sage: var(--sage);
   --font-sans: var(--font-source-sans);
   --font-serif: var(--font-fraunces);
   --font-mono: "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
@@ -102,6 +106,40 @@ h2,
 ::selection {
   background: var(--accent-soft);
   color: var(--accent-strong);
+}
+
+/* Fotos placeholder (mockups .ph1–.ph4): gradiente quando o item não tem imagem */
+.ph1 {
+  background:
+    radial-gradient(circle at 30% 30%, #f5c9a8, transparent 60%),
+    linear-gradient(135deg, #c45c3e, #7a3b2c);
+}
+
+.ph2 {
+  background:
+    radial-gradient(circle at 70% 20%, #fde3b0, transparent 55%),
+    linear-gradient(160deg, #5aa3b8, #2b5d7a);
+}
+
+.ph3 {
+  background:
+    radial-gradient(circle at 40% 70%, #f3ebe3, transparent 55%),
+    linear-gradient(135deg, #d99a5b, #8c4b2f);
+}
+
+.ph4 {
+  background:
+    radial-gradient(circle at 60% 30%, #cfe3c4, transparent 55%),
+    linear-gradient(135deg, #6f8f68, #33503a);
+}
+
+/* Linha de chips com rolagem horizontal, sem barra visível */
+.scroll-row {
+  scrollbar-width: none;
+}
+
+.scroll-row::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes rise-in {

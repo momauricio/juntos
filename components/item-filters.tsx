@@ -8,66 +8,93 @@ import type { ItemStatus, ItemType } from "@/lib/types";
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 const ITEM_STATUSES: ItemStatus[] = ["want", "done"];
 
+export type StatusCounts = Record<ItemStatus | "all", number>;
+
 export type ItemFiltersProps = {
   type: ItemType | "all";
   status: ItemStatus | "all";
   onTypeChange: (type: ItemType | "all") => void;
   onStatusChange: (status: ItemStatus | "all") => void;
+  counts?: StatusCounts;
 };
 
 type UrlItemFiltersProps = {
   type: ItemType | "all";
   status: ItemStatus | "all";
+  counts?: StatusCounts;
 };
 
+const STATUS_TABS: (ItemStatus | "all")[] = ["all", ...ITEM_STATUSES];
+
+// Abas segmentadas de status (mockup .tabs) + chips escuros de tipo (.chip.dark).
 export function ItemFilters({
   type,
   status,
   onTypeChange,
   onStatusChange,
+  counts,
 }: ItemFiltersProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <label className="space-y-2 text-sm font-medium text-foreground/85">
-        <span>Tipo</span>
-        <select
-          value={type}
-          onChange={(event) =>
-            onTypeChange(event.target.value as ItemType | "all")
-          }
-          className="h-12 w-full rounded-2xl border border-border bg-surface px-4 text-base outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
-        >
-          <option value="all">Todos os tipos</option>
-          {ITEM_TYPES.map((itemType) => (
-            <option key={itemType} value={itemType}>
-              {TYPE_LABELS[itemType]}
-            </option>
-          ))}
-        </select>
-      </label>
+    <div className="space-y-3.5">
+      <div
+        role="group"
+        aria-label="Status"
+        className="grid grid-cols-3 rounded-2xl bg-cream/10 p-1"
+      >
+        {STATUS_TABS.map((itemStatus) => {
+          const active = status === itemStatus;
 
-      <label className="space-y-2 text-sm font-medium text-foreground/85">
-        <span>Status</span>
-        <select
-          value={status}
-          onChange={(event) =>
-            onStatusChange(event.target.value as ItemStatus | "all")
-          }
-          className="h-12 w-full rounded-2xl border border-border bg-surface px-4 text-base outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
-        >
-          <option value="all">{STATUS_LABELS.all}</option>
-          {ITEM_STATUSES.map((itemStatus) => (
-            <option key={itemStatus} value={itemStatus}>
+          return (
+            <button
+              key={itemStatus}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onStatusChange(itemStatus)}
+              className={`flex h-[42px] items-center justify-center whitespace-nowrap rounded-xl px-1 text-[15px] font-semibold transition ${
+                active ? "bg-cream text-ink" : "text-cream/75 hover:text-cream"
+              }`}
+            >
               {STATUS_LABELS[itemStatus]}
-            </option>
-          ))}
-        </select>
-      </label>
+              {counts ? ` · ${counts[itemStatus]}` : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        role="group"
+        aria-label="Tipo"
+        className="scroll-row -mx-4 flex gap-2 overflow-x-auto px-4"
+      >
+        {(["all", ...ITEM_TYPES] as const).map((itemType) => {
+          const active = type === itemType;
+
+          return (
+            <button
+              key={itemType}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onTypeChange(itemType)}
+              className={`inline-flex h-[34px] shrink-0 items-center whitespace-nowrap rounded-full px-[13px] text-sm font-semibold transition ${
+                active
+                  ? "bg-cream text-ink"
+                  : "bg-cream/[0.12] text-cream hover:bg-cream/20"
+              }`}
+            >
+              {itemType === "all" ? "Tudo" : TYPE_LABELS[itemType]}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-export function UrlItemFilters({ type, status }: UrlItemFiltersProps) {
+export function UrlItemFilters({
+  type,
+  status,
+  counts,
+}: UrlItemFiltersProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,6 +116,7 @@ export function UrlItemFilters({ type, status }: UrlItemFiltersProps) {
     <ItemFilters
       type={type}
       status={status}
+      counts={counts}
       onTypeChange={(nextType) => updateFilter("type", nextType)}
       onStatusChange={(nextStatus) => updateFilter("status", nextStatus)}
     />

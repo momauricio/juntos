@@ -6,6 +6,14 @@ import { type FormEvent, useState } from "react";
 import { useOnline } from "@/components/auth-hooks";
 import { BackLink, OfflineBanner } from "@/components/auth-ui";
 import {
+  BTN_PRIMARY,
+  CARD,
+  ERROR_TEXT,
+  LABEL,
+  SCREEN,
+  TITLE,
+} from "@/components/ui-classes";
+import {
   INVITE_UNKNOWN_ERROR,
   type InvitePreview,
   inviteCodeStatusError,
@@ -60,24 +68,22 @@ export function CodigoConviteForm() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8 text-foreground">
+    <main className={SCREEN}>
       <BackLink href="/onboarding/nome" />
 
-      <section className="mt-8 space-y-4">
-        <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          Entrar com convite
-        </h1>
+      <section className="mt-2.5">
+        <h1 className={TITLE}>Entrar com convite</h1>
       </section>
 
       {!online ? (
-        <div className="mt-6">
+        <div className="mt-5">
           <OfflineBanner />
         </div>
       ) : null}
 
       <form onSubmit={handleSubmit} noValidate>
-        <div className="mt-8 space-y-3 rounded-[28px] bg-surface p-6">
-          <label htmlFor="invite_code" className="block text-base font-semibold">
+        <div className={`${CARD} mt-[26px]`}>
+          <label htmlFor="invite_code" className={LABEL}>
             Código do convite
           </label>
           <input
@@ -96,13 +102,13 @@ export function CodigoConviteForm() {
             placeholder="XXXX-XXXX"
             aria-invalid={Boolean(error)}
             aria-describedby="invite_code-help"
-            className="h-14 w-full rounded-2xl border border-[#1a2238]/15 bg-[#fbf8f4] px-4 font-mono text-lg uppercase tracking-[0.2em] outline-none transition placeholder:text-[#1a2238]/40 focus:border-accent focus:ring-4 focus:ring-accent-soft"
+            className="h-[50px] w-full rounded-xl border border-ink/20 bg-[#fbf7f2] px-3.5 font-mono text-lg uppercase tracking-[0.2em] text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
           />
-          <p id="invite_code-help" className="text-[#1a2238]/65">
+          <p id="invite_code-help" className="mt-2 text-[13px] text-ink/65">
             Seu par encontra o código em Chamar meu par.
           </p>
           {error ? (
-            <p role="alert" className="text-sm font-medium text-[#a3402a]">
+            <p role="alert" className={`${ERROR_TEXT} mt-3`}>
               {error}
             </p>
           ) : null}
@@ -111,7 +117,7 @@ export function CodigoConviteForm() {
         <button
           type="submit"
           disabled={!normalized || !online || isChecking}
-          className="mt-6 flex h-14 w-full items-center justify-center rounded-3xl bg-accent px-4 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110 disabled:opacity-60"
+          className={`${BTN_PRIMARY} mt-[26px]`}
         >
           Entrar no espaço
         </button>

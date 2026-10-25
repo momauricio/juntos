@@ -2,6 +2,13 @@
 
 import { useActionState, useState, type FormEvent } from "react";
 
+import {
+  BTN_PRIMARY,
+  CARD,
+  FIELD_LABEL,
+  INPUT,
+  TEXTAREA,
+} from "@/components/ui-classes";
 import { assertScore, COMMENT_MAX_LENGTH } from "@/lib/ratings";
 import type { Item, Rating } from "@/lib/types";
 
@@ -67,14 +74,14 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
     <form
       action={formAction}
       onSubmit={validateScores}
-      className="space-y-5 rounded-3xl bg-surface p-6 ring-1 ring-border"
+      className={`${CARD} space-y-4`}
     >
-      <h2 className="font-serif text-2xl font-semibold tracking-tight">
+      <h2 className="text-2xl leading-tight">
         {rating ? "Editar minha nota" : "Dar minha nota"}
       </h2>
 
       {isRestaurant ? (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2.5">
           <ScoreSelect
             label="Comida"
             name="food"
@@ -99,19 +106,19 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
         />
       )}
 
-      <label className="block space-y-2 text-sm font-medium text-foreground/85">
+      <label className={FIELD_LABEL}>
         <span>Quer contar o que achou? (opcional)</span>
         <textarea
           name="comment"
           maxLength={COMMENT_MAX_LENGTH}
           rows={3}
           defaultValue={rating?.comment ?? ""}
-          className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-base outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
+          className={TEXTAREA}
         />
       </label>
 
       {displayError ? (
-        <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-danger">
+        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-danger">
           {displayError}
         </p>
       ) : null}
@@ -119,7 +126,7 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
       <button
         type="submit"
         disabled={isPending}
-        className="h-12 w-full rounded-2xl bg-accent-strong px-5 text-base font-semibold text-accent-contrast transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        className={BTN_PRIMARY}
       >
         {isPending ? "Salvando..." : "Salvar minha nota"}
       </button>
@@ -135,13 +142,13 @@ type ScoreSelectProps = {
 
 function ScoreSelect({ label, name, defaultValue }: ScoreSelectProps) {
   return (
-    <label className="block space-y-2 text-sm font-medium text-foreground/85">
+    <label className={FIELD_LABEL}>
       <span>{label}</span>
       <select
         name={name}
         required
         defaultValue={defaultValue}
-        className="h-12 w-full rounded-2xl border border-border bg-surface px-4 text-base outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
+        className={INPUT}
       >
         <option value="" disabled>
           Escolha

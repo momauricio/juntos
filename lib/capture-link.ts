@@ -5,8 +5,6 @@ export const NOT_A_LINK_COPY =
   "Hmm, isso não parece um link. No post, toque em ⋯ → Copiar link.";
 export const EMPTY_CLIPBOARD_COPY =
   "Não achamos nenhum link copiado. Cola aqui embaixo:";
-export const TRELLO_SOON_COPY =
-  "Já já chega! Por enquanto, cola um link ou pula 💛";
 export const PICK_TYPE_COPY = "Escolhe um tipo pra salvar.";
 export const SAVED_DONE_RATING_PROMPT = `Salvo em ${STATUS_LABELS.done} 💛 Que nota você dá?`;
 

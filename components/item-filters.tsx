@@ -2,35 +2,37 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
-import type { ItemStatus, ItemType } from "@/lib/types";
+import {
+  CATEGORY_LABELS,
+  ITEM_CATEGORIES,
+  type ItemCategory,
+} from "@/lib/item-categories";
+import { STATUS_LABELS } from "@/lib/labels";
+import type { ItemStatus } from "@/lib/types";
 
-const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
-const ITEM_STATUSES: ItemStatus[] = ["want", "done"];
+const STATUS_TABS: ItemStatus[] = ["want", "done"];
 
-export type StatusCounts = Record<ItemStatus | "all", number>;
+export type StatusCounts = Record<ItemStatus, number>;
 
 export type ItemFiltersProps = {
-  type: ItemType | "all";
-  status: ItemStatus | "all";
-  onTypeChange: (type: ItemType | "all") => void;
-  onStatusChange: (status: ItemStatus | "all") => void;
+  category: ItemCategory;
+  status: ItemStatus;
+  onCategoryChange: (category: ItemCategory) => void;
+  onStatusChange: (status: ItemStatus) => void;
   counts?: StatusCounts;
 };
 
 type UrlItemFiltersProps = {
-  type: ItemType | "all";
-  status: ItemStatus | "all";
+  category: ItemCategory;
+  status: ItemStatus;
   counts?: StatusCounts;
 };
 
-const STATUS_TABS: (ItemStatus | "all")[] = ["all", ...ITEM_STATUSES];
-
-// Abas segmentadas de status (mockup .tabs) + chips escuros de tipo (.chip.dark).
+// Abas segmentadas de status (mockup .tabs) + chips escuros de categoria (.chip.dark).
 export function ItemFilters({
-  type,
+  category,
   status,
-  onTypeChange,
+  onCategoryChange,
   onStatusChange,
   counts,
 }: ItemFiltersProps) {
@@ -39,7 +41,7 @@ export function ItemFilters({
       <div
         role="group"
         aria-label="Status"
-        className="grid grid-cols-3 rounded-2xl bg-cream/10 p-1"
+        className="grid grid-cols-2 rounded-2xl bg-cream/10 p-1"
       >
         {STATUS_TABS.map((itemStatus) => {
           const active = status === itemStatus;
@@ -61,27 +63,23 @@ export function ItemFilters({
         })}
       </div>
 
-      <div
-        role="group"
-        aria-label="Tipo"
-        className="scroll-row -mx-4 flex gap-2 overflow-x-auto px-4"
-      >
-        {(["all", ...ITEM_TYPES] as const).map((itemType) => {
-          const active = type === itemType;
+      <div role="group" aria-label="Categoria" className="flex gap-2">
+        {ITEM_CATEGORIES.map((itemCategory) => {
+          const active = category === itemCategory;
 
           return (
             <button
-              key={itemType}
+              key={itemCategory}
               type="button"
               aria-pressed={active}
-              onClick={() => onTypeChange(itemType)}
+              onClick={() => onCategoryChange(itemCategory)}
               className={`inline-flex h-[34px] shrink-0 items-center whitespace-nowrap rounded-full px-[13px] text-sm font-semibold transition ${
                 active
                   ? "bg-cream text-ink"
                   : "bg-cream/[0.12] text-cream hover:bg-cream/20"
               }`}
             >
-              {itemType === "all" ? "Tudo" : TYPE_LABELS[itemType]}
+              {CATEGORY_LABELS[itemCategory]}
             </button>
           );
         })}
@@ -91,7 +89,7 @@ export function ItemFilters({
 }
 
 export function UrlItemFilters({
-  type,
+  category,
   status,
   counts,
 }: UrlItemFiltersProps) {
@@ -99,26 +97,34 @@ export function UrlItemFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  function updateFilter(key: "type" | "status", value: string) {
-    const params = new URLSearchParams(searchParams.toString());
-
-    if (value === "all") {
-      params.delete(key);
-    } else {
-      params.set(key, value);
-    }
-
+  function push(params: URLSearchParams) {
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname);
   }
 
   return (
     <ItemFilters
-      type={type}
+      category={category}
       status={status}
       counts={counts}
-      onTypeChange={(nextType) => updateFilter("type", nextType)}
-      onStatusChange={(nextStatus) => updateFilter("status", nextStatus)}
+      onCategoryChange={(nextCategory) => {
+        const params = new URLSearchParams(searchParams.toString());
+
+        if (nextCategory === "all") {
+          params.delete("type");
+        } else {
+          params.set("type", nextCategory);
+        }
+
+        // Fixa a aba atual (o padrão pode mudar quando o ?salvo= some).
+        params.set("status", status);
+        push(params);
+      }}
+      onStatusChange={(nextStatus) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("status", nextStatus);
+        push(params);
+      }}
     />
   );
 }

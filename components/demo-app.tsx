@@ -6,12 +6,11 @@ import { STATUS_LABELS } from "@/lib/labels";
 import { assertScore, coupleScore, personAverage } from "@/lib/ratings";
 import { addedByLabel } from "@/lib/relative-time";
 import {
-  filterItems,
+  categoryFilterAfterRating,
   ratingSavedMessage,
-  statusFilterAfterRating,
-  typeFilterAfterRating,
 } from "@/lib/demo/after-rating";
-import type { Item, ItemStatus, ItemType } from "@/lib/types";
+import { typesForCategory, type ItemCategory } from "@/lib/item-categories";
+import type { Item, ItemStatus } from "@/lib/types";
 import {
   addItem,
   createTrip,
@@ -66,13 +65,18 @@ type MessageAction = { forMessage: string; label: string; onClick: () => void };
 
 const HIGHLIGHT_MS = 2000;
 
+function itemsInCategory(items: Item[], category: ItemCategory): Item[] {
+  const types = typesForCategory(category);
+  return items.filter((item) => types.includes(item.type));
+}
+
 export function DemoApp() {
   const [state, setState] = useState<DemoState | null>(null);
   const [screen, setScreen] = useState<Screen>({ name: "hub" });
   const [message, setMessage] = useState<string | null>(null);
   const [messageAction, setMessageAction] = useState<MessageAction | null>(null);
-  const [typeFilter, setTypeFilter] = useState<ItemType | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<ItemStatus | "all">("want");
+  const [categoryFilter, setCategoryFilter] = useState<ItemCategory>("all");
+  const [statusFilter, setStatusFilter] = useState<ItemStatus>("want");
   const [highlightItemId, setHighlightItemId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -87,8 +91,10 @@ export function DemoApp() {
 
   const filteredItems = useMemo(() => {
     if (!state) return [];
-    return filterItems(state.space.items, typeFilter, statusFilter);
-  }, [state, typeFilter, statusFilter]);
+    return itemsInCategory(state.space.items, categoryFilter).filter(
+      (item) => item.status === statusFilter,
+    );
+  }, [state, categoryFilter, statusFilter]);
 
   if (!state) {
     return (
@@ -142,9 +148,9 @@ export function DemoApp() {
           <Home
             space={space}
             items={filteredItems}
-            typeFilter={typeFilter}
+            categoryFilter={categoryFilter}
             statusFilter={statusFilter}
-            onTypeFilter={setTypeFilter}
+            onCategoryFilter={setCategoryFilter}
             onStatusFilter={setStatusFilter}
             highlightItemId={highlightItemId}
             onHighlightDone={() => setHighlightItemId(null)}
@@ -190,8 +196,9 @@ export function DemoApp() {
                 });
                 persist({ user, space: nextSpace });
                 if (item) {
-                  setStatusFilter(statusFilterAfterRating(statusFilter));
-                  setTypeFilter(typeFilterAfterRating(typeFilter, item.type));
+                  // Item com nota fica em "Já fizemos": troca a aba para ele seguir visível.
+                  setStatusFilter("done");
+                  setCategoryFilter(categoryFilterAfterRating(categoryFilter, item.type));
                   setHighlightItemId(item.id);
                 }
                 const text = ratingSavedMessage(item?.title ?? "", wasWant);
@@ -283,9 +290,9 @@ export function DemoApp() {
 function Home({
   space,
   items,
-  typeFilter,
+  categoryFilter,
   statusFilter,
-  onTypeFilter,
+  onCategoryFilter,
   onStatusFilter,
   highlightItemId,
   onHighlightDone,
@@ -295,10 +302,10 @@ function Home({
 }: {
   space: DemoSpace;
   items: Item[];
-  typeFilter: ItemType | "all";
-  statusFilter: ItemStatus | "all";
-  onTypeFilter: (v: ItemType | "all") => void;
-  onStatusFilter: (v: ItemStatus | "all") => void;
+  categoryFilter: ItemCategory;
+  statusFilter: ItemStatus;
+  onCategoryFilter: (v: ItemCategory) => void;
+  onStatusFilter: (v: ItemStatus) => void;
   highlightItemId: string | null;
   onHighlightDone: () => void;
   onOpen: (id: string) => void;
@@ -320,10 +327,9 @@ function Home({
     return () => window.clearTimeout(timeout);
   }, [highlightItemId]);
 
-  // Contagem das abas: respeita o tipo escolhido, ignora o status.
-  const typeItems = filterItems(space.items, typeFilter, "all");
+  // Contagem das abas: respeita a categoria escolhida, ignora o status.
+  const typeItems = itemsInCategory(space.items, categoryFilter);
   const counts = {
-    all: typeItems.length,
     want: typeItems.filter((item) => item.status === "want").length,
     done: typeItems.filter((item) => item.status === "done").length,
   };
@@ -355,10 +361,10 @@ function Home({
       </div>
 
       <ItemFilters
-        type={typeFilter}
+        category={categoryFilter}
         status={statusFilter}
         counts={counts}
-        onTypeChange={onTypeFilter}
+        onCategoryChange={onCategoryFilter}
         onStatusChange={onStatusFilter}
       />
 

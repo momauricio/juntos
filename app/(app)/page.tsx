@@ -10,20 +10,15 @@ import { FAB } from "@/components/ui-classes";
 import { WelcomeToast } from "@/components/welcome-toast";
 import { parseSavedStatus } from "@/lib/capture-link";
 import { spaceDisplayName } from "@/lib/invites";
-import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { parseTypeParam } from "@/lib/item-categories";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
-import type { ItemStatus, ItemType } from "@/lib/types";
+import type { ItemStatus } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Lista",
 };
-
-const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
-const ITEM_STATUSES = Object.keys(STATUS_LABELS).filter(
-  (status) => status !== "all",
-) as ItemStatus[];
 
 type HomePageProps = {
   searchParams: Promise<{
@@ -38,27 +33,26 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function parseType(value: string | string[] | undefined): ItemType | "all" {
-  const type = firstParam(value);
-  return type && ITEM_TYPES.includes(type as ItemType)
-    ? (type as ItemType)
-    : "all";
-}
-
+// Sem aba "Todos": o padrão é "Quero ir", exceto logo após salvar em
+// "Já fizemos" (?salvo=done), para a aba bater com o toast.
 function parseStatus(
   value: string | string[] | undefined,
-): ItemStatus | "all" {
+  saved: ItemStatus | null,
+): ItemStatus {
   const status = firstParam(value);
-  return status && ITEM_STATUSES.includes(status as ItemStatus)
-    ? (status as ItemStatus)
-    : "all";
+
+  if (status === "want" || status === "done") {
+    return status;
+  }
+
+  return saved === "done" ? "done" : "want";
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
-  const selectedType = parseType(params.type);
-  const selectedStatus = parseStatus(params.status);
+  const typeFilter = parseTypeParam(params.type);
   const saved = parseSavedStatus(params.salvo);
+  const selectedStatus = parseStatus(params.status, saved);
 
   const supabase = await createClient();
   const {
@@ -81,8 +75,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     .eq("space_id", space.id)
     .order("created_at", { ascending: false });
 
-  if (selectedType !== "all") {
-    query = query.eq("type", selectedType);
+  if (typeFilter.types) {
+    query = query.in("type", typeFilter.types);
   }
 
   const { data, error } = await query;
@@ -93,12 +87,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   // O status é filtrado aqui (e não na consulta) para as abas mostrarem a contagem.
   const typeItems = (data ?? []) as ItemWithRatings[];
-  const items =
-    selectedStatus === "all"
-      ? typeItems
-      : typeItems.filter((item) => item.status === selectedStatus);
+  const items = typeItems.filter((item) => item.status === selectedStatus);
   const counts = {
-    all: typeItems.length,
     want: typeItems.filter((item) => item.status === "want").length,
     done: typeItems.filter((item) => item.status === "done").length,
   };
@@ -151,7 +141,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         ) : null}
 
         <UrlItemFilters
-          type={selectedType}
+          category={typeFilter.category}
           status={selectedStatus}
           counts={counts}
         />

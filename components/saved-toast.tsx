@@ -18,6 +18,14 @@ export function SavedToast({ status }: { status: ItemStatus }) {
     const timeout = window.setTimeout(() => {
       setVisible(false);
       const url = new URL(window.location.href);
+      // No quadro, "Já fizemos" só é o padrão enquanto há ?salvo=done: fixa a aba.
+      if (
+        url.pathname === "/" &&
+        url.searchParams.get("salvo") === "done" &&
+        !url.searchParams.has("status")
+      ) {
+        url.searchParams.set("status", "done");
+      }
       url.searchParams.delete("salvo");
       router.replace(`${url.pathname}${url.search}`, { scroll: false });
     }, VISIBLE_MS);

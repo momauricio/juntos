@@ -1,26 +1,24 @@
 import type { ReactNode } from "react";
 
 import { Avatar, initial } from "@/components/avatar";
-import { CARD } from "@/components/ui-classes";
-import { TYPE_EMOJI, TYPE_LABELS } from "@/lib/labels";
+import { BTN_OUTLINE, CARD } from "@/components/ui-classes";
+import { originalLink } from "@/lib/capture-link";
+import {
+  ACTIVITY_NO_ADDRESS_COPY,
+  STATUS_LABELS,
+  TYPE_EMOJI,
+  TYPE_HINTS,
+  TYPE_LABELS,
+  TYPE_THUMB,
+} from "@/lib/labels";
 import { formatScore } from "@/lib/ratings";
-import type { Item, ItemType } from "@/lib/types";
+import type { Item, ItemStatus, ItemType } from "@/lib/types";
 
 type Tone = "terracotta" | "sage";
 
-// Gradiente placeholder por tipo (os itens ainda não têm imagem própria).
-const TYPE_GRADIENT: Record<ItemType, string> = {
-  food_idea: "ph1",
-  tourist_spot: "ph2",
-  restaurant: "ph3",
-  city: "ph4",
-  movie: "ph2",
-  event: "ph1",
-};
-
-// Classe .ph1–.ph4 do tipo (tipos desconhecidos caem na primeira).
+// Classe .ph1–.ph7 do tipo (tipos desconhecidos caem na primeira).
 export function typeGradient(type: string) {
-  return TYPE_GRADIENT[type as ItemType] ?? "ph1";
+  return TYPE_THUMB[type as ItemType] ?? "ph1";
 }
 
 // "São Paulo · Restaurante" quando há lugar; senão só o tipo.
@@ -40,7 +38,7 @@ export function ItemPhoto({
 }) {
   return (
     <div
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden ${TYPE_GRADIENT[type]} ${
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden ${TYPE_THUMB[type]} ${
         variant === "hero"
           ? "h-[150px] w-full rounded-[20px] text-[64px]"
           : "h-16 w-16 rounded-2xl text-[28px]"
@@ -48,6 +46,22 @@ export function ItemPhoto({
     >
       <span aria-hidden="true">{TYPE_EMOJI[type]}</span>
       {children}
+    </div>
+  );
+}
+
+// Caixa com o tipo escolhido e o hint dele (mockup 20).
+export function TypeHintBox({ type }: { type: ItemType }) {
+  return (
+    <div className="flex items-start gap-2.5 rounded-[14px] bg-accent-soft px-3 py-2.5 text-[14.5px] text-ink">
+      <span aria-hidden="true" className="text-xl leading-6">
+        {TYPE_EMOJI[type]}
+      </span>
+      <p>
+        <b>{TYPE_LABELS[type]}</b>
+        <br />
+        {TYPE_HINTS[type]}
+      </p>
     </div>
   );
 }
@@ -93,18 +107,132 @@ export function ItemCardContent({
   );
 }
 
-// Cabeçalho do detalhe: foto grande, selo "Já fizemos · dd/mm", título e subtítulo.
+// Selo da foto do detalhe: "💛 Queremos" ou "✓ Já fizemos · dd/mm".
+export function heroBadge(item: {
+  status: ItemStatus;
+  completed_at: string | null;
+}) {
+  if (item.status === "want") {
+    return `💛 ${STATUS_LABELS.want}`;
+  }
+
+  return item.completed_at
+    ? `✓ ${STATUS_LABELS.done} · ${formatDayMonth(item.completed_at)}`
+    : `✓ ${STATUS_LABELS.done}`;
+}
+
+// Linha do detalhe (mockup 22): "🧺 Programa · Lucas adicionou · ontem".
+export function heroSubtitle(type: ItemType, addedLabel: string) {
+  return `${heroTypeLabel(type)} · ${addedLabel}`;
+}
+
+// "🧺 Programa" (começo da linha do detalhe).
+export function heroTypeLabel(type: ItemType) {
+  return `${TYPE_EMOJI[type]} ${TYPE_LABELS[type]}`;
+}
+
+const SECTION_LABEL =
+  "text-xs font-bold uppercase tracking-[0.08em] text-ink/65";
+
+// Card só-leitura do detalhe (mockup 22): notas e link original, cada um só se houver.
+export function ItemNotesCard({
+  item,
+}: {
+  item: { notes: string | null; url: string | null };
+}) {
+  const notes = item.notes?.trim();
+  const link = originalLink(item.url);
+
+  if (!notes && !link) {
+    return null;
+  }
+
+  return (
+    <div className={`${CARD} px-4 py-3.5`}>
+      {notes ? (
+        <>
+          <p className={SECTION_LABEL}>Notas</p>
+          <p className="mt-1 whitespace-pre-line break-words text-[15.5px] leading-normal">
+            {notes}
+          </p>
+        </>
+      ) : null}
+      {notes && link ? (
+        <div aria-hidden="true" className="my-3 h-px bg-ink/10" />
+      ) : null}
+      {link ? (
+        <>
+          <p className={SECTION_LABEL}>Link original</p>
+          {link.href ? (
+            <a
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 flex items-center justify-between gap-3 text-[15px] font-semibold hover:underline"
+            >
+              <span className="min-w-0 break-all">{link.label}</span>
+              <span aria-hidden="true" className="shrink-0 font-bold text-accent">
+                ↗
+              </span>
+              <span className="sr-only"> (abre em nova aba)</span>
+            </a>
+          ) : (
+            <p className="mt-1 break-all text-[15px] font-semibold">
+              {link.label}
+            </p>
+          )}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+// "✎ Editar" do detalhe: o formulário de edição fica fechado até a pessoa abrir.
+export function EditDisclosure({ children }: { children: ReactNode }) {
+  return (
+    <details className="space-y-3">
+      <summary
+        className={`${BTN_OUTLINE} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+      >
+        ✎ Editar
+      </summary>
+      {children}
+    </details>
+  );
+}
+
+// Programa sem notas: lembra que onde/quando vão nas notas.
+export function ActivityNoAddressNote({
+  item,
+}: {
+  item: { type: ItemType; notes: string | null };
+}) {
+  if (item.type !== "activity" || item.notes?.trim()) {
+    return null;
+  }
+
+  return (
+    <p className="text-center text-[13.5px] text-cream/60">
+      {ACTIVITY_NO_ADDRESS_COPY}
+    </p>
+  );
+}
+
+// Cabeçalho do detalhe: foto grande, selo de status, título e subtítulo.
 export function ItemHero({
   type,
   title,
   subtitle,
   badge,
+  author,
   children,
 }: {
   type: ItemType;
   title: string;
   subtitle: string;
   badge?: string | null;
+  // Com autor, a bolinha com a inicial entra antes de "Lucas adicionou".
+  author?: { name: string; tone: Tone; addedLabel: string };
   children?: ReactNode;
 }) {
   return (
@@ -119,7 +247,21 @@ export function ItemHero({
       <h1 className="mt-3.5 text-[28px] font-medium leading-tight text-cream">
         {title}
       </h1>
-      <p className="text-sm text-cream/70">{subtitle}</p>
+      {author ? (
+        <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-cream/70">
+          <span>{subtitle} ·</span>
+          <span className="flex items-center gap-1.5">
+            <Avatar
+              label={initial(author.name)}
+              size="xs"
+              tone={author.tone}
+            />
+            {author.addedLabel}
+          </span>
+        </p>
+      ) : (
+        <p className="text-sm text-cream/70">{subtitle}</p>
+      )}
       {children}
     </div>
   );

@@ -48,7 +48,12 @@ export default async function ColarRevisarPage({
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col px-5 pb-24 pt-2">
-      <PlaceReviewCard url={url} backHref={COLAR_PATH} saveAction={save} />
+      <PlaceReviewCard
+        url={url}
+        backHref={COLAR_PATH}
+        saveAction={save}
+        heading="O que vocês querem guardar?"
+      />
     </main>
   );
 }

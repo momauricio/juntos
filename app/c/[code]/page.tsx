@@ -27,7 +27,7 @@ import {
   inviteStatusMessage,
   normalizeInviteCode,
 } from "@/lib/invites";
-import { TYPE_EMOJI } from "@/lib/labels";
+import { STATUS_LABELS, TYPE_EMOJI } from "@/lib/labels";
 import { getRequestOrigin } from "@/lib/request-origin";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
@@ -103,7 +103,7 @@ function InvitePreviewBlock({ preview }: { preview: InvitePreview }) {
         {preview.item_count === 1
           ? "1 lugar"
           : `${preview.item_count} lugares`}{" "}
-        em <strong className="text-cream">Quero ir</strong>
+        em <strong className="text-cream">{STATUS_LABELS.want}</strong>
       </p>
     </>
   );

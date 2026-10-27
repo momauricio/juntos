@@ -3,14 +3,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Avatar, initial, memberTone } from "@/components/avatar";
-import { UrlItemFilters } from "@/components/item-filters";
+import { TypeFilterFooter, UrlItemFilters } from "@/components/item-filters";
 import { ItemList, type ItemWithRatings } from "@/components/item-list";
 import { SavedToast } from "@/components/saved-toast";
 import { FAB } from "@/components/ui-classes";
 import { WelcomeToast } from "@/components/welcome-toast";
 import { parseSavedStatus } from "@/lib/capture-link";
 import { spaceDisplayName } from "@/lib/invites";
-import { parseTypeParam } from "@/lib/item-categories";
+import {
+  countByStatus,
+  parseTypeParam,
+  typeFilterSummary,
+} from "@/lib/item-categories";
+import { TYPE_LABELS } from "@/lib/labels";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
@@ -26,6 +31,7 @@ type HomePageProps = {
     status?: string | string[];
     "bem-vindo"?: string | string[];
     salvo?: string | string[];
+    novo?: string | string[];
   }>;
 };
 
@@ -33,7 +39,7 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-// Sem aba "Todos": o padrão é "Quero ir", exceto logo após salvar em
+// Sem aba "Todos": o padrão é "Queremos", exceto logo após salvar em
 // "Já fizemos" (?salvo=done), para a aba bater com o toast.
 function parseStatus(
   value: string | string[] | undefined,
@@ -88,10 +94,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   // O status é filtrado aqui (e não na consulta) para as abas mostrarem a contagem.
   const typeItems = (data ?? []) as ItemWithRatings[];
   const items = typeItems.filter((item) => item.status === selectedStatus);
-  const counts = {
-    want: typeItems.filter((item) => item.status === "want").length,
-    done: typeItems.filter((item) => item.status === "done").length,
-  };
+  const counts = countByStatus(typeItems);
+  // Item recém-salvo (?salvo=want&novo=<id>): destaque na lista e linha do toast.
+  const newItemId = saved === "want" ? firstParam(params.novo) : undefined;
+  const newItem = newItemId
+    ? typeItems.find((item) => item.id === newItemId)
+    : undefined;
   const memberDisplayNames = space.members.map((member) => member.displayName);
   const isWaiting = space.members.length < 2;
   // Nomes de quem divide o espaço: autoria das ideias e iniciais de quem deu nota.
@@ -141,7 +149,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         ) : null}
 
         <UrlItemFilters
-          category={typeFilter.category}
+          typeChip={typeFilter.chip}
           status={selectedStatus}
           counts={counts}
         />
@@ -150,7 +158,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           items={items}
           memberNames={memberNames}
           memberOrder={space.members.map((member) => member.userId)}
+          highlightId={newItem?.id}
         />
+
+        {typeFilter.chip && typeFilter.chip !== "all" ? (
+          <TypeFilterFooter
+            summary={typeFilterSummary(
+              typeFilter.chip,
+              counts[selectedStatus],
+              selectedStatus,
+            )}
+            href={`/?status=${selectedStatus}`}
+          />
+        ) : null}
       </section>
 
       <Link
@@ -162,7 +182,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </Link>
 
       {firstParam(params["bem-vindo"]) === "1" ? <WelcomeToast /> : null}
-      {saved ? <SavedToast status={saved} /> : null}
+      {saved ? (
+        <SavedToast
+          status={saved}
+          description={
+            newItem ? `${newItem.title} · ${TYPE_LABELS[newItem.type]}` : undefined
+          }
+        />
+      ) : null}
     </main>
   );
 }

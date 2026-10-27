@@ -80,7 +80,7 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
           className="left-[31.4%] top-[36.4%] h-[60.6%] w-[45.7%] -rotate-1 text-[60px] shadow-[0_20px_40px_rgba(0,0,0,0.35)]"
         >
           <span className="absolute bottom-2.5 left-2.5 rounded-full bg-cream px-2 py-0.5 text-xs font-bold text-ink">
-            Quero ir 💛
+            Queremos 💛
           </span>
         </PhotoCard>
       </div>

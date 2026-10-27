@@ -3,20 +3,11 @@
 import { useState, type JSX } from "react";
 
 import { WizardShell } from "@/components/demo-wizard-shell";
-import { TYPE_LABELS } from "@/lib/labels";
+import { TYPE_EMOJI, TYPE_HINTS, TYPE_LABELS } from "@/lib/labels";
 import type { ItemType } from "@/lib/types";
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 const STEP_COUNT = 3;
-
-const TYPE_HINTS: Record<ItemType, string> = {
-  restaurant: "Onde comer bem juntos.",
-  food_idea: "Um prato ou receita para tentar.",
-  tourist_spot: "Lugar para visitar e explorar.",
-  movie: "Filme, série ou sessão juntos.",
-  city: "Uma cidade ou destino para sonhar.",
-  event: "Show, festa, exposição ou qualquer programa.",
-};
 
 export function IdeaWizard({
   onCancel,
@@ -96,6 +87,7 @@ export function IdeaWizard({
                     selected ? "text-[var(--terracotta)]" : "text-accent-strong"
                   }`}
                 >
+                  <span aria-hidden="true">{TYPE_EMOJI[value]} </span>
                   {TYPE_LABELS[value]}
                 </span>
                 <span className="mt-2 block text-sm leading-6 text-accent-strong/70">

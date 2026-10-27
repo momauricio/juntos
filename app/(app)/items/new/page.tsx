@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { ItemForm, type ItemFormState } from "@/components/item-form";
 import { EYEBROW_ACCENT, SUBTITLE, TITLE } from "@/components/ui-classes";
+import { savedRedirectPath } from "@/lib/capture-link";
 import { TYPE_LABELS } from "@/lib/labels";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
@@ -65,21 +66,25 @@ async function createItem(
     redirect("/onboarding");
   }
 
-  const { error } = await supabase.from("items").insert({
-    space_id: membership.space_id,
-    type,
-    title,
-    url: url || null,
-    notes: notes || null,
-    status: "want",
-    created_by: user.id,
-  });
+  const { data, error } = await supabase
+    .from("items")
+    .insert({
+      space_id: membership.space_id,
+      type,
+      title,
+      url: url || null,
+      notes: notes || null,
+      status: "want",
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (error || !data) {
     return { error: "Não foi possível criar a ideia. Tente novamente." };
   }
 
-  redirect("/");
+  redirect(savedRedirectPath("want", data.id as string));
 }
 
 export default function NewItemPage() {

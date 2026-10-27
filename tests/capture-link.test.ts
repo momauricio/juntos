@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   captureLink,
   normalizeLink,
+  originalLink,
   parseLink,
   parseSavedStatus,
   SAVED_DONE_RATING_PROMPT,
@@ -120,7 +121,7 @@ describe("captureLink", () => {
 
 describe("saved toast", () => {
   it("names the column", () => {
-    expect(savedToastCopy("want")).toBe("Salvo em Quero ir 💛");
+    expect(savedToastCopy("want")).toBe("Salvo em Queremos 💛");
     expect(savedToastCopy("done")).toBe("Salvo em Já fizemos 💛");
   });
 
@@ -146,6 +147,59 @@ describe("savedRedirectPath", () => {
   });
 
   it("goes back to the board with the toast when saved as want", () => {
-    expect(savedRedirectPath("want", "abc-123")).toBe("/?salvo=want");
+    expect(savedRedirectPath("want", "abc-123")).toBe(
+      "/?salvo=want&novo=abc-123",
+    );
+  });
+});
+
+describe("originalLink", () => {
+  it("shows host and path without scheme or www", () => {
+    expect(
+      originalLink("https://www.instagram.com/p/CeramicaExemplo/"),
+    ).toEqual({
+      href: "https://www.instagram.com/p/CeramicaExemplo/",
+      label: "instagram.com/p/CeramicaExemplo/",
+    });
+  });
+
+  it("drops query, hash and a bare root path from the label", () => {
+    expect(originalLink("http://exemplo.com.br/?utm=x#topo")).toEqual({
+      href: "http://exemplo.com.br/?utm=x#topo",
+      label: "exemplo.com.br",
+    });
+    expect(originalLink("https://site.com/a/b?igsh=123")?.label).toBe(
+      "site.com/a/b",
+    );
+  });
+
+  it("keeps the port and decodes the path", () => {
+    expect(
+      originalLink("https://exemplo.com:8080/cer%C3%A2mica")?.label,
+    ).toBe("exemplo.com:8080/cerâmica");
+  });
+
+  it("links bare domains over https", () => {
+    expect(originalLink("  maps.app.goo.gl/abc  ")).toEqual({
+      href: "https://maps.app.goo.gl/abc",
+      label: "maps.app.goo.gl/abc",
+    });
+  });
+
+  it("never links non-http text", () => {
+    expect(originalLink("javascript:alert(1)")).toEqual({
+      href: null,
+      label: "javascript:alert(1)",
+    });
+    expect(originalLink("no ateliê do bairro")).toEqual({
+      href: null,
+      label: "no ateliê do bairro",
+    });
+  });
+
+  it("returns null when there is no link", () => {
+    expect(originalLink(null)).toBeNull();
+    expect(originalLink(undefined)).toBeNull();
+    expect(originalLink("   ")).toBeNull();
   });
 });

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
+import { TypeHintBox } from "@/components/item-visuals";
 import {
   BTN_PRIMARY,
   CARD,
@@ -10,7 +11,7 @@ import {
   INPUT,
   TEXTAREA,
 } from "@/components/ui-classes";
-import { TYPE_LABELS } from "@/lib/labels";
+import { NOTES_PLACEHOLDER, TYPE_EMOJI, TYPE_LABELS } from "@/lib/labels";
 import type { Item, ItemType } from "@/lib/types";
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
@@ -32,6 +33,7 @@ export function ItemForm({ action, item, mode }: ItemFormProps) {
     action,
     INITIAL_ACTION_STATE,
   );
+  const [type, setType] = useState<ItemType>(item?.type ?? "restaurant");
 
   return (
     <form
@@ -39,21 +41,25 @@ export function ItemForm({ action, item, mode }: ItemFormProps) {
       className={`${CARD} space-y-4`}
     >
       {isCreate ? (
-        <label className={FIELD_LABEL}>
-          <span>Tipo</span>
-          <select
-            name="type"
-            required
-            defaultValue={item?.type ?? "restaurant"}
-            className={INPUT}
-          >
-            {ITEM_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {TYPE_LABELS[type]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="space-y-2.5">
+          <label className={FIELD_LABEL}>
+            <span>Tipo</span>
+            <select
+              name="type"
+              required
+              value={type}
+              onChange={(event) => setType(event.target.value as ItemType)}
+              className={INPUT}
+            >
+              {ITEM_TYPES.map((option) => (
+                <option key={option} value={option}>
+                  {TYPE_EMOJI[option]} {TYPE_LABELS[option]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <TypeHintBox type={type} />
+        </div>
       ) : item ? (
         <div className="space-y-1.5 text-sm font-semibold text-ink">
           <span>Tipo</span>
@@ -96,7 +102,7 @@ export function ItemForm({ action, item, mode }: ItemFormProps) {
           defaultValue={item?.notes ?? ""}
           rows={5}
           className={TEXTAREA}
-          placeholder="Detalhes, horários, endereço ou qualquer lembrança."
+          placeholder={NOTES_PLACEHOLDER}
         />
       </label>
 

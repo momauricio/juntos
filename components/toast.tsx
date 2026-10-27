@@ -6,15 +6,24 @@ type ToastProps = {
   title: string;
   description?: string;
   icon?: string;
+  // Círculo terracota com ✓ (mockup 23).
+  check?: boolean;
 };
 
-export function Toast({ title, description, icon }: ToastProps) {
+export function Toast({ title, description, icon, check }: ToastProps) {
   return (
     <div
       role="status"
       className="fixed inset-x-4 top-[max(1rem,env(safe-area-inset-top))] z-50 mx-auto flex max-w-md items-center gap-2.5 rounded-[18px] bg-cream px-3.5 py-3 text-ink shadow-[0_14px_30px_rgba(0,0,0,0.35)]"
     >
-      {icon ? (
+      {check ? (
+        <span
+          aria-hidden="true"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent font-bold text-accent-contrast"
+        >
+          ✓
+        </span>
+      ) : icon ? (
         <span aria-hidden="true" className="text-[22px]">
           {icon}
         </span>

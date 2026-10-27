@@ -6,10 +6,12 @@ import { STATUS_LABELS } from "@/lib/labels";
 import { assertScore, coupleScore, personAverage } from "@/lib/ratings";
 import { addedByLabel } from "@/lib/relative-time";
 import {
-  categoryFilterAfterRating,
+  filterItems,
   ratingSavedMessage,
+  typeFilterAfterRating,
+  type TypeFilter,
 } from "@/lib/demo/after-rating";
-import { typesForCategory, type ItemCategory } from "@/lib/item-categories";
+import { countByStatus, typeFilterSummary } from "@/lib/item-categories";
 import type { Item, ItemStatus } from "@/lib/types";
 import {
   addItem,
@@ -26,9 +28,11 @@ import {
 } from "@/lib/demo/store";
 import { Avatar, initial, memberTone } from "@/components/avatar";
 import { DemoHub } from "@/components/demo-hub";
-import { ItemFilters } from "@/components/item-filters";
+import { ItemFilters, TypeFilterFooter } from "@/components/item-filters";
 import {
-  formatDayMonth,
+  ActivityNoAddressNote,
+  heroBadge,
+  heroSubtitle,
   ITEM_CARD_CLASS,
   ItemCardContent,
   ItemHero,
@@ -65,17 +69,12 @@ type MessageAction = { forMessage: string; label: string; onClick: () => void };
 
 const HIGHLIGHT_MS = 2000;
 
-function itemsInCategory(items: Item[], category: ItemCategory): Item[] {
-  const types = typesForCategory(category);
-  return items.filter((item) => types.includes(item.type));
-}
-
 export function DemoApp() {
   const [state, setState] = useState<DemoState | null>(null);
   const [screen, setScreen] = useState<Screen>({ name: "hub" });
   const [message, setMessage] = useState<string | null>(null);
   const [messageAction, setMessageAction] = useState<MessageAction | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<ItemCategory>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<ItemStatus>("want");
   const [highlightItemId, setHighlightItemId] = useState<string | null>(null);
 
@@ -91,10 +90,8 @@ export function DemoApp() {
 
   const filteredItems = useMemo(() => {
     if (!state) return [];
-    return itemsInCategory(state.space.items, categoryFilter).filter(
-      (item) => item.status === statusFilter,
-    );
-  }, [state, categoryFilter, statusFilter]);
+    return filterItems(state.space.items, typeFilter, statusFilter);
+  }, [state, typeFilter, statusFilter]);
 
   if (!state) {
     return (
@@ -148,9 +145,9 @@ export function DemoApp() {
           <Home
             space={space}
             items={filteredItems}
-            categoryFilter={categoryFilter}
+            typeFilter={typeFilter}
             statusFilter={statusFilter}
-            onCategoryFilter={setCategoryFilter}
+            onTypeFilter={setTypeFilter}
             onStatusFilter={setStatusFilter}
             highlightItemId={highlightItemId}
             onHighlightDone={() => setHighlightItemId(null)}
@@ -198,7 +195,7 @@ export function DemoApp() {
                 if (item) {
                   // Item com nota fica em "Já fizemos": troca a aba para ele seguir visível.
                   setStatusFilter("done");
-                  setCategoryFilter(categoryFilterAfterRating(categoryFilter, item.type));
+                  setTypeFilter(typeFilterAfterRating(typeFilter, item.type));
                   setHighlightItemId(item.id);
                 }
                 const text = ratingSavedMessage(item?.title ?? "", wasWant);
@@ -290,9 +287,9 @@ export function DemoApp() {
 function Home({
   space,
   items,
-  categoryFilter,
+  typeFilter,
   statusFilter,
-  onCategoryFilter,
+  onTypeFilter,
   onStatusFilter,
   highlightItemId,
   onHighlightDone,
@@ -302,9 +299,9 @@ function Home({
 }: {
   space: DemoSpace;
   items: Item[];
-  categoryFilter: ItemCategory;
+  typeFilter: TypeFilter;
   statusFilter: ItemStatus;
-  onCategoryFilter: (v: ItemCategory) => void;
+  onTypeFilter: (v: TypeFilter) => void;
   onStatusFilter: (v: ItemStatus) => void;
   highlightItemId: string | null;
   onHighlightDone: () => void;
@@ -327,12 +324,8 @@ function Home({
     return () => window.clearTimeout(timeout);
   }, [highlightItemId]);
 
-  // Contagem das abas: respeita a categoria escolhida, ignora o status.
-  const typeItems = itemsInCategory(space.items, categoryFilter);
-  const counts = {
-    want: typeItems.filter((item) => item.status === "want").length,
-    done: typeItems.filter((item) => item.status === "done").length,
-  };
+  // Contagem das abas: respeita o tipo escolhido, ignora o status.
+  const counts = countByStatus(filterItems(space.items, typeFilter, "all"));
 
   return (
     <div className="space-y-3.5 pb-20">
@@ -361,10 +354,10 @@ function Home({
       </div>
 
       <ItemFilters
-        category={categoryFilter}
+        typeChip={typeFilter}
         status={statusFilter}
         counts={counts}
-        onCategoryChange={onCategoryFilter}
+        onTypeChange={onTypeFilter}
         onStatusChange={onStatusFilter}
       />
 
@@ -399,6 +392,13 @@ function Home({
           })}
         </ul>
       )}
+
+      {typeFilter !== "all" ? (
+        <TypeFilterFooter
+          summary={typeFilterSummary(typeFilter, counts[statusFilter], statusFilter)}
+          onShowAll={() => onTypeFilter("all")}
+        />
+      ) : null}
 
       <button type="button" className={FAB} onClick={onNewIdea}>
         <span aria-hidden="true">＋</span>
@@ -461,16 +461,15 @@ function Detail({
       <ItemHero
         type={item.type}
         title={item.title}
-        subtitle={itemSubtitle(item.type, item.notes)}
-        badge={
-          item.status === "done" && item.completed_at
-            ? `✓ ${STATUS_LABELS.done} · ${formatDayMonth(item.completed_at)}`
-            : null
-        }
+        subtitle={heroSubtitle(
+          item.type,
+          addedByLabel(memberName(space, item.created_by), item.created_at),
+        )}
+        badge={heroBadge(item)}
       >
-        <p className="mt-1 text-[13px] text-cream/55">
-          {addedByLabel(memberName(space, item.created_by), item.created_at)}
-        </p>
+        {item.notes ? (
+          <p className="mt-1 text-[13px] text-cream/55">{item.notes}</p>
+        ) : null}
         {item.url ? (
           <a
             href={item.url}
@@ -482,6 +481,8 @@ function Detail({
           </a>
         ) : null}
       </ItemHero>
+
+      <ActivityNoAddressNote item={item} />
 
       <CoupleScoreCard
         couple={couple}

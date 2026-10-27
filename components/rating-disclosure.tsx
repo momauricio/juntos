@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 
-import { BTN_OUTLINE, BTN_SOFT } from "@/components/ui-classes";
+import { BTN_OUTLINE, BTN_PRIMARY, BTN_SOFT } from "@/components/ui-classes";
 import { ratingAutoOpenKey, shouldAutoOpen } from "@/lib/rating-auto-open";
 import type { ItemStatus } from "@/lib/types";
 
@@ -12,6 +12,8 @@ type RatingDisclosureProps = {
   hasMyRating: boolean;
   userId: string;
   itemId: string;
+  // Botão terracota largo ("✓ Já fizemos" em Queremos).
+  primary?: boolean;
   children: ReactNode;
 };
 
@@ -35,6 +37,7 @@ export function RatingDisclosure({
   hasMyRating,
   userId,
   itemId,
+  primary = false,
   children,
 }: RatingDisclosureProps) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -61,7 +64,9 @@ export function RatingDisclosure({
 
   return (
     <details ref={detailsRef} className="group space-y-3">
-      <summary className={`${BTN_SOFT} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+      <summary
+        className={`${primary ? BTN_PRIMARY : BTN_SOFT} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+      >
         {summary}
       </summary>
       {children}

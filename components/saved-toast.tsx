@@ -10,7 +10,13 @@ import type { ItemStatus } from "@/lib/types";
 const VISIBLE_MS = 4000;
 
 // Depois de salvar um lugar (?salvo=want|done): some sozinho e limpa o parâmetro.
-export function SavedToast({ status }: { status: ItemStatus }) {
+export function SavedToast({
+  status,
+  description,
+}: {
+  status: ItemStatus;
+  description?: string;
+}) {
   const router = useRouter();
   const [visible, setVisible] = useState(true);
 
@@ -27,6 +33,7 @@ export function SavedToast({ status }: { status: ItemStatus }) {
         url.searchParams.set("status", "done");
       }
       url.searchParams.delete("salvo");
+      url.searchParams.delete("novo");
       router.replace(`${url.pathname}${url.search}`, { scroll: false });
     }, VISIBLE_MS);
 
@@ -37,5 +44,7 @@ export function SavedToast({ status }: { status: ItemStatus }) {
     return null;
   }
 
-  return <Toast title={savedToastCopy(status)} />;
+  return (
+    <Toast check title={savedToastCopy(status)} description={description} />
+  );
 }

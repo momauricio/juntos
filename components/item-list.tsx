@@ -20,9 +20,16 @@ type ItemListProps = {
   memberNames: Record<string, string>;
   // userIds na ordem de entrada no espaço (define a cor do avatar).
   memberOrder?: string[];
+  // Item recém-salvo, com contorno terracota (mockup 23).
+  highlightId?: string;
 };
 
-export function ItemList({ items, memberNames, memberOrder = [] }: ItemListProps) {
+export function ItemList({
+  items,
+  memberNames,
+  memberOrder = [],
+  highlightId,
+}: ItemListProps) {
   if (items.length === 0) {
     return (
       <div className={`${CARD} px-6 py-12 text-center`}>
@@ -30,8 +37,8 @@ export function ItemList({ items, memberNames, memberOrder = [] }: ItemListProps
           Nenhuma ideia ainda
         </h2>
         <p className="mt-3 text-sm leading-6 text-ink/70">
-          Adicionem restaurantes, filmes, viagens e outras vontades para fazer
-          juntos.
+          Adicionem restaurantes, programas, filmes e outras vontades para
+          fazer juntos.
         </p>
       </div>
     );
@@ -43,7 +50,15 @@ export function ItemList({ items, memberNames, memberOrder = [] }: ItemListProps
         const authorName = memberNames[item.created_by] ?? UNKNOWN_AUTHOR_NAME;
 
         return (
-          <Link key={item.id} href={`/items/${item.id}`} className={ITEM_CARD_CLASS}>
+          <Link
+            key={item.id}
+            href={`/items/${item.id}`}
+            className={`${ITEM_CARD_CLASS} ${
+              item.id === highlightId
+                ? "outline-2 outline-offset-2 outline-accent"
+                : ""
+            }`}
+          >
             <ItemCardContent
               item={item}
               subtitle={itemSubtitle(item.type)}

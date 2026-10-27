@@ -1,38 +1,42 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
-  CATEGORY_LABELS,
-  ITEM_CATEGORIES,
-  type ItemCategory,
+  ALL_CHIP_LABEL,
+  TYPE_CHIPS,
+  type StatusCounts,
+  type TypeChip,
 } from "@/lib/item-categories";
-import { STATUS_LABELS } from "@/lib/labels";
+import { STATUS_LABELS, TYPE_CHIP_LABELS, TYPE_EMOJI } from "@/lib/labels";
 import type { ItemStatus } from "@/lib/types";
 
 const STATUS_TABS: ItemStatus[] = ["want", "done"];
 
-export type StatusCounts = Record<ItemStatus, number>;
+export type { StatusCounts };
 
 export type ItemFiltersProps = {
-  category: ItemCategory;
+  // null = nenhum chip destacado (link antigo com grupo de tipos).
+  typeChip: TypeChip | null;
   status: ItemStatus;
-  onCategoryChange: (category: ItemCategory) => void;
+  onTypeChange: (chip: TypeChip) => void;
   onStatusChange: (status: ItemStatus) => void;
   counts?: StatusCounts;
 };
 
 type UrlItemFiltersProps = {
-  category: ItemCategory;
+  typeChip: TypeChip | null;
   status: ItemStatus;
   counts?: StatusCounts;
 };
 
-// Abas segmentadas de status (mockup .tabs) + chips escuros de categoria (.chip.dark).
+// Abas segmentadas de status (mockup .tabs) + chips escuros de tipo (.chip.dark),
+// numa linha com rolagem horizontal.
 export function ItemFilters({
-  category,
+  typeChip,
   status,
-  onCategoryChange,
+  onTypeChange,
   onStatusChange,
   counts,
 }: ItemFiltersProps) {
@@ -63,23 +67,34 @@ export function ItemFilters({
         })}
       </div>
 
-      <div role="group" aria-label="Categoria" className="flex gap-2">
-        {ITEM_CATEGORIES.map((itemCategory) => {
-          const active = category === itemCategory;
+      <div
+        role="group"
+        aria-label="Tipo"
+        className="scroll-row -mr-5 flex gap-2 overflow-x-auto pr-5"
+      >
+        {TYPE_CHIPS.map((chip) => {
+          const active = typeChip === chip;
 
           return (
             <button
-              key={itemCategory}
+              key={chip}
               type="button"
               aria-pressed={active}
-              onClick={() => onCategoryChange(itemCategory)}
-              className={`inline-flex h-[34px] shrink-0 items-center whitespace-nowrap rounded-full px-[13px] text-sm font-semibold transition ${
+              onClick={() => onTypeChange(chip)}
+              className={`inline-flex h-[34px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-[13px] text-sm font-semibold transition ${
                 active
                   ? "bg-cream text-ink"
                   : "bg-cream/[0.12] text-cream hover:bg-cream/20"
               }`}
             >
-              {CATEGORY_LABELS[itemCategory]}
+              {chip === "all" ? (
+                ALL_CHIP_LABEL
+              ) : (
+                <>
+                  <span aria-hidden="true">{TYPE_EMOJI[chip]}</span>
+                  {TYPE_CHIP_LABELS[chip]}
+                </>
+              )}
             </button>
           );
         })}
@@ -88,8 +103,37 @@ export function ItemFilters({
   );
 }
 
+const FOOTER = "mt-2 text-center text-sm text-cream/65";
+const FOOTER_LINK = "underline underline-offset-2 hover:text-cream";
+
+// Rodapé com filtro de tipo ativo (mockup 21b): "3 programas em Queremos · ver tudo".
+export function TypeFilterFooter({
+  summary,
+  href,
+  onShowAll,
+}: {
+  summary: string;
+  href?: string;
+  onShowAll?: () => void;
+}) {
+  return (
+    <p className={FOOTER}>
+      {summary} ·{" "}
+      {href ? (
+        <Link href={href} className={FOOTER_LINK}>
+          ver tudo
+        </Link>
+      ) : (
+        <button type="button" onClick={onShowAll} className={FOOTER_LINK}>
+          ver tudo
+        </button>
+      )}
+    </p>
+  );
+}
+
 export function UrlItemFilters({
-  category,
+  typeChip,
   status,
   counts,
 }: UrlItemFiltersProps) {
@@ -104,16 +148,16 @@ export function UrlItemFilters({
 
   return (
     <ItemFilters
-      category={category}
+      typeChip={typeChip}
       status={status}
       counts={counts}
-      onCategoryChange={(nextCategory) => {
+      onTypeChange={(nextChip) => {
         const params = new URLSearchParams(searchParams.toString());
 
-        if (nextCategory === "all") {
+        if (nextChip === "all") {
           params.delete("type");
         } else {
-          params.set("type", nextCategory);
+          params.set("type", nextChip);
         }
 
         // Fixa a aba atual (o padrão pode mudar quando o ?salvo= some).

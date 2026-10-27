@@ -5,15 +5,21 @@ import { type FormEvent, useActionState, useState } from "react";
 
 import { useOnline } from "@/components/auth-hooks";
 import { BackLink, OfflineBanner } from "@/components/auth-ui";
-import { ItemPhoto } from "@/components/item-visuals";
+import { ItemPhoto, TypeHintBox } from "@/components/item-visuals";
 import {
   BTN_PRIMARY,
   CARD,
   ERROR_TEXT,
   TEXT_LINK_QUIET,
+  TEXTAREA,
 } from "@/components/ui-classes";
 import { PICK_TYPE_COPY } from "@/lib/capture-link";
-import { STATUS_LABELS, TYPE_EMOJI, TYPE_LABELS } from "@/lib/labels";
+import {
+  NOTES_PLACEHOLDER,
+  STATUS_LABELS,
+  TYPE_EMOJI,
+  TYPE_LABELS,
+} from "@/lib/labels";
 import type { ItemStatus, ItemType } from "@/lib/types";
 
 export type PlaceReviewState = {
@@ -27,12 +33,14 @@ type PlaceReviewCardProps = {
     state: PlaceReviewState,
     formData: FormData,
   ) => Promise<PlaceReviewState>;
+  // "＋ Colar link" pede "O que vocês querem guardar?"; o onboarding mantém o padrão.
+  heading?: string;
 };
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 const STATUS_OPTIONS: { value: ItemStatus; label: string }[] = [
   { value: "want", label: `💛 ${STATUS_LABELS.want}` },
-  { value: "done", label: STATUS_LABELS.done },
+  { value: "done", label: `✓ ${STATUS_LABELS.done}` },
 ];
 const INITIAL_STATE: PlaceReviewState = { error: null };
 
@@ -60,6 +68,7 @@ export function PlaceReviewCard({
   url,
   backHref,
   saveAction,
+  heading = "Como chama esse lugar?",
 }: PlaceReviewCardProps) {
   const online = useOnline();
   const [state, formAction, isPending] = useActionState(
@@ -87,7 +96,7 @@ export function PlaceReviewCard({
       <BackLink href={backHref} />
 
       <h1 className="mt-1 text-[26px] font-medium leading-[1.2] text-cream">
-        Como chama esse lugar?
+        {heading}
       </h1>
 
       <form action={formAction} onSubmit={handleSubmit} noValidate>
@@ -144,10 +153,16 @@ export function PlaceReviewCard({
                     <span className={CHIP}>
                       <span aria-hidden="true">{TYPE_EMOJI[option]}</span>
                       {TYPE_LABELS[option]}
+                      {type === option ? " ✓" : null}
                     </span>
                   </label>
                 ))}
               </div>
+              {type ? (
+                <div className="mt-1.5">
+                  <TypeHintBox type={type} />
+                </div>
+              ) : null}
             </fieldset>
 
             <fieldset>
@@ -168,6 +183,22 @@ export function PlaceReviewCard({
                 ))}
               </div>
             </fieldset>
+
+            <div className="space-y-1">
+              <label htmlFor="place_notes" className={FIELD_LABEL}>
+                Notas{" "}
+                <span className="font-normal normal-case tracking-normal">
+                  (opcional)
+                </span>
+              </label>
+              <textarea
+                id="place_notes"
+                name="notes"
+                rows={2}
+                placeholder={NOTES_PLACEHOLDER}
+                className={TEXTAREA}
+              />
+            </div>
 
             <div className="space-y-1">
               <p className={FIELD_LABEL}>Link original</p>

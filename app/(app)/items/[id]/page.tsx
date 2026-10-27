@@ -5,10 +5,13 @@ import { notFound, redirect } from "next/navigation";
 import { memberTone } from "@/components/avatar";
 import { ItemForm, type ItemFormState } from "@/components/item-form";
 import {
+  ActivityNoAddressNote,
   CoupleScoreCard,
-  formatDayMonth,
+  EditDisclosure,
+  heroBadge,
+  heroTypeLabel,
   ItemHero,
-  itemSubtitle,
+  ItemNotesCard,
   ratingChips,
 } from "@/components/item-visuals";
 import { RatingDisclosure } from "@/components/rating-disclosure";
@@ -325,35 +328,49 @@ export default async function ItemPage({ params }: ItemPageProps) {
         <ItemHero
           type={item.type}
           title={item.title}
-          subtitle={itemSubtitle(item.type)}
-          badge={
-            item.status === "done" && item.completed_at
-              ? `✓ ${STATUS_LABELS.done} · ${formatDayMonth(item.completed_at)}`
-              : null
-          }
+          subtitle={heroTypeLabel(item.type)}
+          author={{
+            name: creatorName,
+            tone: memberTone(memberIds.indexOf(item.created_by)),
+            addedLabel: addedByLabel(creatorName, item.created_at),
+          }}
+          badge={heroBadge(item)}
         >
-          <div className="mt-1 flex flex-col gap-0.5 text-[13px] text-cream/55 sm:flex-row sm:gap-4">
-            <p>{addedByLabel(creatorName, item.created_at)}</p>
-            {editedLabel ? <p>{editedLabel}</p> : null}
-          </div>
+          {editedLabel ? (
+            <p className="mt-1 text-[13px] text-cream/55">{editedLabel}</p>
+          ) : null}
         </ItemHero>
 
-        <CoupleScoreCard
-          couple={couple}
-          caption={coupleCaption}
-          emptyText="Ainda sem nota. Salvem a primeira avaliação quando fizerem esta ideia."
-          people={people.map((person) => ({
-            id: person.id,
-            name: person.name,
-            tone: memberTone(memberIds.indexOf(person.id)),
-            average: person.rating ? personAverage(person.rating) : null,
-            chips: person.rating ? ratingChips(person.rating) : [],
-            comment: person.rating?.comment ?? null,
-          }))}
-        />
+        <ItemNotesCard item={item} />
+
+        <ActivityNoAddressNote item={item} />
+
+        {/* Em Queremos, sem nota de ninguém, o card vazio não aparece. */}
+        {item.status === "done" || couple != null ? (
+          <CoupleScoreCard
+            couple={couple}
+            caption={coupleCaption}
+            emptyText="Ainda sem nota. Salvem a primeira avaliação quando fizerem esta ideia."
+            people={people.map((person) => ({
+              id: person.id,
+              name: person.name,
+              tone: memberTone(memberIds.indexOf(person.id)),
+              average: person.rating ? personAverage(person.rating) : null,
+              chips: person.rating ? ratingChips(person.rating) : [],
+              comment: person.rating?.comment ?? null,
+            }))}
+          />
+        ) : null}
 
         <RatingDisclosure
-          summary={myRating ? "✎ Editar minha nota" : "Dar minha nota"}
+          summary={
+            item.status === "want"
+              ? `✓ ${STATUS_LABELS.done}`
+              : myRating
+                ? "✎ Editar minha nota"
+                : "Dar minha nota"
+          }
+          primary={item.status === "want"}
           status={item.status}
           hasMyRating={myRating != null}
           userId={user.id}
@@ -363,9 +380,10 @@ export default async function ItemPage({ params }: ItemPageProps) {
           <RatingForm action={saveRating} item={item} rating={myRating} />
         </RatingDisclosure>
 
-        <div className="pt-4">
+        {/* Remonta depois de salvar (updated_at muda): fecha e pega os valores novos. */}
+        <EditDisclosure key={item.updated_at}>
           <ItemForm action={updateItem} item={item} mode="edit" />
-        </div>
+        </EditDisclosure>
       </section>
     </main>
   );

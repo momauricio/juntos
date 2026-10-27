@@ -108,7 +108,7 @@ h2,
   color: var(--accent-strong);
 }
 
-/* Fotos placeholder (mockups .ph1–.ph4): gradiente quando o item não tem imagem */
+/* Fotos placeholder (mockups .ph1–.ph7): gradiente quando o item não tem imagem */
 .ph1 {
   background:
     radial-gradient(circle at 30% 30%, #f5c9a8, transparent 60%),
@@ -131,6 +131,27 @@ h2,
   background:
     radial-gradient(circle at 60% 30%, #cfe3c4, transparent 55%),
     linear-gradient(135deg, #6f8f68, #33503a);
+}
+
+/* Programa (lilás) */
+.ph5 {
+  background:
+    radial-gradient(circle at 35% 30%, #efe3f7, transparent 58%),
+    linear-gradient(135deg, #9a86c2, #4f416f);
+}
+
+/* Filme (índigo) */
+.ph6 {
+  background:
+    radial-gradient(circle at 60% 25%, #c9d3f2, transparent 55%),
+    linear-gradient(135deg, #4b5a8f, #232c4d);
+}
+
+/* Evento (rosa) */
+.ph7 {
+  background:
+    radial-gradient(circle at 40% 30%, #ffd6de, transparent 55%),
+    linear-gradient(135deg, #d0708a, #7d3550);
 }
 
 /* Linha de chips com rolagem horizontal, sem barra visível */

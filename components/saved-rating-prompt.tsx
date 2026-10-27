@@ -15,7 +15,7 @@ export function SavedRatingPrompt() {
   return (
     <p
       role="status"
-      className="rounded-2xl bg-accent-soft px-4 py-3 text-base font-semibold text-accent-strong"
+      className="flex items-center gap-2.5 rounded-[18px] bg-cream px-3.5 py-3 text-[15px] font-semibold text-ink shadow-[0_14px_30px_rgba(0,0,0,0.35)]"
     >
       {SAVED_DONE_RATING_PROMPT}
     </p>

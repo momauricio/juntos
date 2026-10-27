@@ -5,6 +5,13 @@ import { type FormEvent, useActionState, useState } from "react";
 
 import { useOnline } from "@/components/auth-hooks";
 import { BackLink, OfflineBanner } from "@/components/auth-ui";
+import { ItemPhoto } from "@/components/item-visuals";
+import {
+  BTN_PRIMARY,
+  CARD,
+  ERROR_TEXT,
+  TEXT_LINK_QUIET,
+} from "@/components/ui-classes";
 import { PICK_TYPE_COPY } from "@/lib/capture-link";
 import { STATUS_LABELS, TYPE_EMOJI, TYPE_LABELS } from "@/lib/labels";
 import type { ItemStatus, ItemType } from "@/lib/types";
@@ -30,12 +37,22 @@ const STATUS_OPTIONS: { value: ItemStatus; label: string }[] = [
 const INITIAL_STATE: PlaceReviewState = { error: null };
 
 const FIELD_LABEL =
-  "block text-sm font-semibold uppercase tracking-[0.15em] text-[#1a2238]/60";
+  "block text-xs font-bold uppercase tracking-[0.08em] text-ink/65";
+// Mockup .chip / .chip.on; a altura de toque fica no <label> (min-h-11).
 const CHIP =
-  "flex h-11 cursor-pointer items-center gap-2 rounded-full bg-[#1a2238]/8 px-4 text-base font-semibold transition peer-checked:bg-accent peer-checked:text-accent-contrast peer-focus-visible:ring-4 peer-focus-visible:ring-accent-soft";
+  "flex h-[34px] cursor-pointer items-center gap-1.5 rounded-full bg-ink/[0.07] px-[13px] text-sm font-semibold text-ink transition peer-checked:bg-accent peer-checked:text-accent-contrast peer-focus-visible:ring-4 peer-focus-visible:ring-accent-soft";
 
 function displayUrl(url: string) {
   return url.replace(/^https?:\/\/(www\.)?/, "");
+}
+
+// Selo "via instagram.com" sobre a foto (o mockup mostra o @ do post).
+function ViaBadge({ url }: { url: string }) {
+  return (
+    <span className="absolute bottom-2.5 left-2.5 max-w-[80%] truncate rounded-full bg-[rgba(18,24,43,0.75)] px-2.5 py-1 text-xs font-semibold text-cream">
+      via {displayUrl(url).split("/")[0]}
+    </span>
+  );
 }
 
 // Tela 4b (modo manual, até a P1): mesmo card no onboarding e no "＋ Colar link".
@@ -69,100 +86,111 @@ export function PlaceReviewCard({
     <>
       <BackLink href={backHref} />
 
-      <h1 className="mt-4 font-serif text-4xl font-semibold leading-tight tracking-tight">
+      <h1 className="mt-1 text-[26px] font-medium leading-[1.2] text-cream">
         Como chama esse lugar?
       </h1>
 
       <form action={formAction} onSubmit={handleSubmit} noValidate>
         <input type="hidden" name="url" value={url} />
 
-        <div className="mt-6 space-y-6 rounded-[28px] bg-surface p-5 text-[#1a2238]">
-          <div
-            aria-hidden="true"
-            className="h-40 rounded-3xl bg-linear-to-br from-[#f0c4a8] via-[#c97a5a] to-[#8a3f2b]"
-          />
-
-          <div className="space-y-2">
-            <label htmlFor="place_title" className={FIELD_LABEL}>
-              Nome
-            </label>
-            <input
-              id="place_title"
-              name="title"
-              type="text"
-              autoComplete="off"
-              autoFocus
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              className="h-14 w-full rounded-2xl border border-[#1a2238]/15 bg-[#fbf8f4] px-4 font-serif text-2xl font-semibold outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
-            />
+        <div className={`${CARD} mt-3.5 p-3`}>
+          <div aria-hidden="true">
+            {type ? (
+              <ItemPhoto type={type} variant="hero">
+                <ViaBadge url={url} />
+              </ItemPhoto>
+            ) : (
+              <div className="ph1 relative flex h-[150px] items-center justify-center overflow-hidden rounded-[20px] text-[64px]">
+                📍
+                <ViaBadge url={url} />
+              </div>
+            )}
           </div>
 
-          <fieldset className="space-y-3">
-            <legend className={FIELD_LABEL}>Tipo</legend>
-            <div className="flex flex-wrap gap-2 pt-3">
-              {ITEM_TYPES.map((option) => (
-                <label key={option}>
-                  <input
-                    type="radio"
-                    name="type"
-                    value={option}
-                    checked={type === option}
-                    onChange={() => {
-                      setType(option);
-                      setClientError(null);
-                    }}
-                    className="peer sr-only"
-                  />
-                  <span className={CHIP}>
-                    <span aria-hidden="true">{TYPE_EMOJI[option]}</span>
-                    {TYPE_LABELS[option]}
-                  </span>
-                </label>
-              ))}
+          <div className="space-y-2.5 px-1.5 pb-1.5 pt-4">
+            <div className="space-y-1">
+              <label htmlFor="place_title" className={FIELD_LABEL}>
+                Nome
+              </label>
+              <input
+                id="place_title"
+                name="title"
+                type="text"
+                autoComplete="off"
+                autoFocus
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Ex.: Café da Esquina"
+                className="h-[50px] w-full rounded-xl border border-ink/20 bg-[#fbf7f2] px-3.5 font-serif text-xl font-bold text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
+              />
             </div>
-          </fieldset>
 
-          <fieldset className="space-y-3">
-            <legend className={FIELD_LABEL}>Vai para</legend>
-            <div className="flex flex-wrap gap-2 pt-3">
-              {STATUS_OPTIONS.map((option) => (
-                <label key={option.value}>
-                  <input
-                    type="radio"
-                    name="status"
-                    value={option.value}
-                    checked={status === option.value}
-                    onChange={() => setStatus(option.value)}
-                    className="peer sr-only"
-                  />
-                  <span className={CHIP}>{option.label}</span>
-                </label>
-              ))}
+            <fieldset>
+              <legend className={FIELD_LABEL}>Tipo</legend>
+              <div className="flex flex-wrap gap-x-1.5 pt-1">
+                {ITEM_TYPES.map((option) => (
+                  <label key={option} className="flex min-h-11 items-center">
+                    <input
+                      type="radio"
+                      name="type"
+                      value={option}
+                      checked={type === option}
+                      onChange={() => {
+                        setType(option);
+                        setClientError(null);
+                      }}
+                      className="peer sr-only"
+                    />
+                    <span className={CHIP}>
+                      <span aria-hidden="true">{TYPE_EMOJI[option]}</span>
+                      {TYPE_LABELS[option]}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className={FIELD_LABEL}>Vai para</legend>
+              <div className="flex flex-wrap gap-x-1.5 pt-1">
+                {STATUS_OPTIONS.map((option) => (
+                  <label key={option.value} className="flex min-h-11 items-center">
+                    <input
+                      type="radio"
+                      name="status"
+                      value={option.value}
+                      checked={status === option.value}
+                      onChange={() => setStatus(option.value)}
+                      className="peer sr-only"
+                    />
+                    <span className={CHIP}>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <div className="space-y-1">
+              <p className={FIELD_LABEL}>Link original</p>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block truncate text-sm text-ink/70 underline underline-offset-4"
+              >
+                {displayUrl(url)}
+              </a>
             </div>
-          </fieldset>
 
-          <div className="space-y-2">
-            <p className={FIELD_LABEL}>Link original</p>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block truncate text-[#1a2238]/75 underline underline-offset-4"
-            >
-              {displayUrl(url)}
-            </a>
+            {error ? (
+              <p role="alert" className={ERROR_TEXT}>
+                {error}
+              </p>
+            ) : null}
           </div>
-
-          {error ? (
-            <p role="alert" className="text-sm font-medium text-[#a3402a]">
-              {error}
-            </p>
-          ) : null}
         </div>
 
         {!online ? (
-          <div className="mt-6">
+          <div className="mt-3.5">
             <OfflineBanner />
           </div>
         ) : null}
@@ -170,7 +198,7 @@ export function PlaceReviewCard({
         <button
           type="submit"
           disabled={!title.trim() || !online || isPending}
-          className="mt-6 flex h-14 w-full items-center justify-center rounded-3xl bg-accent px-4 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110 disabled:opacity-60"
+          className={`${BTN_PRIMARY} mt-3.5`}
         >
           {isPending ? "Salvando..." : "Tá certo, salvar"}
         </button>
@@ -178,7 +206,7 @@ export function PlaceReviewCard({
 
       <Link
         href={backHref}
-        className="mx-auto mt-5 text-lg text-foreground/70 underline underline-offset-4 transition hover:text-foreground"
+        className={`${TEXT_LINK_QUIET} mt-3`}
       >
         Descartar
       </Link>

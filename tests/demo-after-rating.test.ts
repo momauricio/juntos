@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  categoryFilterAfterRating,
   filterItems,
   ratingSavedMessage,
   statusFilterAfterRating,
@@ -22,6 +23,14 @@ describe("filters after rating", () => {
     expect(typeFilterAfterRating("all", "movie")).toBe("all");
     expect(typeFilterAfterRating("movie", "movie")).toBe("movie");
     expect(typeFilterAfterRating("restaurant", "movie")).toBe("all");
+  });
+});
+
+describe("categoryFilterAfterRating", () => {
+  it("keeps the chip when it matches the item's group, otherwise resets to Tudo", () => {
+    expect(categoryFilterAfterRating("all", "movie")).toBe("all");
+    expect(categoryFilterAfterRating("passeios", "movie")).toBe("passeios");
+    expect(categoryFilterAfterRating("comer", "movie")).toBe("all");
   });
 });
 

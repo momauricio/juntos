@@ -1,3 +1,4 @@
+import { categoryForType, type ItemCategory } from "@/lib/item-categories";
 import type { Item, ItemStatus, ItemType } from "@/lib/types";
 
 export type TypeFilter = ItemType | "all";
@@ -22,6 +23,13 @@ export function statusFilterAfterRating(current: StatusFilter): StatusFilter {
 
 export function typeFilterAfterRating(current: TypeFilter, itemType: ItemType): TypeFilter {
   return current === "all" || current === itemType ? current : "all";
+}
+
+export function categoryFilterAfterRating(
+  current: ItemCategory,
+  itemType: ItemType,
+): ItemCategory {
+  return current === "all" || current === categoryForType(itemType) ? current : "all";
 }
 
 export function ratingSavedMessage(title: string, wasWant: boolean): string {

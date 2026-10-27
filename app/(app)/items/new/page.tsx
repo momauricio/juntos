@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { ItemForm, type ItemFormState } from "@/components/item-form";
+import { EYEBROW_ACCENT, SUBTITLE, TITLE } from "@/components/ui-classes";
 import { TYPE_LABELS } from "@/lib/labels";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
@@ -83,16 +84,12 @@ async function createItem(
 
 export default function NewItemPage() {
   return (
-    <main className="px-4 pb-24 pt-8 sm:pb-12">
-      <section className="mx-auto w-full max-w-2xl space-y-6">
-        <div className="space-y-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-            Nova ideia
-          </p>
-          <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            Adicionar à lista
-          </h1>
-          <p className="text-base leading-7 text-foreground/70">
+    <main className="px-5 pb-24 pt-2 sm:pb-12">
+      <section className="mx-auto w-full max-w-lg space-y-6">
+        <div className="space-y-2.5">
+          <p className={EYEBROW_ACCENT}>Nova ideia</p>
+          <h1 className={TITLE}>Adicionar à lista</h1>
+          <p className={SUBTITLE}>
             Escolha o tipo, dê um título e salve como algo que vocês querem
             fazer.
           </p>

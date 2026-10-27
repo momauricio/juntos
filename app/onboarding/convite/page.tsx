@@ -5,6 +5,7 @@ import { Avatar, initial } from "@/components/avatar";
 import { InviteShare } from "@/components/invite-share";
 import { SavedToast } from "@/components/saved-toast";
 import { StepProgress } from "@/components/step-progress";
+import { SCREEN, STEP_LABEL, SUBTITLE } from "@/components/ui-classes";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { parseSavedStatus } from "@/lib/capture-link";
 import {
@@ -86,30 +87,30 @@ export default async function ConvitePage({ searchParams }: ConvitePageProps) {
   const link = inviteLink(await getRequestOrigin(), code);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8 text-foreground">
+    <main className={SCREEN}>
       {passo === "3" ? (
         <>
-          <p className="text-lg text-foreground/70">Passo 3 de 3</p>
+          <p className={`${STEP_LABEL} pt-3`}>Passo 3 de 3</p>
           <StepProgress step={3} />
         </>
       ) : null}
 
       <div
         aria-hidden="true"
-        className="mt-10 flex items-center justify-center gap-4"
+        className="mt-[26px] flex items-center justify-center gap-3.5"
       >
-        <Avatar label={initial(myName)} size="lg" />
-        <span className="w-12 border-t-2 border-dashed border-foreground/40" />
-        <span className="text-5xl">💛</span>
-        <span className="w-12 border-t-2 border-dashed border-foreground/40" />
-        <Avatar label="?" size="lg" dashed />
+        <Avatar label={initial(myName)} size="xl" />
+        <span className="w-10 border-t-2 border-dashed border-cream/45" />
+        <span className="text-[30px]">💛</span>
+        <span className="w-10 border-t-2 border-dashed border-cream/45" />
+        <Avatar label="?" size="xl" dashed />
       </div>
 
-      <section className="mt-8 space-y-3 text-center">
-        <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+      <section className="mt-[18px] text-center">
+        <h1 className="text-[31px] font-medium leading-[1.12] text-cream">
           Agora chama seu par
         </h1>
-        <p className="text-lg leading-8 text-foreground/70">
+        <p className={`${SUBTITLE} mt-2.5`}>
           Fica bem melhor a dois: vocês veem tudo na hora e cada um dá a sua
           nota.
         </p>

@@ -2,27 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Avatar, initial } from "@/components/avatar";
+import { Avatar, initial, memberTone } from "@/components/avatar";
 import { UrlItemFilters } from "@/components/item-filters";
 import { ItemList, type ItemWithRatings } from "@/components/item-list";
 import { SavedToast } from "@/components/saved-toast";
+import { FAB } from "@/components/ui-classes";
 import { WelcomeToast } from "@/components/welcome-toast";
 import { parseSavedStatus } from "@/lib/capture-link";
 import { spaceDisplayName } from "@/lib/invites";
-import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { parseTypeParam } from "@/lib/item-categories";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
-import type { ItemStatus, ItemType } from "@/lib/types";
+import type { ItemStatus } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Lista",
 };
-
-const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
-const ITEM_STATUSES = Object.keys(STATUS_LABELS).filter(
-  (status) => status !== "all",
-) as ItemStatus[];
 
 type HomePageProps = {
   searchParams: Promise<{
@@ -37,27 +33,26 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function parseType(value: string | string[] | undefined): ItemType | "all" {
-  const type = firstParam(value);
-  return type && ITEM_TYPES.includes(type as ItemType)
-    ? (type as ItemType)
-    : "all";
-}
-
+// Sem aba "Todos": o padrão é "Quero ir", exceto logo após salvar em
+// "Já fizemos" (?salvo=done), para a aba bater com o toast.
 function parseStatus(
   value: string | string[] | undefined,
-): ItemStatus | "all" {
+  saved: ItemStatus | null,
+): ItemStatus {
   const status = firstParam(value);
-  return status && ITEM_STATUSES.includes(status as ItemStatus)
-    ? (status as ItemStatus)
-    : "all";
+
+  if (status === "want" || status === "done") {
+    return status;
+  }
+
+  return saved === "done" ? "done" : "want";
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
-  const selectedType = parseType(params.type);
-  const selectedStatus = parseStatus(params.status);
+  const typeFilter = parseTypeParam(params.type);
   const saved = parseSavedStatus(params.salvo);
+  const selectedStatus = parseStatus(params.status, saved);
 
   const supabase = await createClient();
   const {
@@ -80,12 +75,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     .eq("space_id", space.id)
     .order("created_at", { ascending: false });
 
-  if (selectedType !== "all") {
-    query = query.eq("type", selectedType);
-  }
-
-  if (selectedStatus !== "all") {
-    query = query.eq("status", selectedStatus);
+  if (typeFilter.types) {
+    query = query.in("type", typeFilter.types);
   }
 
   const { data, error } = await query;
@@ -94,7 +85,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     throw new Error("Não foi possível carregar a lista.");
   }
 
-  const items = (data ?? []) as ItemWithRatings[];
+  // O status é filtrado aqui (e não na consulta) para as abas mostrarem a contagem.
+  const typeItems = (data ?? []) as ItemWithRatings[];
+  const items = typeItems.filter((item) => item.status === selectedStatus);
+  const counts = {
+    want: typeItems.filter((item) => item.status === "want").length,
+    done: typeItems.filter((item) => item.status === "done").length,
+  };
   const memberDisplayNames = space.members.map((member) => member.displayName);
   const isWaiting = space.members.length < 2;
   // Nomes de quem divide o espaço: autoria das ideias e iniciais de quem deu nota.
@@ -103,53 +100,62 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   );
 
   return (
-    <main className="px-4 pb-24 pt-8 sm:pb-12">
-      <section className="mx-auto w-full max-w-4xl space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-foreground/60">
+    <main className="px-5 pb-28 pt-1">
+      <section className="mx-auto w-full max-w-lg space-y-3.5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cream/60">
               Juntos
             </p>
-            <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+            <h1 className="mt-1 text-[28px] font-medium leading-tight text-cream">
               {spaceDisplayName(space.name, memberDisplayNames)}
             </h1>
           </div>
-          <div aria-hidden="true" className="flex -space-x-2 pt-6">
+          <div aria-hidden="true" className="flex shrink-0 -space-x-2">
             {memberDisplayNames.map((name, index) => (
               <Avatar
                 key={index}
                 label={initial(name)}
-                className="ring-2 ring-background"
+                size="md"
+                tone={memberTone(index)}
               />
             ))}
             {isWaiting ? (
-              <Avatar label="?" dashed className="bg-background" />
+              <Avatar label="?" size="md" dashed className="bg-background" />
             ) : null}
           </div>
         </div>
 
         {isWaiting ? (
-          <p className="flex flex-wrap items-center justify-between gap-2 rounded-3xl border border-accent/50 bg-accent/15 px-5 py-4 text-lg">
-            <span>
+          <p className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-accent/50 bg-accent/[0.18] px-3 py-2.5">
+            <span className="text-[14.5px] font-semibold text-cream">
               <span aria-hidden="true">⏳</span> Esperando seu par entrar
             </span>
             <Link
               href="/onboarding/convite"
-              className="font-semibold text-accent-soft underline underline-offset-4"
+              className="text-sm font-bold text-[#f0b8a4] underline underline-offset-2"
             >
               Reenviar convite
             </Link>
           </p>
         ) : null}
 
-        <UrlItemFilters type={selectedType} status={selectedStatus} />
+        <UrlItemFilters
+          category={typeFilter.category}
+          status={selectedStatus}
+          counts={counts}
+        />
 
-        <ItemList items={items} memberNames={memberNames} />
+        <ItemList
+          items={items}
+          memberNames={memberNames}
+          memberOrder={space.members.map((member) => member.userId)}
+        />
       </section>
 
       <Link
         href="/colar"
-        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 items-center gap-2 rounded-3xl bg-accent px-6 text-lg font-semibold text-accent-contrast shadow-lg shadow-accent/30 transition hover:brightness-110 sm:right-8"
+        className={FAB}
       >
         <span aria-hidden="true">＋</span>
         Colar link

@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 
 import { useOnline } from "@/components/auth-hooks";
 import { OfflineBanner } from "@/components/auth-ui";
+import { ERROR_TEXT, INPUT } from "@/components/ui-classes";
 import { SPACE_NAME_MAX } from "@/lib/display-name";
 import { inviteErrorMessage } from "@/lib/invites";
 import { createClient } from "@/lib/supabase/client";
@@ -47,7 +48,7 @@ export function SpaceNameForm({ name, computedName }: SpaceNameFormProps) {
     <form onSubmit={handleSubmit} className="space-y-3">
       <label
         htmlFor="space_name"
-        className="block text-sm font-medium text-foreground/70"
+        className="block text-sm font-semibold text-ink"
       >
         Como chamamos vocês dois?
       </label>
@@ -60,19 +61,19 @@ export function SpaceNameForm({ name, computedName }: SpaceNameFormProps) {
           value={value}
           onChange={(event) => setValue(event.target.value)}
           placeholder={computedName}
-          className="h-12 min-w-0 flex-1 rounded-2xl border border-border bg-surface px-4 text-base text-[#1a2238] outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
+          className={`${INPUT} min-w-0 flex-1`}
         />
         <button
           type="submit"
           disabled={!online || isPending}
-          className="h-12 rounded-2xl bg-foreground px-5 text-base font-semibold text-surface transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-[50px] shrink-0 rounded-xl bg-accent px-5 text-base font-semibold text-accent-contrast transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
         >
           Salvar
         </button>
       </div>
       {!online ? <OfflineBanner /> : null}
       {error ? (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className={ERROR_TEXT}>
           {error}
         </p>
       ) : null}
@@ -116,7 +117,7 @@ export function LeaveSpace({ partnerName, itemCount }: LeaveSpaceProps) {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="h-12 w-full rounded-2xl px-4 text-base font-semibold text-danger ring-1 ring-border transition hover:bg-foreground/5"
+        className="flex h-[52px] w-full items-center justify-center rounded-2xl border border-[#a3402a]/30 px-5 text-base font-semibold text-[#a3402a] transition hover:bg-[#a3402a]/5"
       >
         Sair do espaço
       </button>
@@ -124,7 +125,7 @@ export function LeaveSpace({ partnerName, itemCount }: LeaveSpaceProps) {
   }
 
   return (
-    <div className="space-y-4 rounded-2xl bg-surface-muted p-4 text-[#1a2238] ring-1 ring-border">
+    <div className="space-y-4 rounded-2xl bg-ink/[0.05] p-4 text-ink">
       <p className="text-base leading-7">
         {partnerName
           ? `Sair do espaço de vocês? Os lugares continuam com ${partnerName}. Você pode voltar se ${partnerName} te chamar de novo.`
@@ -132,7 +133,7 @@ export function LeaveSpace({ partnerName, itemCount }: LeaveSpaceProps) {
       </p>
       {!online ? <OfflineBanner /> : null}
       {error ? (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className={ERROR_TEXT}>
           {error}
         </p>
       ) : null}
@@ -141,7 +142,7 @@ export function LeaveSpace({ partnerName, itemCount }: LeaveSpaceProps) {
           type="button"
           disabled={!online || isPending}
           onClick={handleLeave}
-          className="h-12 rounded-2xl bg-accent px-4 text-base font-semibold text-accent-contrast transition hover:brightness-110 disabled:opacity-60"
+          className="h-[52px] rounded-2xl bg-accent px-4 text-base font-semibold text-accent-contrast transition hover:brightness-110 disabled:opacity-60"
         >
           {partnerName ? "Sair" : "Apagar e sair"}
         </button>
@@ -149,7 +150,7 @@ export function LeaveSpace({ partnerName, itemCount }: LeaveSpaceProps) {
           type="button"
           disabled={isPending}
           onClick={() => setConfirming(false)}
-          className="h-12 rounded-2xl bg-surface px-4 text-base font-semibold ring-1 ring-border transition hover:bg-surface-strong disabled:opacity-60"
+          className="h-[52px] rounded-2xl border border-ink/20 bg-[#fbf7f2] px-4 text-base font-semibold text-ink transition hover:bg-surface-strong disabled:opacity-60"
         >
           Ficar
         </button>

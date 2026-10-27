@@ -2,16 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { memberTone } from "@/components/avatar";
 import { ItemForm, type ItemFormState } from "@/components/item-form";
+import {
+  CoupleScoreCard,
+  formatDayMonth,
+  ItemHero,
+  itemSubtitle,
+  ratingChips,
+} from "@/components/item-visuals";
 import { RatingDisclosure } from "@/components/rating-disclosure";
 import { RatingForm, type RatingFormState } from "@/components/rating-form";
 import { SavedRatingPrompt } from "@/components/saved-rating-prompt";
-import { STATUS_LABELS, TYPE_LABELS } from "@/lib/labels";
+import { BACK_LINK } from "@/components/ui-classes";
+import { STATUS_LABELS } from "@/lib/labels";
 import {
   assertScore,
   COMMENT_MAX_LENGTH,
   coupleScore,
-  formatScore,
   personAverage,
 } from "@/lib/ratings";
 import { addedByLabel, editedByLabel } from "@/lib/relative-time";
@@ -39,30 +47,6 @@ function scoreValue(formData: FormData, key: string) {
   const value = Number(formValue(formData, key));
   assertScore(value);
   return value;
-}
-
-function ratingChips(rating: Rating) {
-  if (
-    rating.food != null &&
-    rating.service != null &&
-    rating.ambiance != null
-  ) {
-    return [
-      `Comida ${rating.food}`,
-      `Atendimento ${rating.service}`,
-      `Ambiente ${rating.ambiance}`,
-    ];
-  }
-
-  return rating.score != null ? [`Nota ${rating.score}`] : [];
-}
-
-function formatDayMonth(timestamp: string) {
-  return new Date(timestamp).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "America/Sao_Paulo",
-  });
 }
 
 export async function generateMetadata({
@@ -326,120 +310,47 @@ export default async function ItemPage({ params }: ItemPageProps) {
   }
 
   return (
-    <main className="px-4 pb-24 pt-8 sm:pb-12">
-      <section className="mx-auto w-full max-w-2xl space-y-6">
+    <main className="px-5 pb-24 pt-0">
+      <section className="mx-auto w-full max-w-lg space-y-3.5">
         {item.status === "done" ? (
-          <Link
-            href="/?status=done"
-            className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-strong transition hover:text-accent"
-          >
+          <Link href="/?status=done" className={BACK_LINK}>
             ← {STATUS_LABELS.done}
           </Link>
         ) : (
-          <Link
-            href="/"
-            className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-strong transition hover:text-accent"
-          >
-            Voltar para a lista
+          <Link href="/?status=want" className={BACK_LINK}>
+            ← {STATUS_LABELS.want}
           </Link>
         )}
 
-        <div className="space-y-3">
-          {item.status === "done" && item.completed_at ? (
-            <span className="inline-flex rounded-2xl bg-accent-soft px-3 py-1 text-sm font-semibold text-accent-strong">
-              ✓ {STATUS_LABELS.done} · {formatDayMonth(item.completed_at)}
-            </span>
-          ) : null}
-          <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            {item.title}
-          </h1>
-          <p className="text-base text-foreground/70">
-            {TYPE_LABELS[item.type]}
-          </p>
-          <div className="flex flex-col gap-1 text-sm text-foreground/65 sm:flex-row sm:gap-4">
+        <ItemHero
+          type={item.type}
+          title={item.title}
+          subtitle={itemSubtitle(item.type)}
+          badge={
+            item.status === "done" && item.completed_at
+              ? `✓ ${STATUS_LABELS.done} · ${formatDayMonth(item.completed_at)}`
+              : null
+          }
+        >
+          <div className="mt-1 flex flex-col gap-0.5 text-[13px] text-cream/55 sm:flex-row sm:gap-4">
             <p>{addedByLabel(creatorName, item.created_at)}</p>
             {editedLabel ? <p>{editedLabel}</p> : null}
           </div>
-        </div>
+        </ItemHero>
 
-        <div className="rounded-3xl bg-surface p-6 ring-1 ring-border">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-                Nota do casal
-              </p>
-              {couple != null ? (
-                <p className="mt-1 text-sm text-foreground/70">
-                  {coupleCaption}
-                </p>
-              ) : null}
-            </div>
-            {couple != null ? (
-              <p className="font-serif text-5xl font-semibold tracking-tight text-accent">
-                {formatScore(couple)}
-              </p>
-            ) : null}
-          </div>
-
-          {couple != null ? (
-            <ul className="mt-5 divide-y divide-border border-t border-border">
-              {people.map((person) => {
-                const average = person.rating
-                  ? personAverage(person.rating)
-                  : null;
-
-                return (
-                  <li key={person.id} className="space-y-3 py-4 last:pb-0">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <span
-                          aria-hidden
-                          className="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-contrast"
-                        >
-                          {person.name.charAt(0).toUpperCase()}
-                        </span>
-                        <span className="font-semibold">{person.name}</span>
-                      </div>
-                      {average != null ? (
-                        <span className="rounded-2xl bg-accent-soft px-3 py-1 text-sm font-semibold text-accent-strong">
-                          {formatScore(average)}
-                        </span>
-                      ) : null}
-                    </div>
-                    {person.rating ? (
-                      <>
-                        <div className="flex flex-wrap gap-2">
-                          {ratingChips(person.rating).map((chip) => (
-                            <span
-                              key={chip}
-                              className="rounded-2xl bg-surface-muted px-3 py-1 text-sm font-medium text-foreground/80"
-                            >
-                              {chip}
-                            </span>
-                          ))}
-                        </div>
-                        {person.rating.comment ? (
-                          <p className="text-sm italic leading-6 text-foreground/70">
-                            “{person.rating.comment}”
-                          </p>
-                        ) : null}
-                      </>
-                    ) : (
-                      <p className="text-sm text-foreground/65">
-                        {person.name} ainda não deu nota
-                      </p>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="mt-3 text-sm leading-6 text-foreground/70">
-              Ainda sem nota. Salvem a primeira avaliação quando fizerem esta
-              ideia.
-            </p>
-          )}
-        </div>
+        <CoupleScoreCard
+          couple={couple}
+          caption={coupleCaption}
+          emptyText="Ainda sem nota. Salvem a primeira avaliação quando fizerem esta ideia."
+          people={people.map((person) => ({
+            id: person.id,
+            name: person.name,
+            tone: memberTone(memberIds.indexOf(person.id)),
+            average: person.rating ? personAverage(person.rating) : null,
+            chips: person.rating ? ratingChips(person.rating) : [],
+            comment: person.rating?.comment ?? null,
+          }))}
+        />
 
         <RatingDisclosure
           summary={myRating ? "✎ Editar minha nota" : "Dar minha nota"}
@@ -452,7 +363,9 @@ export default async function ItemPage({ params }: ItemPageProps) {
           <RatingForm action={saveRating} item={item} rating={myRating} />
         </RatingDisclosure>
 
-        <ItemForm action={updateItem} item={item} mode="edit" />
+        <div className="pt-4">
+          <ItemForm action={updateItem} item={item} mode="edit" />
+        </div>
       </section>
     </main>
   );

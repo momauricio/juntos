@@ -5,7 +5,24 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 
 import { useCountdown, useOnline } from "@/components/auth-hooks";
-import { BackLink, GoogleIcon, OfflineBanner } from "@/components/auth-ui";
+import {
+  BackLink,
+  GoogleIcon,
+  OfflineBanner,
+  OrDivider,
+} from "@/components/auth-ui";
+import {
+  BTN_SOFT_LG,
+  BTN_WHITE,
+  CARD,
+  ERROR_TEXT,
+  EYEBROW,
+  INPUT,
+  LABEL,
+  SCREEN,
+  SUBTITLE,
+  TITLE,
+} from "@/components/ui-classes";
 import { AUTH_ERROR_COPY, postLoginCallbackPath } from "@/lib/auth-callback";
 import {
   OTP_COPY,
@@ -151,23 +168,19 @@ export function EntrarForm({ next, code }: EntrarFormProps) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8 text-foreground">
+    <main className={SCREEN}>
       <BackLink href={backHref} />
 
-      <section className="mt-8 space-y-4">
-        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-foreground/60">
-          Entrar
-        </p>
-        <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          Como você quer entrar?
-        </h1>
-        <p className="text-lg leading-8 text-foreground/70">
+      <section className="mt-2.5">
+        <p className={EYEBROW}>Entrar</p>
+        <h1 className={`${TITLE} mt-2.5`}>Como você quer entrar?</h1>
+        <p className={`${SUBTITLE} mt-3`}>
           Cada um de vocês entra com a própria conta. Sem senha pra decorar.
         </p>
       </section>
 
       {isOffline || networkFailed ? (
-        <div className="mt-6">
+        <div className="mt-5">
           <OfflineBanner />
         </div>
       ) : null}
@@ -176,9 +189,9 @@ export function EntrarForm({ next, code }: EntrarFormProps) {
         type="button"
         onClick={handleGoogle}
         disabled={isOffline || isBusy}
-        className="mt-8 flex h-14 w-full items-center justify-center gap-3 rounded-3xl bg-surface px-4 text-lg font-semibold transition hover:bg-cream disabled:opacity-60"
+        className={`${BTN_WHITE} mt-[34px]`}
       >
-        <GoogleIcon />
+        <GoogleIcon className="h-[22px] w-[22px]" />
         Continuar com Google
       </button>
 
@@ -188,18 +201,14 @@ export function EntrarForm({ next, code }: EntrarFormProps) {
         </p>
       ) : null}
 
-      <div className="my-6 flex items-center gap-4 text-foreground/60">
-        <span className="h-px flex-1 bg-border" />
-        <span>ou</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
+      <OrDivider className="my-5" />
 
       <form
         noValidate
         onSubmit={handleEmail}
-        className="space-y-4 rounded-[28px] bg-surface p-6"
+        className={`${CARD} p-4`}
       >
-        <label htmlFor="email" className="block text-base font-semibold">
+        <label htmlFor="email" className={LABEL}>
           Seu e-mail
         </label>
         <input
@@ -220,11 +229,11 @@ export function EntrarForm({ next, code }: EntrarFormProps) {
           aria-invalid={errorKind === "email_invalido"}
           aria-describedby="email-help"
           placeholder="voce@email.com"
-          className="h-14 w-full rounded-2xl border border-[#1a2238]/15 bg-[#fbf8f4] px-4 text-lg outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
+          className={INPUT}
         />
 
         {emailMessage ? (
-          <p role="alert" className="text-sm font-medium text-[#a3402a]">
+          <p role="alert" className={`${ERROR_TEXT} mt-2`}>
             {emailMessage}
           </p>
         ) : null}
@@ -232,18 +241,18 @@ export function EntrarForm({ next, code }: EntrarFormProps) {
         <button
           type="submit"
           disabled={isOffline || isBusy}
-          className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent-soft px-4 text-lg font-semibold transition hover:brightness-95 disabled:opacity-60"
+          className={`${BTN_SOFT_LG} mt-3`}
         >
           <span aria-hidden="true">✉️</span>
           Entrar com código no e-mail
         </button>
 
-        <p id="email-help" className="text-center text-sm text-[#1a2238]/65">
+        <p id="email-help" className="mt-2.5 text-center text-[13px] text-ink/65">
           A gente manda um código de 6 números. Leva segundos.
         </p>
       </form>
 
-      <p className="mt-8 text-center text-sm text-foreground/60">
+      <p className="mt-7 text-center text-[12.5px] text-cream/55">
         Ao continuar, você concorda com os{" "}
         <Link href="/termos" className="underline-offset-2 hover:underline">
           Termos

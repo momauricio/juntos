@@ -5,6 +5,7 @@ import {
   PlaceReviewCard,
   type PlaceReviewState,
 } from "@/components/place-review-card";
+import { SCREEN } from "@/components/ui-classes";
 import { captureLink } from "@/lib/capture-link";
 import { requireSpace, savePlace } from "@/lib/save-place";
 
@@ -49,7 +50,7 @@ export default async function RevisarPage({ searchParams }: RevisarPageProps) {
   await requireSpace(PRIMEIRO_LUGAR_PATH);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8 text-foreground">
+    <main className={SCREEN}>
       <PlaceReviewCard
         url={url}
         backHref={PRIMEIRO_LUGAR_PATH}

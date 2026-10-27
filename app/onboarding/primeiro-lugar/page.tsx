@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { LinkPasteCard } from "@/components/link-paste-card";
-import { OrDivider } from "@/components/auth-ui";
 import { StepProgress } from "@/components/step-progress";
-import { TrelloSoonCard } from "@/components/trello-soon-card";
 import {
   SCREEN,
   STEP_LABEL,
@@ -36,10 +34,6 @@ export default async function PrimeiroLugarPage() {
       </section>
 
       <LinkPasteCard reviewPath="/onboarding/primeiro-lugar/revisar" />
-
-      <OrDivider className="my-4" />
-
-      <TrelloSoonCard />
 
       <Link
         href="/onboarding/convite?passo=3"

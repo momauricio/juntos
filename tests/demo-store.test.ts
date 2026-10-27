@@ -29,14 +29,22 @@ describe("sampleState", () => {
     expect(space.members[0].id).toBe(user.id);
   });
 
-  it("has the 3 places from the mockups, all added by Lucas", () => {
+  it("has the places and Programas from the mockups, all added by Lucas", () => {
     const { user, space } = sampleState();
     expect(
       space.items.map(({ title, type, notes, status }) => ({ title, type, notes, status })),
     ).toEqual([
       { title: "Café da Esquina", type: "food_idea", notes: "São Paulo", status: "want" },
+      { title: "Trilha da Pedra Exemplo", type: "activity", notes: null, status: "want" },
+      {
+        title: "Aula de cerâmica",
+        type: "activity",
+        notes: "No ateliê do bairro, num sábado de manhã",
+        status: "want",
+      },
       { title: "Praia do Félix", type: "tourist_spot", notes: "Ubatuba", status: "want" },
       { title: "Cantina da Nonna", type: "restaurant", notes: "São Paulo", status: "done" },
+      { title: "Aprender a dançar forró", type: "activity", notes: null, status: "want" },
     ]);
     expect(space.items.every((item) => item.created_by === user.id)).toBe(true);
     expect(space.items.every((item) => item.space_id === space.id)).toBe(true);
@@ -71,7 +79,7 @@ describe("sampleState", () => {
   it("returns a fresh copy each time", () => {
     const first = sampleState();
     first.space.items.pop();
-    expect(sampleState().space.items).toHaveLength(3);
+    expect(sampleState().space.items).toHaveLength(6);
   });
 
   it("works with the store helpers", () => {
@@ -81,7 +89,7 @@ describe("sampleState", () => {
       title: "Filme",
       createdBy: user.id,
     });
-    expect(next.items).toHaveLength(4);
+    expect(next.items).toHaveLength(7);
     const praia = space.items.find((item) => item.title === "Praia do Félix")!;
     const rated = upsertRating(space, { itemId: praia.id, ratedBy: user.id, score: 8 });
     expect(rated.items.find((item) => item.id === praia.id)?.status).toBe("done");

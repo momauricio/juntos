@@ -188,7 +188,7 @@ export function normalizeSpace(raw: DemoSpace | (Omit<DemoSpace, "trips"> & { tr
 
 const HOUR_MS = 60 * 60 * 1000;
 
-/** Dados de exemplo da vitrine (mockups 06 e 09). */
+/** Dados de exemplo da vitrine (mockups 06, 09 e 21). */
 export function sampleState(): DemoState {
   const now = Date.now();
   const at = (hoursAgo: number) => new Date(now - hoursAgo * HOUR_MS).toISOString();
@@ -225,6 +225,20 @@ export function sampleState(): DemoState {
       createdAt: at(0),
     }),
     item({
+      id: "item_trilha_da_pedra",
+      type: "activity",
+      title: "Trilha da Pedra Exemplo",
+      notes: null,
+      createdAt: at(2),
+    }),
+    item({
+      id: "item_aula_de_ceramica",
+      type: "activity",
+      title: "Aula de cerâmica",
+      notes: "No ateliê do bairro, num sábado de manhã",
+      createdAt: at(8),
+    }),
+    item({
       id: "item_praia_do_felix",
       type: "tourist_spot",
       title: "Praia do Félix",
@@ -238,6 +252,13 @@ export function sampleState(): DemoState {
       notes: "São Paulo",
       createdAt: at(30),
       completedAt: cantinaDoneAt,
+    }),
+    item({
+      id: "item_forro",
+      type: "activity",
+      title: "Aprender a dançar forró",
+      notes: null,
+      createdAt: at(50),
     }),
   ];
 

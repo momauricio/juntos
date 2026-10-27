@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  categoryFilterAfterRating,
   filterItems,
   ratingSavedMessage,
   statusFilterAfterRating,
@@ -26,11 +25,10 @@ describe("filters after rating", () => {
   });
 });
 
-describe("categoryFilterAfterRating", () => {
-  it("keeps the chip when it matches the item's group, otherwise resets to Tudo", () => {
-    expect(categoryFilterAfterRating("all", "movie")).toBe("all");
-    expect(categoryFilterAfterRating("passeios", "movie")).toBe("passeios");
-    expect(categoryFilterAfterRating("comer", "movie")).toBe("all");
+describe("typeFilterAfterRating with Programa", () => {
+  it("keeps the Programa chip for a Programa item, otherwise resets to Tudo", () => {
+    expect(typeFilterAfterRating("activity", "activity")).toBe("activity");
+    expect(typeFilterAfterRating("activity", "movie")).toBe("all");
   });
 });
 

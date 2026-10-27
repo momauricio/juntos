@@ -28,7 +28,7 @@ accounts in the same couple space and a third account outside it.
      `invite_preview('<code>')` with the anon key).
    - Confirm the payload has only `status`, `host_first_name`, `item_count`,
      `thumbnails` (item types) and `is_member`: no titles, e-mails or ids.
-   - Confirm `item_count` counts only items in **Quero ir** and `thumbnails`
+   - Confirm `item_count` counts only items in **Queremos** and `thumbnails`
      has at most 3 entries.
    - Confirm a used code shows "Esse convite já foi usado…", a code with
      `expires_at` in the past shows the expired text, an unknown code shows
@@ -101,9 +101,9 @@ accounts in the same couple space and a third account outside it.
     - Rename a space and confirm `spaces.updated_at` is refreshed to now.
     - As B, send an update that changes nothing (e.g. `title = title` with
       `updated_by = <outro>`) and confirm `updated_by`/`updated_at` are kept.
-    - As A, rate a "Quero ir" item created by B (the first rating moves it to
-      "Já fomos") and confirm `updated_by` is A.
-    - As B, re-rate an item that is already "Já fomos" and confirm the item's
+    - As A, rate a "Queremos" item created by B (the first rating moves it to
+      "Já fizemos") and confirm `updated_by` is A.
+    - As B, re-rate an item that is already "Já fizemos" and confirm the item's
       `updated_by`/`updated_at` are unchanged (only the rating row changes).
     - As B, move an item to a space B is not a member of and confirm it fails
       with a row-level security violation; the item stays in its space.

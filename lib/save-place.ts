@@ -47,6 +47,7 @@ export async function savePlace(
   const title = formValue(formData, "title");
   const type = formValue(formData, "type");
   const url = captureLink(formValue(formData, "url"));
+  const notes = formValue(formData, "notes");
   const status: ItemStatus =
     formValue(formData, "status") === "done" ? "done" : "want";
 
@@ -66,6 +67,7 @@ export async function savePlace(
       type: type as ItemType,
       title,
       url,
+      notes: notes || null,
       status,
       completed_at: status === "done" ? new Date().toISOString() : null,
     })

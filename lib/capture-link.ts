@@ -67,6 +67,36 @@ export function captureLink(text: string): string | null {
   return parsed.ok ? normalizeLink(parsed.url) : null;
 }
 
+export type OriginalLink = { href: string | null; label: string };
+
+// "LINK ORIGINAL" do detalhe: host + caminho, sem https:// nem www.
+// Só vira link clicável se for http(s); texto que não é link aparece cru.
+export function originalLink(
+  url: string | null | undefined,
+): OriginalLink | null {
+  const value = url?.trim();
+
+  if (!value) {
+    return null;
+  }
+
+  const parsed = parseLink(value);
+
+  if (!parsed.ok) {
+    return { href: null, label: value };
+  }
+
+  const link = new URL(parsed.url);
+  const host = `${link.hostname.replace(/^www\./, "")}${link.port ? `:${link.port}` : ""}`;
+  let path = link.pathname === "/" ? "" : link.pathname;
+
+  try {
+    path = decodeURI(path);
+  } catch {}
+
+  return { href: link.href, label: `${host}${path}` };
+}
+
 export function parseSavedStatus(
   value: string | string[] | undefined,
 ): ItemStatus | null {
@@ -78,7 +108,10 @@ export function savedToastCopy(status: ItemStatus): string {
   return `Salvo em ${status === "done" ? STATUS_LABELS.done : STATUS_LABELS.want} 💛`;
 }
 
-// "Já fizemos" vai pro detalhe (a nota abre ali); "Quero ir" volta pro quadro.
+// "Já fizemos" vai pro detalhe (a nota abre ali); "Queremos" volta pro quadro,
+// com o item novo em destaque (?novo=).
 export function savedRedirectPath(status: ItemStatus, id: string): string {
-  return status === "done" ? `/items/${id}?salvo=done` : `/?salvo=${status}`;
+  return status === "done"
+    ? `/items/${id}?salvo=done`
+    : `/?salvo=want&novo=${encodeURIComponent(id)}`;
 }

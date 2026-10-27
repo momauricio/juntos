@@ -1,4 +1,5 @@
 export type ItemType =
+  | "activity"
   | "restaurant"
   | "food_idea"
   | "tourist_spot"

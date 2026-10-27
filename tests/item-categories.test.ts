@@ -1,74 +1,108 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  CATEGORY_LABELS,
-  ITEM_CATEGORIES,
-  categoryForType,
+  ALL_CHIP_LABEL,
+  TYPE_CHIPS,
+  countByStatus,
   parseTypeParam,
-  typesForCategory,
+  typeFilterSummary,
 } from "@/lib/item-categories";
-import { TYPE_LABELS } from "@/lib/labels";
-import type { ItemType } from "@/lib/types";
+import { TYPE_CHIP_LABELS, TYPE_EMOJI } from "@/lib/labels";
+import type { ItemStatus, ItemType } from "@/lib/types";
 
-const ALL_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
-
-describe("item categories", () => {
-  it("labels the chips like the mockup", () => {
-    expect(ITEM_CATEGORIES.map((category) => CATEGORY_LABELS[category])).toEqual([
+describe("type chips", () => {
+  it("lists Tudo and then one chip per type, Programa first (mockup 21)", () => {
+    expect(
+      TYPE_CHIPS.map((chip) =>
+        chip === "all" ? ALL_CHIP_LABEL : `${TYPE_EMOJI[chip]} ${TYPE_CHIP_LABELS[chip]}`,
+      ),
+    ).toEqual([
       "Tudo",
-      "Comer",
-      "Passeios",
-      "Viagens",
+      "🧺 Programa",
+      "🍝 Restaurante",
+      "☕ Comida",
+      "🏖️ Passeio",
+      "🎬 Filme",
+      "🏙️ Cidade",
+      "🎟️ Evento",
     ]);
-  });
-
-  it("groups the existing types", () => {
-    expect(typesForCategory("all")).toEqual(ALL_TYPES);
-    expect(typesForCategory("comer")).toEqual(["restaurant", "food_idea"]);
-    expect(typesForCategory("passeios")).toEqual(["tourist_spot", "event", "movie"]);
-    expect(typesForCategory("viagens")).toEqual(["city"]);
-  });
-
-  it("puts every type in exactly one group", () => {
-    const grouped = (["comer", "passeios", "viagens"] as const).flatMap(typesForCategory);
-    expect([...grouped].sort()).toEqual([...ALL_TYPES].sort());
-
-    for (const type of ALL_TYPES) {
-      expect(typesForCategory(categoryForType(type))).toContain(type);
-    }
-  });
-
-  it("maps a type to its group", () => {
-    expect(categoryForType("restaurant")).toBe("comer");
-    expect(categoryForType("food_idea")).toBe("comer");
-    expect(categoryForType("movie")).toBe("passeios");
-    expect(categoryForType("city")).toBe("viagens");
   });
 });
 
 describe("parseTypeParam", () => {
-  it("reads a group", () => {
-    expect(parseTypeParam("comer")).toEqual({
-      category: "comer",
-      types: ["restaurant", "food_idea"],
-    });
-    expect(parseTypeParam(["viagens", "comer"])).toEqual({
-      category: "viagens",
-      types: ["city"],
-    });
-  });
-
-  it("keeps an old single type, highlighting its group", () => {
+  it("reads a single type, highlighting its chip", () => {
     expect(parseTypeParam("restaurant")).toEqual({
-      category: "comer",
+      chip: "restaurant",
       types: ["restaurant"],
     });
-    expect(parseTypeParam("event")).toEqual({ category: "passeios", types: ["event"] });
+    expect(parseTypeParam("activity")).toEqual({ chip: "activity", types: ["activity"] });
+    expect(parseTypeParam(["event", "movie"])).toEqual({ chip: "event", types: ["event"] });
+  });
+
+  it("keeps old group links filtering by the group, with no chip highlighted", () => {
+    expect(parseTypeParam("comer")).toEqual({
+      chip: null,
+      types: ["restaurant", "food_idea"],
+    });
+    expect(parseTypeParam("passeios")).toEqual({
+      chip: null,
+      types: ["tourist_spot", "event", "movie"],
+    });
+    expect(parseTypeParam("viagens")).toEqual({ chip: null, types: ["city"] });
   });
 
   it("falls back to everything", () => {
-    expect(parseTypeParam(undefined)).toEqual({ category: "all", types: null });
-    expect(parseTypeParam("all")).toEqual({ category: "all", types: null });
-    expect(parseTypeParam("nada")).toEqual({ category: "all", types: null });
+    expect(parseTypeParam(undefined)).toEqual({ chip: "all", types: null });
+    expect(parseTypeParam("all")).toEqual({ chip: "all", types: null });
+    expect(parseTypeParam("nada")).toEqual({ chip: "all", types: null });
+    expect(parseTypeParam("toString")).toEqual({ chip: "all", types: null });
+  });
+});
+
+describe("countByStatus", () => {
+  const items: { type: ItemType; status: ItemStatus }[] = [
+    { type: "activity", status: "want" },
+    { type: "activity", status: "want" },
+    { type: "activity", status: "want" },
+    { type: "activity", status: "done" },
+    { type: "restaurant", status: "want" },
+    { type: "movie", status: "done" },
+    { type: "movie", status: "done" },
+  ];
+
+  it("counts every item when there is no type filter", () => {
+    expect(countByStatus(items)).toEqual({ want: 4, done: 3 });
+  });
+
+  it("follows the type filter (mockup 21b)", () => {
+    const { types } = parseTypeParam("activity");
+    const filtered = items.filter((item) => types!.includes(item.type));
+    expect(countByStatus(filtered)).toEqual({ want: 3, done: 1 });
+  });
+
+  it("follows an old group filter", () => {
+    const { types } = parseTypeParam("passeios");
+    const filtered = items.filter((item) => types!.includes(item.type));
+    expect(countByStatus(filtered)).toEqual({ want: 0, done: 2 });
+  });
+
+  it("is zero for an empty list", () => {
+    expect(countByStatus([])).toEqual({ want: 0, done: 0 });
+  });
+});
+
+describe("typeFilterSummary", () => {
+  it("matches the spec for Programa", () => {
+    expect(typeFilterSummary("activity", 3, "want")).toBe("3 programas em Queremos");
+    expect(typeFilterSummary("activity", 1, "want")).toBe("1 programa em Queremos");
+    expect(typeFilterSummary("activity", 0, "want")).toBe("0 programas em Queremos");
+  });
+
+  it("generalizes to the other types and to Já fizemos", () => {
+    expect(typeFilterSummary("restaurant", 2, "done")).toBe("2 restaurantes em Já fizemos");
+    expect(typeFilterSummary("tourist_spot", 1, "want")).toBe(
+      "1 ponto turístico em Queremos",
+    );
+    expect(typeFilterSummary("food_idea", 4, "want")).toBe("4 ideias de comida em Queremos");
   });
 });

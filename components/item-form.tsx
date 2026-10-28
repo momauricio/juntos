@@ -11,7 +11,12 @@ import {
   INPUT,
   TEXTAREA,
 } from "@/components/ui-classes";
-import { NOTES_PLACEHOLDER, TYPE_EMOJI, TYPE_LABELS } from "@/lib/labels";
+import {
+  NOTES_PLACEHOLDER,
+  TYPE_EMOJI,
+  TYPE_LABELS,
+  typeLabel,
+} from "@/lib/labels";
 import type { Item, ItemType } from "@/lib/types";
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
@@ -64,7 +69,7 @@ export function ItemForm({ action, item, mode }: ItemFormProps) {
         <div className="space-y-1.5 text-sm font-semibold text-ink">
           <span>Tipo</span>
           <p className="flex h-[50px] items-center rounded-xl border border-ink/20 bg-surface-muted px-3.5 text-base font-normal text-ink/70">
-            {TYPE_LABELS[item.type]}
+            {typeLabel(item.type)}
           </p>
           <p className="text-xs font-normal text-ink/60">
             O tipo fica bloqueado depois que a ideia é criada.

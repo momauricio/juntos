@@ -27,11 +27,10 @@ import {
   inviteStatusMessage,
   normalizeInviteCode,
 } from "@/lib/invites";
-import { STATUS_LABELS, TYPE_EMOJI } from "@/lib/labels";
+import { STATUS_LABELS, typeEmoji } from "@/lib/labels";
 import { getRequestOrigin } from "@/lib/request-origin";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
-import type { ItemType } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Convite",
@@ -94,7 +93,7 @@ function InvitePreviewBlock({ preview }: { preview: InvitePreview }) {
             className={`flex h-[84px] items-center justify-center rounded-[14px] ${typeGradient(type)}`}
           >
             <span aria-hidden="true" className="text-[32px]">
-              {TYPE_EMOJI[type as ItemType] ?? "📍"}
+              {typeEmoji(type)}
             </span>
           </div>
         ))}

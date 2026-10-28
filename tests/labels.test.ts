@@ -13,6 +13,9 @@ import {
   TYPE_HINTS,
   TYPE_LABELS,
   TYPE_THUMB,
+  typeEmoji,
+  typeHint,
+  typeLabel,
 } from "@/lib/labels";
 
 const TYPE_KEYS = [
@@ -22,6 +25,7 @@ const TYPE_KEYS = [
   "tourist_spot",
   "movie",
   "city",
+  "stay",
   "event",
 ];
 
@@ -40,7 +44,7 @@ describe("STATUS_LABELS", () => {
 });
 
 describe("type maps", () => {
-  it("have the same 7 keys, Programa first", () => {
+  it("have the same 8 keys, Programa first, Hospedagem after Cidade", () => {
     for (const map of [
       TYPE_LABELS,
       TYPE_EMOJI,
@@ -66,8 +70,33 @@ describe("type maps", () => {
     expect(TYPE_HINTS.event).toBe("Show, festa, exposição: tem data marcada.");
   });
 
-  it("uses one thumbnail per type", () => {
-    expect(new Set(Object.values(TYPE_THUMB)).size).toBe(TYPE_KEYS.length);
+  it("describes Hospedagem", () => {
+    expect(TYPE_LABELS.stay).toBe("Hospedagem");
+    expect(TYPE_EMOJI.stay).toBe("🏨");
+    expect(TYPE_CHIP_LABELS.stay).toBe("Hospedagem");
+    expect(TYPE_HINTS.stay).toBe("Hotel, pousada ou cabana pra dormir fora.");
+    expect(TYPE_THUMB.stay).toBe(TYPE_THUMB.city);
+  });
+
+  it("uses one thumbnail per type (Hospedagem shares Cidade's)", () => {
+    const others = Object.entries(TYPE_THUMB).filter(([type]) => type !== "stay");
+    expect(new Set(others.map(([, thumb]) => thumb)).size).toBe(TYPE_KEYS.length - 1);
+  });
+});
+
+describe("unknown type fallback", () => {
+  it("keeps known types as they are", () => {
+    expect(typeLabel("stay")).toBe("Hospedagem");
+    expect(typeEmoji("activity")).toBe("🧺");
+    expect(typeHint("event")).toBe(TYPE_HINTS.event);
+  });
+
+  it("never shows undefined for a type the app does not know", () => {
+    for (const type of ["boat", "", "toString", "__proto__"]) {
+      expect(typeLabel(type)).toBe("Item");
+      expect(typeEmoji(type)).toBe("📍");
+      expect(typeHint(type)).toBe("");
+    }
   });
 });
 

@@ -6,10 +6,10 @@ import { originalLink } from "@/lib/capture-link";
 import {
   ACTIVITY_NO_ADDRESS_COPY,
   STATUS_LABELS,
-  TYPE_EMOJI,
-  TYPE_HINTS,
-  TYPE_LABELS,
   TYPE_THUMB,
+  typeEmoji,
+  typeHint,
+  typeLabel,
 } from "@/lib/labels";
 import { formatScore } from "@/lib/ratings";
 import type { Item, ItemStatus, ItemType } from "@/lib/types";
@@ -18,13 +18,13 @@ type Tone = "terracotta" | "sage";
 
 // Classe .ph1–.ph7 do tipo (tipos desconhecidos caem na primeira).
 export function typeGradient(type: string) {
-  return TYPE_THUMB[type as ItemType] ?? "ph1";
+  return Object.hasOwn(TYPE_THUMB, type) ? TYPE_THUMB[type as ItemType] : "ph1";
 }
 
 // "São Paulo · Restaurante" quando há lugar; senão só o tipo.
 export function itemSubtitle(type: ItemType, place?: string | null) {
   const trimmed = place?.trim();
-  return trimmed ? `${trimmed} · ${TYPE_LABELS[type]}` : TYPE_LABELS[type];
+  return trimmed ? `${trimmed} · ${typeLabel(type)}` : typeLabel(type);
 }
 
 export function ItemPhoto({
@@ -38,13 +38,13 @@ export function ItemPhoto({
 }) {
   return (
     <div
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden ${TYPE_THUMB[type]} ${
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden ${typeGradient(type)} ${
         variant === "hero"
           ? "h-[150px] w-full rounded-[20px] text-[64px]"
           : "h-16 w-16 rounded-2xl text-[28px]"
       }`}
     >
-      <span aria-hidden="true">{TYPE_EMOJI[type]}</span>
+      <span aria-hidden="true">{typeEmoji(type)}</span>
       {children}
     </div>
   );
@@ -55,12 +55,12 @@ export function TypeHintBox({ type }: { type: ItemType }) {
   return (
     <div className="flex items-start gap-2.5 rounded-[14px] bg-accent-soft px-3 py-2.5 text-[14.5px] text-ink">
       <span aria-hidden="true" className="text-xl leading-6">
-        {TYPE_EMOJI[type]}
+        {typeEmoji(type)}
       </span>
       <p>
-        <b>{TYPE_LABELS[type]}</b>
+        <b>{typeLabel(type)}</b>
         <br />
-        {TYPE_HINTS[type]}
+        {typeHint(type)}
       </p>
     </div>
   );
@@ -128,7 +128,7 @@ export function heroSubtitle(type: ItemType, addedLabel: string) {
 
 // "🧺 Programa" (começo da linha do detalhe).
 export function heroTypeLabel(type: ItemType) {
-  return `${TYPE_EMOJI[type]} ${TYPE_LABELS[type]}`;
+  return `${typeEmoji(type)} ${typeLabel(type)}`;
 }
 
 const SECTION_LABEL =

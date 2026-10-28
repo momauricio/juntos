@@ -24,6 +24,7 @@ describe("type chips", () => {
       "🏖️ Passeio",
       "🎬 Filme",
       "🏙️ Cidade",
+      "🏨 Hospedagem",
       "🎟️ Evento",
     ]);
   });
@@ -36,6 +37,7 @@ describe("parseTypeParam", () => {
       types: ["restaurant"],
     });
     expect(parseTypeParam("activity")).toEqual({ chip: "activity", types: ["activity"] });
+    expect(parseTypeParam("stay")).toEqual({ chip: "stay", types: ["stay"] });
     expect(parseTypeParam(["event", "movie"])).toEqual({ chip: "event", types: ["event"] });
   });
 
@@ -48,7 +50,7 @@ describe("parseTypeParam", () => {
       chip: null,
       types: ["tourist_spot", "event", "movie"],
     });
-    expect(parseTypeParam("viagens")).toEqual({ chip: null, types: ["city"] });
+    expect(parseTypeParam("viagens")).toEqual({ chip: null, types: ["city", "stay"] });
   });
 
   it("falls back to everything", () => {
@@ -104,5 +106,13 @@ describe("typeFilterSummary", () => {
       "1 ponto turístico em Queremos",
     );
     expect(typeFilterSummary("food_idea", 4, "want")).toBe("4 ideias de comida em Queremos");
+    expect(typeFilterSummary("stay", 1, "want")).toBe("1 hospedagem em Queremos");
+    expect(typeFilterSummary("stay", 2, "done")).toBe("2 hospedagens em Já fizemos");
+  });
+
+  it("does not break on a type the app does not know", () => {
+    const unknown = "boat" as ItemType;
+    expect(typeFilterSummary(unknown, 1, "want")).toBe("1 item em Queremos");
+    expect(typeFilterSummary(unknown, 3, "done")).toBe("3 itens em Já fizemos");
   });
 });

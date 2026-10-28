@@ -1,6 +1,11 @@
 "use client";
 
-import { useActionState, useState, type FormEvent } from "react";
+import {
+  useActionState,
+  useState,
+  type FormEvent,
+  type InputHTMLAttributes,
+} from "react";
 
 import {
   BTN_PRIMARY,
@@ -9,7 +14,13 @@ import {
   INPUT,
   TEXTAREA,
 } from "@/components/ui-classes";
-import { assertScore, COMMENT_MAX_LENGTH } from "@/lib/ratings";
+import {
+  COMMENT_MAX_LENGTH,
+  parseScore,
+  SCORE_ERROR,
+  SCORE_PATTERN,
+  scoreInputValue,
+} from "@/lib/ratings";
 import type { Item, Rating } from "@/lib/types";
 
 type RatingFormProps = {
@@ -24,7 +35,6 @@ type RatingFormProps = {
   > | null;
 };
 
-const SCORE_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1);
 const INITIAL_ACTION_STATE: RatingFormState = { error: null };
 
 export type RatingFormState = {
@@ -33,9 +43,7 @@ export type RatingFormState = {
 
 function scoreFromForm(formData: FormData, key: string) {
   const rawValue = formData.get(key);
-  const value = typeof rawValue === "string" ? Number(rawValue) : Number.NaN;
-  assertScore(value);
-  return value;
+  return parseScore(typeof rawValue === "string" ? rawValue : "");
 }
 
 export function RatingForm({ action, item, rating }: RatingFormProps) {
@@ -82,27 +90,31 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
 
       {isRestaurant ? (
         <div className="grid grid-cols-3 gap-2.5">
-          <ScoreSelect
+          <ScoreInput
             label="Comida"
             name="food"
-            defaultValue={rating?.food ?? ""}
+            required
+            defaultValue={scoreInputValue(rating?.food)}
           />
-          <ScoreSelect
+          <ScoreInput
             label="Atendimento"
             name="service"
-            defaultValue={rating?.service ?? ""}
+            required
+            defaultValue={scoreInputValue(rating?.service)}
           />
-          <ScoreSelect
+          <ScoreInput
             label="Ambiente"
             name="ambiance"
-            defaultValue={rating?.ambiance ?? ""}
+            required
+            defaultValue={scoreInputValue(rating?.ambiance)}
           />
         </div>
       ) : (
-        <ScoreSelect
+        <ScoreInput
           label="Nota"
           name="score"
-          defaultValue={rating?.score ?? ""}
+          required
+          defaultValue={scoreInputValue(rating?.score)}
         />
       )}
 
@@ -134,31 +146,29 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
   );
 }
 
-type ScoreSelectProps = {
+type ScoreInputProps = Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "type" | "inputMode" | "pattern" | "className"
+> & {
   label: string;
-  name: string;
-  defaultValue: number | "";
 };
 
-function ScoreSelect({ label, name, defaultValue }: ScoreSelectProps) {
+// Nota de 1 a 10 com até 1 casa ("8,2" ou "8.2"); quem lê o valor usa parseScore.
+// Também usado no formulário de nota da demo.
+export function ScoreInput({ label, ...inputProps }: ScoreInputProps) {
   return (
     <label className={FIELD_LABEL}>
       <span>{label}</span>
-      <select
-        name={name}
-        required
-        defaultValue={defaultValue}
+      <input
+        type="text"
+        inputMode="decimal"
+        autoComplete="off"
+        placeholder="ex.: 8,2"
+        pattern={SCORE_PATTERN}
+        title={SCORE_ERROR}
+        {...inputProps}
         className={INPUT}
-      >
-        <option value="" disabled>
-          Escolha
-        </option>
-        {SCORE_OPTIONS.map((score) => (
-          <option key={score} value={score}>
-            {score}
-          </option>
-        ))}
-      </select>
+      />
     </label>
   );
 }

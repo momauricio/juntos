@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { STATUS_LABELS } from "@/lib/labels";
-import { assertScore, coupleScore, personAverage } from "@/lib/ratings";
+import {
+  assertScore,
+  coupleScore,
+  parseScore,
+  personAverage,
+  scoreInputValue,
+} from "@/lib/ratings";
 import { addedByLabel } from "@/lib/relative-time";
 import {
   filterItems,
@@ -47,13 +53,12 @@ import {
   BTN_SOFT,
   CARD,
   FAB,
-  FIELD_LABEL,
-  INPUT,
 } from "@/components/ui-classes";
 import { DemoShowcaseBanner } from "@/components/demo-showcase-banner";
 import { IdeaWizard } from "@/components/demo-idea-wizard";
 import { TripWizard } from "@/components/demo-trip-wizard";
 import { TripDetail, TripsHome } from "@/components/demo-trips";
+import { ScoreInput } from "@/components/rating-form";
 
 type Screen =
   | { name: "hub" }
@@ -432,11 +437,25 @@ function Detail({
 }) {
   const item = space.items.find((i) => i.id === itemId);
   const rating = space.ratings.find((r) => r.item_id === itemId);
-  const [food, setFood] = useState(rating?.food ?? 7);
-  const [service, setService] = useState(rating?.service ?? 7);
-  const [ambiance, setAmbiance] = useState(rating?.ambiance ?? 7);
-  const [score, setScore] = useState(rating?.score ?? 7);
+  // Texto como digitado ("8,2"); notas antigas inteiras aparecem como "8,0".
+  const [food, setFood] = useState(scoreInputValue(rating?.food));
+  const [service, setService] = useState(scoreInputValue(rating?.service));
+  const [ambiance, setAmbiance] = useState(scoreInputValue(rating?.ambiance));
+  const [score, setScore] = useState(scoreInputValue(rating?.score));
   const [formOpen, setFormOpen] = useState(!rating);
+  const [scoreError, setScoreError] = useState<string | null>(null);
+
+  function rate(read: () => Parameters<typeof onRate>[0]) {
+    try {
+      const payload = read();
+      setScoreError(null);
+      onRate(payload);
+    } catch (error) {
+      setScoreError(
+        error instanceof Error ? error.message : "Informe uma nota de 1 a 10.",
+      );
+    }
+  }
 
   if (!item) {
     return (
@@ -511,15 +530,21 @@ function Detail({
           {item.type === "restaurant" ? (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-2.5">
-                <ScoreSelect label="Comida" value={food} onChange={setFood} />
-                <ScoreSelect label="Atendimento" value={service} onChange={setService} />
-                <ScoreSelect label="Ambiente" value={ambiance} onChange={setAmbiance} />
+                <ScoreInput label="Comida" value={food} onChange={(e) => setFood(e.target.value)} />
+                <ScoreInput label="Atendimento" value={service} onChange={(e) => setService(e.target.value)} />
+                <ScoreInput label="Ambiente" value={ambiance} onChange={(e) => setAmbiance(e.target.value)} />
               </div>
+              {scoreError ? <ScoreError text={scoreError} /> : null}
               <button
                 type="button"
                 className={BTN_PRIMARY}
                 onClick={() =>
-                  onRate({ food, service, ambiance, score: null })
+                  rate(() => ({
+                    food: parseScore(food),
+                    service: parseScore(service),
+                    ambiance: parseScore(ambiance),
+                    score: null,
+                  }))
                 }
               >
                 Salvar nota
@@ -527,12 +552,18 @@ function Detail({
             </div>
           ) : (
             <div className="space-y-4">
-              <ScoreSelect label="Nota" value={score} onChange={setScore} />
+              <ScoreInput label="Nota" value={score} onChange={(e) => setScore(e.target.value)} />
+              {scoreError ? <ScoreError text={scoreError} /> : null}
               <button
                 type="button"
                 className={BTN_PRIMARY}
                 onClick={() =>
-                  onRate({ score, food: null, service: null, ambiance: null })
+                  rate(() => ({
+                    score: parseScore(score),
+                    food: null,
+                    service: null,
+                    ambiance: null,
+                  }))
                 }
               >
                 Salvar nota
@@ -557,30 +588,11 @@ function Detail({
   );
 }
 
-function ScoreSelect({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (n: number) => void;
-}) {
+function ScoreError({ text }: { text: string }) {
   return (
-    <label className={FIELD_LABEL}>
-      <span>{label}</span>
-      <select
-        className={INPUT}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      >
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-          <option key={n} value={n}>
-            {n}
-          </option>
-        ))}
-      </select>
-    </label>
+    <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-danger">
+      {text}
+    </p>
   );
 }
 

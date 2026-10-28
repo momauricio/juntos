@@ -20,10 +20,11 @@ import { SavedRatingPrompt } from "@/components/saved-rating-prompt";
 import { BACK_LINK } from "@/components/ui-classes";
 import { STATUS_LABELS } from "@/lib/labels";
 import {
-  assertScore,
   COMMENT_MAX_LENGTH,
   coupleScore,
+  parseScore,
   personAverage,
+  SCORE_ERROR,
 } from "@/lib/ratings";
 import { addedByLabel, editedByLabel } from "@/lib/relative-time";
 import { signInPathWithNext } from "@/lib/auth-callback";
@@ -46,10 +47,9 @@ function formValue(formData: FormData, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+// "8,2" → 8.2 (vírgula vira ponto) antes de ir para a RPC.
 function scoreValue(formData: FormData, key: string) {
-  const value = Number(formValue(formData, key));
-  assertScore(value);
-  return value;
+  return parseScore(formValue(formData, key));
 }
 
 export async function generateMetadata({
@@ -297,7 +297,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
               p_comment: comment || null,
             };
     } catch {
-      return { error: "Informe uma nota de 1 a 10." };
+      return { error: SCORE_ERROR };
     }
 
     const { error: ratingError } = await actionSupabase.rpc(

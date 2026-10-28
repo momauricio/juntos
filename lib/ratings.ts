@@ -1,9 +1,41 @@
 export const COMMENT_MAX_LENGTH = 280;
 
+export const SCORE_ERROR = "Nota deve ser de 1 a 10, com até 1 casa (ex.: 8,2)";
+
+// Para o atributo pattern do campo de nota: 1 a 9 com até 1 casa, ou 10 / 10,0.
+export const SCORE_PATTERN = "10([.,]0)?|[1-9]([.,][0-9])?";
+const SCORE_RE = new RegExp(`^(?:${SCORE_PATTERN})$`);
+
+// Notas em décimos inteiros (8,2 → 82), para as contas não pegarem erro de float.
+function tenths(n: number): number {
+  return Math.round(n * 10);
+}
+
 export function assertScore(n: number): void {
-  if (!Number.isInteger(n) || n < 1 || n > 10) {
-    throw new Error("Nota deve ser um inteiro de 1 a 10");
+  if (
+    !Number.isFinite(n) ||
+    n < 1 ||
+    n > 10 ||
+    Math.abs(n * 10 - tenths(n)) > 1e-9
+  ) {
+    throw new Error(SCORE_ERROR);
   }
+}
+
+// Texto digitado ("8,2", "8.2", "8") → número; vírgula vira ponto.
+export function parseScore(text: string): number {
+  const trimmed = text.trim();
+  if (!SCORE_RE.test(trimmed)) {
+    throw new Error(SCORE_ERROR);
+  }
+  const value = Number(trimmed.replace(",", "."));
+  assertScore(value);
+  return value;
+}
+
+// Valor do campo de nota: 8 → "8,0", sem nota → "".
+export function scoreInputValue(value: number | null | undefined): string {
+  return value == null ? "" : formatScore(value);
 }
 
 export function restaurantAverage(
@@ -14,7 +46,7 @@ export function restaurantAverage(
   assertScore(food);
   assertScore(service);
   assertScore(ambiance);
-  return Math.round(((food + service + ambiance) / 3) * 10) / 10;
+  return Math.round((tenths(food) + tenths(service) + tenths(ambiance)) / 3) / 10;
 }
 
 export function displayRating(rating: {
@@ -62,8 +94,12 @@ export function coupleScore(ratings: RatingValues[]): number | null {
     return null;
   }
 
-  const sum = averages.reduce((total, value) => total + value, 0);
-  return Math.round((sum / averages.length) * 10) / 10;
+  // Soma em terços de décimo (inteiros) para o meio (8,25) arredondar sempre para cima.
+  const sum = averages.reduce(
+    (total, value) => total + Math.round(value * 30),
+    0,
+  );
+  return Math.round(sum / (3 * averages.length)) / 10;
 }
 
 export function formatScore(value: number): string {

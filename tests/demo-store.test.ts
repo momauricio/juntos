@@ -96,6 +96,37 @@ describe("sampleState", () => {
   });
 });
 
+describe("demo ratings with one decimal", () => {
+  it("stores decimal scores and averages them to one decimal", () => {
+    const { user, space } = sampleState();
+    const cantina = space.items.find((item) => item.title === "Cantina da Nonna")!;
+    const rated = upsertRating(space, {
+      itemId: cantina.id,
+      ratedBy: user.id,
+      food: 8.2,
+      service: 9.3,
+      ambiance: 7.5,
+      score: null,
+    });
+    expect(rated.ratings.find((r) => r.item_id === cantina.id)).toMatchObject({
+      food: 8.2,
+      service: 9.3,
+      ambiance: 7.5,
+    });
+    expect(ratingForItem(rated, cantina.id)).toBe(8.3);
+  });
+
+  it("keeps old integer ratings saved in localStorage valid", () => {
+    const { space } = sampleState();
+    // JSON como a demo antiga gravava: notas inteiras.
+    const saved = JSON.parse(JSON.stringify(space));
+    const normalized = normalizeSpace(saved);
+    const cantina = normalized.items.find((item) => item.title === "Cantina da Nonna")!;
+    expect(normalized.ratings[0]).toMatchObject({ food: 9, service: 8, ambiance: 9 });
+    expect(ratingForItem(normalized, cantina.id)).toBe(8.7);
+  });
+});
+
 describe("demo trips", () => {
   it("creates trip with checklist, stops and docs", () => {
     const { user, space: empty } = emptySpace();

@@ -359,9 +359,9 @@ export function CoupleScoreCard({
   );
 }
 
-// "Comida 9" → chip com o número em negrito.
+// "Comida 8,2" → chip com o número em negrito.
 function ScoreChip({ text }: { text: string }) {
-  const match = text.match(/^(.*\S)\s+(\d+)$/);
+  const match = text.match(/^(.*\S)\s+(\d+(?:,\d)?)$/);
 
   return (
     <span className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full bg-ink/[0.07] px-2.5 text-[13px] font-semibold">
@@ -389,13 +389,13 @@ export function ratingChips(rating: {
     rating.ambiance != null
   ) {
     return [
-      `Comida ${rating.food}`,
-      `Atendimento ${rating.service}`,
-      `Ambiente ${rating.ambiance}`,
+      `Comida ${formatScore(rating.food)}`,
+      `Atendimento ${formatScore(rating.service)}`,
+      `Ambiente ${formatScore(rating.ambiance)}`,
     ];
   }
 
-  return rating.score != null ? [`Nota ${rating.score}`] : [];
+  return rating.score != null ? [`Nota ${formatScore(rating.score)}`] : [];
 }
 
 export function formatDayMonth(timestamp: string) {

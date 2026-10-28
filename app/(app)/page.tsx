@@ -15,7 +15,7 @@ import {
   parseTypeParam,
   typeFilterSummary,
 } from "@/lib/item-categories";
-import { TYPE_LABELS } from "@/lib/labels";
+import { typeLabel } from "@/lib/labels";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
@@ -186,7 +186,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <SavedToast
           status={saved}
           description={
-            newItem ? `${newItem.title} · ${TYPE_LABELS[newItem.type]}` : undefined
+            newItem ? `${newItem.title} · ${typeLabel(newItem.type)}` : undefined
           }
         />
       ) : null}

@@ -8,6 +8,7 @@ export const TYPE_LABELS: Record<ItemType, string> = {
   tourist_spot: "Ponto turístico",
   movie: "Filme",
   city: "Cidade",
+  stay: "Hospedagem",
   event: "Evento",
 };
 
@@ -24,6 +25,7 @@ export const TYPE_EMOJI: Record<ItemType, string> = {
   tourist_spot: "🏖️",
   movie: "🎬",
   city: "🏙️",
+  stay: "🏨",
   event: "🎟️",
 };
 
@@ -35,6 +37,7 @@ export const TYPE_CHIP_LABELS: Record<ItemType, string> = {
   tourist_spot: "Passeio",
   movie: "Filme",
   city: "Cidade",
+  stay: "Hospedagem",
   event: "Evento",
 };
 
@@ -46,10 +49,12 @@ export const TYPE_HINTS: Record<ItemType, string> = {
   tourist_spot: "Lugar para visitar e explorar.",
   movie: "Filme, série ou sessão juntos.",
   city: "Uma cidade ou destino para sonhar.",
+  stay: "Hotel, pousada ou cabana pra dormir fora.",
   event: "Show, festa, exposição: tem data marcada.",
 };
 
 // Classe da miniatura (.ph1–.ph7 em globals.css; os itens ainda não têm imagem).
+// Hospedagem divide o gradiente com Cidade (os dois são de viagem).
 export const TYPE_THUMB: Record<ItemType, string> = {
   activity: "ph5",
   restaurant: "ph3",
@@ -57,8 +62,29 @@ export const TYPE_THUMB: Record<ItemType, string> = {
   tourist_spot: "ph2",
   movie: "ph6",
   city: "ph4",
+  stay: "ph4",
   event: "ph7",
 };
+
+// Tipo que veio do banco e o app não conhece: não quebra nem mostra "undefined".
+export const UNKNOWN_TYPE_LABEL = "Item";
+export const UNKNOWN_TYPE_EMOJI = "📍";
+
+export function typeLabel(type: string): string {
+  return Object.hasOwn(TYPE_LABELS, type)
+    ? TYPE_LABELS[type as ItemType]
+    : UNKNOWN_TYPE_LABEL;
+}
+
+export function typeEmoji(type: string): string {
+  return Object.hasOwn(TYPE_EMOJI, type)
+    ? TYPE_EMOJI[type as ItemType]
+    : UNKNOWN_TYPE_EMOJI;
+}
+
+export function typeHint(type: string): string {
+  return Object.hasOwn(TYPE_HINTS, type) ? TYPE_HINTS[type as ItemType] : "";
+}
 
 export const NOTES_PLACEHOLDER =
   "Onde? Quando? Ex.: no ateliê do bairro, num sábado de manhã";

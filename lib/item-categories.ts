@@ -14,7 +14,7 @@ export const ALL_CHIP_LABEL = "Tudo";
 const LEGACY_GROUPS: Record<string, ItemType[]> = {
   comer: ["restaurant", "food_idea"],
   passeios: ["tourist_spot", "event", "movie"],
-  viagens: ["city"],
+  viagens: ["city", "stay"],
 };
 
 export type TypeParamFilter = {
@@ -61,8 +61,12 @@ const TYPE_NOUNS: Record<ItemType, [singular: string, plural: string]> = {
   tourist_spot: ["ponto turístico", "pontos turísticos"],
   movie: ["filme", "filmes"],
   city: ["cidade", "cidades"],
+  stay: ["hospedagem", "hospedagens"],
   event: ["evento", "eventos"],
 };
+
+// Tipo desconhecido (veio do banco, o app ainda não conhece).
+const UNKNOWN_TYPE_NOUNS: [singular: string, plural: string] = ["item", "itens"];
 
 // Rodapé com filtro de tipo (mockup 21b): "3 programas em Queremos".
 export function typeFilterSummary(
@@ -70,6 +74,8 @@ export function typeFilterSummary(
   count: number,
   status: ItemStatus,
 ): string {
-  const [singular, plural] = TYPE_NOUNS[type];
+  const [singular, plural] = Object.hasOwn(TYPE_NOUNS, type)
+    ? TYPE_NOUNS[type]
+    : UNKNOWN_TYPE_NOUNS;
   return `${count} ${count === 1 ? singular : plural} em ${STATUS_LABELS[status]}`;
 }

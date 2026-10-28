@@ -5,6 +5,7 @@ export type ItemType =
   | "tourist_spot"
   | "movie"
   | "city"
+  | "stay"
   | "event";
 
 export type ItemStatus = "want" | "done";

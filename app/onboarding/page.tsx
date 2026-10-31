@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { InvitePanel } from "@/components/invite-panel";
+import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 
 type OnboardingPageProps = {
@@ -23,9 +24,8 @@ export default async function OnboardingPage({
     const onboardingPath = code
       ? `/onboarding?code=${encodeURIComponent(code)}`
       : "/onboarding";
-    const loginParams = new URLSearchParams({ next: onboardingPath });
 
-    redirect(`/login?${loginParams.toString()}`);
+    redirect(signInPathWithNext(onboardingPath, code));
   }
 
   const { data: membership } = await supabase

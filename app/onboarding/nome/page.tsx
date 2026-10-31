@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 const NOME_PATH = "/onboarding/nome";
-const CONVITE_PATH = "/onboarding/convite?passo=3";
+const PRIMEIRO_LUGAR_PATH = "/onboarding/primeiro-lugar";
 const WELCOME_PATH = "/?bem-vindo=1";
 
 async function requireUser() {
@@ -43,7 +43,7 @@ async function requireUser() {
 type Session = Awaited<ReturnType<typeof requireUser>>;
 
 // Sem espaço: cria o espaço (com o nome do casal, se veio) e segue para o
-// convite. Se já entrou em um espaço nesse meio-tempo, vai para o quadro.
+// primeiro lugar. Se já entrou em um espaço nesse meio-tempo, vai para o quadro.
 async function createSpace(
   supabase: Session["supabase"],
   spaceName: string | null,
@@ -61,7 +61,7 @@ async function createSpace(
     return { error: inviteErrorMessage(error) };
   }
 
-  redirect(CONVITE_PATH);
+  redirect(PRIMEIRO_LUGAR_PATH);
 }
 
 async function saveName(

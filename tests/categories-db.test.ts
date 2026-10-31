@@ -16,6 +16,8 @@ const PG_BIN = process.env.JUNTOS_PG_BIN;
 const MIGRATIONS_DIR = join(process.cwd(), "supabase/migrations");
 const CATEGORIES_MIGRATION = "20261031120000_categories.sql";
 const ROLLBACK = join(process.cwd(), "supabase/rollback/20261031_categories_down.sql");
+const FALLBACK_MIGRATION = "20261031130000_categories_switch_fallback.sql";
+const FALLBACK_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031130000_categories_switch_fallback_down.sql");
 
 // Pessoas e espaços "de antes" da migration.
 const MAURICIO = "dc615b01-9e66-4888-9451-3a44f1a6cea0";
@@ -62,6 +64,7 @@ let port = 0;
 let psqlBin = "psql";
 let started = false;
 let snapshotBefore = "";
+let schemaAfterCategories = "";
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -121,6 +124,16 @@ function createSpace(user: string, email: string, code: string): string {
     as: user,
   });
 }
+
+// Funções do schema public (corpo, security definer, search_path e grants) e
+// triggers: compara o esquema logo depois de categories com o de depois do
+// rollback de 20261031130000.
+const SCHEMA = `select concat_ws(E'\\n',
+  (select string_agg(concat_ws('|', p.proname, pg_get_function_identity_arguments(p.oid), md5(p.prosrc),
+                               p.prosecdef, p.proconfig::text, p.proacl::text), E'\\n' order by p.proname, p.oid)
+   from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public'),
+  (select string_agg(t.tgname || '|' || t.tgrelid::regclass::text, E'\\n' order by t.tgname, t.tgrelid::regclass::text)
+   from pg_trigger t where not t.tgisinternal));`;
 
 const SNAPSHOT = `select string_agg(concat_ws('|', id, type, status, updated_at, updated_by), E'\\n' order by id) from public.items;`;
 
@@ -195,6 +208,8 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
     snapshotBefore = run(SNAPSHOT);
 
     runFile(join(MIGRATIONS_DIR, CATEGORIES_MIGRATION));
+    schemaAfterCategories = run(SCHEMA);
+    expect(files).toContain(FALLBACK_MIGRATION);
     // As migrations depois de categories (se houver) também entram.
     for (const file of files.filter((f) => f > CATEGORIES_MIGRATION)) {
       runFile(join(MIGRATIONS_DIR, file));
@@ -427,7 +442,8 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
                   'public.category_name_key(text)', 'public.categories_normalize()',
                   'public.categories_enforce_limit()', 'public.categories_prevent_delete_non_empty()',
                   'public.seed_default_categories(uuid)', 'public.spaces_seed_categories()',
-                  'public.items_fill_category()', 'public.items_category_same_space()'
+                  'public.items_fill_category()', 'public.items_category_same_space()',
+                  'public.ensure_default_category(uuid, text)'
                 ]) f;`),
     ).toBe("f");
     expect(
@@ -535,7 +551,277 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
     expect(run(`select count(*) from public.categories where space_id = '${newSpace}';`)).toBe("8");
   });
 
-  it("rollback volta ao esquema anterior e items.type fica igual ao backup", () => {
+  // Troca de espaço com categoria que não cabe (20261031130000). Cada caso cria
+  // os próprios espaços; confere sempre que nenhum item se perdeu.
+  let personSeq = 0x100;
+  function person(): string {
+    personSeq += 1;
+    return `00000000-0000-4000-8000-${personSeq.toString(16).padStart(12, "0")}`;
+  }
+
+  // Espaço novo de uma pessoa nova; devolve o espaço e quem é dona dele.
+  function spaceOf(code: string) {
+    const owner = person();
+    return { owner, space: createSpace(owner, `${code.toLowerCase()}@x`, code) };
+  }
+
+  // Completa o espaço com categorias próprias até 30.
+  function fillTo30(space: string, owner: string, prefix = "Própria") {
+    run(
+      `insert into public.categories (space_id, name, emoji, color)
+       select '${space}', '${prefix} ' || g, '⭐', 'ph1'
+       from generate_series(1, 30 - (select count(*) from public.categories where space_id = '${space}')) g;`,
+      { as: owner },
+    );
+    expect(run(`select count(*) from public.categories where space_id = '${space}';`)).toBe("30");
+  }
+
+  // Item numa categoria escolhida pelo nome.
+  function addItem(space: string, owner: string, category: string, type: string, title: string) {
+    run(
+      `insert into public.items (space_id, type, title, category_id)
+       values ('${space}', '${type}', '${title}', '${categoryId(space, category)}');`,
+      { as: owner },
+    );
+  }
+
+  // switch(code, true) e as conferências de sempre.
+  function switchKeepingItems(user: string, code: string, oldSpace: string, newSpace: string) {
+    const items = (space: string) =>
+      run(`select coalesce(string_agg(id || '|' || type, ',' order by id), '') from public.items where space_id = '${space}';`);
+    const oldItems = items(oldSpace);
+    const total = run(`select count(*) from public.items where space_id in ('${oldSpace}', '${newSpace}');`);
+
+    expect(run(`select public.switch_space_and_redeem('${code}', true);`, { as: user })).toBe(newSpace);
+
+    expect(run(`select count(*) from public.items where space_id = '${newSpace}';`)).toBe(total);
+    expect(
+      run(`select (select count(*) from public.items where space_id = '${oldSpace}')
+                + (select count(*) from public.categories where space_id = '${oldSpace}')
+                + (select count(*) from public.spaces where id = '${oldSpace}');`),
+    ).toBe("0");
+    expect(
+      run(`select count(*) from public.items i left join public.categories c on c.id = i.category_id
+           where i.space_id = '${newSpace}' and c.space_id is distinct from '${newSpace}';`),
+    ).toBe("0");
+    // mesmos ids, mesmo type
+    expect(
+      run(`select coalesce(string_agg(id || '|' || type, ',' order by id), '') from public.items
+           where id = any(string_to_array('${oldItems.replace(/\|[a-z_]+/g, "")}', ',')::uuid[]);`),
+    ).toBe(oldItems);
+  }
+
+  function itemsByCategory(space: string, titles: string[]) {
+    return run(`select string_agg(i.title || '>' || c.name, ',' order by i.title) from public.items i
+                join public.categories c on c.id = i.category_id
+                where i.space_id = '${space}' and i.title in ('${titles.join("','")}');`);
+  }
+
+  it("troca: nome com acento/maiúscula diferente (Púbs × pubs) junta, sem criar categoria", () => {
+    const old = spaceOf("SWA001");
+    const target = spaceOf("SWA002");
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Púbs', '🍺', 'ph5');`, { as: old.owner });
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${target.space}', 'pubs', '🍻', 'ph2');`, {
+      as: target.owner,
+    });
+    addItem(old.space, old.owner, "Púbs", "activity", "Pub A");
+    addItem(old.space, old.owner, "Púbs", "restaurant", "Bar com comida A");
+
+    switchKeepingItems(old.owner, "SWA002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("9");
+    expect(itemsByCategory(target.space, ["Pub A", "Bar com comida A"])).toBe("Bar com comida A>pubs,Pub A>pubs");
+  });
+
+  it("troca: nome que não bate vira categoria nova no fim", () => {
+    const old = spaceOf("SWB001");
+    const target = spaceOf("SWB002");
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Bares', '🍺', 'ph5');`, { as: old.owner });
+    addItem(old.space, old.owner, "Bares", "activity", "Bar B");
+
+    switchKeepingItems(old.owner, "SWB002", old.space, target.space);
+
+    expect(
+      run(`select concat_ws('|', position, emoji, color, item_type, created_by) from public.categories
+           where space_id = '${target.space}' and name = 'Bares';`),
+    ).toBe(`9|🍺|ph5|activity|${old.owner}`);
+    expect(itemsByCategory(target.space, ["Bar B"])).toBe("Bar B>Bares");
+  });
+
+  it("troca: espaço novo com 30 + categoria nova com itens de 2 tipos -> padrão de cada tipo, total 30", () => {
+    const old = spaceOf("SWC001");
+    const target = spaceOf("SWC002");
+    fillTo30(target.space, target.owner);
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Viagens', '✈️', 'ph4');`, {
+      as: old.owner,
+    });
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Cantina C");
+    addItem(old.space, old.owner, "Viagens", "stay", "Pousada C");
+    addItem(old.space, old.owner, "Viagens", "stay", "Hotel C");
+    // e um item numa padrão, que junta pelo nome
+    run(`insert into public.items (space_id, type, title) values ('${old.space}', 'movie', 'Filme C');`, { as: old.owner });
+
+    switchKeepingItems(old.owner, "SWC002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("30");
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}' and name = 'Viagens';`)).toBe("0");
+    expect(itemsByCategory(target.space, ["Cantina C", "Pousada C", "Hotel C", "Filme C"])).toBe(
+      "Cantina C>Restaurante,Filme C>Filme,Hotel C>Hospedagem,Pousada C>Hospedagem",
+    );
+  });
+
+  it("troca: padrão do tipo apagada no espaço novo + estouro -> primeira padrão que existe", () => {
+    const old = spaceOf("SWD001");
+    const target = spaceOf("SWD002");
+    run(`delete from public.categories where space_id = '${target.space}' and name in ('Restaurante', 'Hospedagem');`, {
+      as: target.owner,
+    });
+    fillTo30(target.space, target.owner);
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Viagens', '✈️', 'ph4');`, {
+      as: old.owner,
+    });
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Cantina D");
+
+    switchKeepingItems(old.owner, "SWD002", old.space, target.space);
+
+    // Hospedagem (1) e Restaurante (2) apagadas: a primeira padrão é Passeio (3)
+    expect(itemsByCategory(target.space, ["Cantina D"])).toBe("Cantina D>Passeio");
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("30");
+  });
+
+  it("troca: nenhuma padrão no espaço novo + estouro -> recria a padrão do tipo (31ª, sem autor)", () => {
+    const old = spaceOf("SWE001");
+    const target = spaceOf("SWE002");
+    run(`delete from public.categories where space_id = '${target.space}';`, { as: target.owner });
+    fillTo30(target.space, target.owner);
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Viagens', '✈️', 'ph4');`, {
+      as: old.owner,
+    });
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Cantina E");
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Trattoria E");
+
+    switchKeepingItems(old.owner, "SWE002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("31");
+    expect(
+      run(`select concat_ws('|', position, name, emoji, color, item_type, created_by is null) from public.categories
+           where space_id = '${target.space}' and created_by is null;`),
+    ).toBe("31|Restaurante|🍝|ph3|restaurant|t");
+    expect(itemsByCategory(target.space, ["Cantina E", "Trattoria E"])).toBe(
+      "Cantina E>Restaurante,Trattoria E>Restaurante",
+    );
+    // o limite de 30 continua para o casal
+    expect(
+      fails(`insert into public.categories (space_id, name, emoji, color) values ('${target.space}', 'Mais uma', '⭐', 'ph1');`, {
+        as: target.owner,
+      }),
+    ).toContain("category_limit");
+  });
+
+  it("troca: nome padrão ocupado por categoria do casal -> usa a existente, sem erro", () => {
+    const old = spaceOf("SWF001");
+    const target = spaceOf("SWF002");
+    run(`delete from public.categories where space_id = '${target.space}';`, { as: target.owner });
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${target.space}', 'restaurante', '🍕', 'ph7');`, {
+      as: target.owner,
+    });
+    fillTo30(target.space, target.owner);
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Viagens', '✈️', 'ph4');`, {
+      as: old.owner,
+    });
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Cantina F");
+
+    switchKeepingItems(old.owner, "SWF002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("30");
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}' and created_by is null;`)).toBe("0");
+    expect(itemsByCategory(target.space, ["Cantina F"])).toBe("Cantina F>restaurante");
+    expect(run(`select type from public.items where title = 'Cantina F';`)).toBe("restaurant");
+  });
+
+  it("insert sem category_id depois de apagar a padrão recria a padrão no fim; o limite de 30 continua para o casal", () => {
+    const { owner, space } = spaceOf("SWG001");
+    run(`delete from public.categories where space_id = '${space}' and name = 'Restaurante';`, { as: owner });
+
+    expect(
+      run(
+        `select inserted from public.import_trello_items('[
+           {"type":"restaurant","status":"want","title":"Do Trello G","source_ref":"card-g1"},
+           {"type":"restaurant","status":"done","title":"Outro do Trello G","source_ref":"card-g2"}
+         ]'::jsonb);`,
+        { as: owner },
+      ),
+    ).toBe("2");
+    expect(
+      run(`select string_agg(concat_ws('|', position, name, emoji, color, item_type, created_by is null), ',')
+           from public.categories where space_id = '${space}' and name = 'Restaurante';`),
+    ).toBe("9|Restaurante|🍝|ph3|restaurant|t");
+    expect(itemsByCategory(space, ["Do Trello G", "Outro do Trello G"])).toBe(
+      "Do Trello G>Restaurante,Outro do Trello G>Restaurante",
+    );
+
+    // Com 30, o casal não cria a 31ª; um insert do app sem categoria de um tipo
+    // apagado ainda recria a padrão (31ª) e o casal continua sem poder criar.
+    fillTo30(space, owner);
+    expect(
+      fails(`insert into public.categories (space_id, name, emoji, color) values ('${space}', 'A 31ª', '⭐', 'ph1');`, {
+        as: owner,
+      }),
+    ).toContain("category_limit");
+    run(`delete from public.categories where space_id = '${space}' and name = 'Filme';`, { as: owner });
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${space}', 'De volta a 30', '⭐', 'ph1');`, {
+      as: owner,
+    });
+    run(`insert into public.items (space_id, type, title) values ('${space}', 'movie', 'Filme G');`, { as: owner });
+    expect(
+      run(`select concat_ws('|', c.position, c.name, c.emoji, c.color, c.item_type, c.created_by is null)
+           from public.items i join public.categories c on c.id = i.category_id where i.title = 'Filme G';`),
+    ).toBe("33|Filme|🎬|ph6|movie|t");
+    expect(run(`select count(*) from public.categories where space_id = '${space}';`)).toBe("31");
+    expect(
+      fails(`insert into public.categories (space_id, name, emoji, color) values ('${space}', 'A 32ª', '⭐', 'ph1');`, {
+        as: owner,
+      }),
+    ).toContain("category_limit");
+  });
+
+  it("troca com false continua igual: itens apagados e nenhuma categoria criada, mesmo com 30", () => {
+    const old = spaceOf("SWH001");
+    const target = spaceOf("SWH002");
+    fillTo30(target.space, target.owner);
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Viagens', '✈️', 'ph4');`, {
+      as: old.owner,
+    });
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Cantina H");
+    const categoriesBefore = run(`select string_agg(id::text, ',' order by id) from public.categories where space_id = '${target.space}';`);
+
+    expect(run("select public.switch_space_and_redeem('SWH002', false);", { as: old.owner })).toBe(target.space);
+
+    expect(
+      run(`select (select count(*) from public.spaces where id = '${old.space}')
+                + (select count(*) from public.categories where space_id = '${old.space}')
+                + (select count(*) from public.items where title = 'Cantina H');`),
+    ).toBe("0");
+    expect(run(`select string_agg(id::text, ',' order by id) from public.categories where space_id = '${target.space}';`)).toBe(
+      categoriesBefore,
+    );
+    expect(run(`select space_id from public.space_members where user_id = '${old.owner}';`)).toBe(target.space);
+  });
+
+  it("rollback de 20261031130000 volta exatamente ao esquema de categories", () => {
+    runFile(FALLBACK_ROLLBACK);
+    expect(run(SCHEMA)).toBe(schemaAfterCategories);
+    expect(run("select to_regprocedure('public.ensure_default_category(uuid, text)') is null;")).toBe("t");
+
+    // De volta ao PR 1: insert sem categoria do tipo falha de novo.
+    const { owner, space } = spaceOf("SWR001");
+    run(`delete from public.categories where space_id = '${space}' and name = 'Cidade';`, { as: owner });
+    expect(
+      fails(`insert into public.items (space_id, type, title) values ('${space}', 'city', 'Gramado R');`, { as: owner }),
+    ).toContain("category_required");
+  });
+
+  it("rollback de categories (depois do de 20261031130000) volta ao esquema anterior e items.type fica igual ao backup", () => {
     const output = runFile(ROLLBACK);
     expect(output).toContain("|0");
 

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
-import { InvitePanel } from "@/components/invite-panel";
+import { signInPathWithNext } from "@/lib/auth-callback";
+import { normalizeInviteCode } from "@/lib/invites";
 import { createClient } from "@/lib/supabase/server";
 
 type OnboardingPageProps = {
@@ -9,23 +10,25 @@ type OnboardingPageProps = {
   }>;
 };
 
+// Só roteia: convite → /c/[code]; sem espaço → tela "Seu nome"; senão, quadro.
 export default async function OnboardingPage({
   searchParams,
 }: OnboardingPageProps) {
   const params = await searchParams;
-  const code = Array.isArray(params.code) ? params.code[0] : params.code;
+  const rawCode = Array.isArray(params.code) ? params.code[0] : params.code;
+  const code = normalizeInviteCode(rawCode ?? "");
+
+  if (code) {
+    redirect(`/c/${encodeURIComponent(code)}`);
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    const onboardingPath = code
-      ? `/onboarding?code=${encodeURIComponent(code)}`
-      : "/onboarding";
-    const loginParams = new URLSearchParams({ next: onboardingPath });
-
-    redirect(`/login?${loginParams.toString()}`);
+    redirect(signInPathWithNext("/onboarding"));
   }
 
   const { data: membership } = await supabase
@@ -34,28 +37,5 @@ export default async function OnboardingPage({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (membership) {
-    redirect("/");
-  }
-
-  return (
-    <main className="min-h-dvh px-4 py-10 text-foreground">
-      <div className="mx-auto w-full max-w-4xl">
-        <section className="mb-8 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-            Juntos
-          </p>
-          <h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
-            Monte a lista de vocês
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-foreground/70">
-            Crie um espaço para compartilhar com seu par ou entre usando o
-            convite que você recebeu.
-          </p>
-        </section>
-
-        <InvitePanel initialCode={code} />
-      </div>
-    </main>
-  );
+  redirect(membership ? "/" : "/onboarding/nome");
 }

@@ -1,23 +1,15 @@
-import { headers } from "next/headers";
+import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { InvitePanel } from "@/components/invite-panel";
+import { LeaveSpace, SpaceNameForm } from "@/components/space-settings";
+import { signInPathWithNext } from "@/lib/auth-callback";
+import { spaceDisplayName } from "@/lib/invites";
+import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
 
-type SpaceMemberRow = {
-  user_id: string;
-  role: string;
-  joined_at: string;
-};
-
-type ProfileRow = {
-  id: string;
-  display_name: string;
-};
-
-type ActiveInviteRow = {
-  code: string;
-  expires_at: string;
+export const metadata: Metadata = {
+  title: "Ajustes",
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -25,30 +17,12 @@ const ROLE_LABELS: Record<string, string> = {
   member: "Membro",
 };
 
-async function getRequestOrigin() {
-  const headersList = await headers();
-  const host = headersList.get("host");
-
-  if (!host) {
-    return "";
-  }
-
-  const forwardedProto = headersList.get("x-forwarded-proto");
-  const protocol =
-    forwardedProto?.split(",")[0]?.trim() ??
-    (host.startsWith("localhost") || host.startsWith("127.0.0.1")
-      ? "http"
-      : "https");
-
-  return `${protocol}://${host}`;
-}
-
 async function logout() {
   "use server";
 
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/login");
+  redirect(signInPathWithNext(null));
 }
 
 export default async function SettingsPage() {
@@ -58,86 +32,34 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(signInPathWithNext("/settings"));
   }
 
-  const { data: membership } = await supabase
-    .from("space_members")
-    .select("space_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const space = await loadMySpace(supabase, user.id);
 
-  if (!membership) {
+  if (!space) {
     redirect("/onboarding");
   }
 
-  const { data: space, error: spaceError } = await supabase
-    .from("spaces")
-    .select("id,name")
-    .eq("id", membership.space_id)
-    .maybeSingle();
+  const memberCount = space.members.length;
+  const memberNames = space.members.map((member) => member.displayName);
+  const computedName = spaceDisplayName(null, memberNames);
+  const partnerName =
+    space.members.find((member) => member.userId !== user.id)?.displayName ??
+    null;
+  let itemCount = 0;
 
-  if (spaceError || !space) {
-    throw new Error("Não foi possível carregar o espaço.");
-  }
+  if (!partnerName) {
+    const { count, error: countError } = await supabase
+      .from("items")
+      .select("id", { count: "exact", head: true })
+      .eq("space_id", space.id);
 
-  const { data: memberRows, error: membersError } = await supabase
-    .from("space_members")
-    .select("user_id,role,joined_at")
-    .eq("space_id", membership.space_id)
-    .order("joined_at", { ascending: true });
-
-  if (membersError) {
-    throw new Error("Não foi possível carregar os membros.");
-  }
-
-  const members = (memberRows ?? []) as SpaceMemberRow[];
-  const userIds = members.map((member) => member.user_id);
-  let profiles: ProfileRow[] = [];
-
-  if (userIds.length > 0) {
-    const { data: profileRows, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id,display_name")
-      .in("id", userIds);
-
-    if (profilesError) {
-      throw new Error("Não foi possível carregar os perfis.");
+    if (countError) {
+      throw new Error("Não foi possível carregar os lugares.");
     }
 
-    profiles = (profileRows ?? []) as ProfileRow[];
-  }
-
-  const profilesById = new Map(
-    profiles.map((profile) => [profile.id, profile.display_name]),
-  );
-  const memberCount = members.length;
-  const displayMembers = members.map((member, index) => ({
-    ...member,
-    displayName:
-      profilesById.get(member.user_id) ??
-      (member.user_id === user.id ? "Você" : `Pessoa ${index + 1}`),
-  }));
-
-  const origin = await getRequestOrigin();
-  let activeInvite: ActiveInviteRow | null = null;
-
-  if (memberCount < 2) {
-    const { data: inviteRow, error: inviteError } = await supabase
-      .from("invites")
-      .select("code,expires_at")
-      .eq("space_id", membership.space_id)
-      .is("redeemed_at", null)
-      .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (inviteError) {
-      throw new Error("Não foi possível carregar o convite.");
-    }
-
-    activeInvite = (inviteRow as ActiveInviteRow | null) ?? null;
+    itemCount = count ?? 0;
   }
 
   return (
@@ -145,27 +67,23 @@ export default async function SettingsPage() {
       <section className="mx-auto w-full max-w-4xl space-y-6">
         <div className="space-y-3">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-            Configurações
+            Ajustes
           </p>
           <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             Seu espaço
           </h1>
           <p className="text-base leading-7 text-foreground/70">
-            Veja quem está no espaço, convide seu par e saia da sua conta quando
-            precisar.
+            Dê um nome para o espaço, veja quem está nele e saia da sua conta
+            quando precisar.
           </p>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
           <section className="rounded-3xl bg-surface p-6 ring-1 ring-border">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground/70">
-                Nome do espaço
-              </p>
-              <h2 className="font-serif text-2xl font-semibold tracking-tight">
-                {space.name}
-              </h2>
-            </div>
+            <h2 className="mb-4 font-serif text-2xl font-semibold tracking-tight">
+              {spaceDisplayName(space.name, memberNames)}
+            </h2>
+            <SpaceNameForm name={space.name} computedName={computedName} />
 
             <div className="mt-6">
               <div className="flex items-center justify-between gap-4">
@@ -178,16 +96,16 @@ export default async function SettingsPage() {
               </div>
 
               <ul className="mt-4 space-y-3">
-                {displayMembers.map((member) => (
+                {space.members.map((member) => (
                   <li
-                    key={member.user_id}
+                    key={member.userId}
                     className="flex items-center justify-between gap-3 rounded-2xl bg-surface-muted px-4 py-3 ring-1 ring-border"
                   >
                     <div>
                       <p className="font-medium text-foreground">
                         {member.displayName}
                       </p>
-                      {member.user_id === user.id ? (
+                      {member.userId === user.id ? (
                         <p className="text-sm text-foreground/65">Você</p>
                       ) : null}
                     </div>
@@ -196,12 +114,20 @@ export default async function SettingsPage() {
                     </span>
                   </li>
                 ))}
-                {memberCount < 2 ? (
-                  <li className="rounded-2xl border border-dashed border-border px-4 py-3 text-sm text-foreground/60">
-                    Aguardando seu par entrar com o convite.
-                  </li>
-                ) : null}
               </ul>
+
+              {memberCount < 2 ? (
+                <Link
+                  href="/onboarding/convite"
+                  className="mt-4 flex h-12 w-full items-center justify-center rounded-2xl bg-accent-strong px-4 text-base font-semibold text-accent-contrast transition hover:bg-accent"
+                >
+                  Chamar meu par
+                </Link>
+              ) : null}
+            </div>
+
+            <div className="mt-6">
+              <LeaveSpace partnerName={partnerName} itemCount={itemCount} />
             </div>
           </section>
 
@@ -228,25 +154,6 @@ export default async function SettingsPage() {
             </form>
           </section>
         </div>
-
-        {memberCount < 2 ? (
-          <InvitePanel
-            variant="settings"
-            spaceId={membership.space_id}
-            origin={origin}
-            initialCode={activeInvite?.code}
-            initialExpiresAt={activeInvite?.expires_at}
-          />
-        ) : (
-          <section className="rounded-3xl bg-surface p-6 ring-1 ring-border">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-              Convite
-            </p>
-            <p className="mt-3 text-lg font-semibold text-foreground">
-              Vocês dois já estão no espaço.
-            </p>
-          </section>
-        )}
       </section>
     </main>
   );

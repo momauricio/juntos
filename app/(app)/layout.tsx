@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
+import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AppLayout({
@@ -14,7 +15,7 @@ export default async function AppLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(signInPathWithNext(null));
   }
 
   const { data: membership } = await supabase
@@ -56,7 +57,7 @@ export default async function AppLayout({
               href="/settings"
               className="flex h-11 items-center rounded-2xl px-3 text-foreground/80 transition hover:bg-accent-soft hover:text-accent-strong"
             >
-              Configurações
+              Ajustes
             </Link>
           </nav>
         </div>

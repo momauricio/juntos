@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { DemoApp } from "@/components/demo-app";
+
+export const metadata: Metadata = {
+  title: "Demo",
+};
 
 export default function DemoPage() {
   return (

@@ -28,6 +28,9 @@ function failure(error: DbError): { ok: false; reason: CategoryFailureReason } {
 
 const NOT_FOUND = { ok: false, reason: "not_found" } as const;
 
+// Ordem do casal (C7): position, empate por created_at e, por último, id (as
+// semeadas nascem com o mesmo created_at). Determinística: os dois veem a
+// mesma ordem, inclusive no meio de uma reordenação salva uma a uma.
 export async function listCategories(
   supabase: SupabaseClient,
   spaceId: string,
@@ -37,7 +40,8 @@ export async function listCategories(
     .select("*")
     .eq("space_id", spaceId)
     .order("position", { ascending: true })
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) return failure(error);
   return { ok: true, categories: (data ?? []) as Category[] };

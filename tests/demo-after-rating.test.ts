@@ -6,7 +6,7 @@ import {
   statusFilterAfterRating,
   typeFilterAfterRating,
 } from "@/lib/demo/after-rating";
-import { addItem, createSpace, createUser, upsertRating } from "@/lib/demo/store";
+import { addItem, sampleState, upsertRating, type DemoSpace } from "@/lib/demo/store";
 
 describe("filters after rating", () => {
   it("moves the status filter from want to done", () => {
@@ -39,8 +39,8 @@ describe("ratingSavedMessage", () => {
 
 describe("rated item stays visible in the list", () => {
   function setup() {
-    const user = createUser("Mauricio");
-    let space = createSpace(user);
+    const { user, space: sample } = sampleState();
+    let space: DemoSpace = { ...sample, items: [], ratings: [], trips: [] };
     space = addItem(space, { type: "movie", title: "Filme A", createdBy: user.id });
     space = addItem(space, { type: "city", title: "Lisboa", createdBy: user.id });
     const item = space.items.find((i) => i.title === "Filme A")!;

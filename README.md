@@ -2,38 +2,33 @@
 
 Wishlist compartilhada do casal — restaurantes, filmes, viagens e ideias, com notas depois de viver.
 
-## Modo demo (teste mobile agora)
+## Vitrine (demo)
 
-Site público de teste (mobile-first):
+Vitrine pública, para quem "só quer dar uma olhada":
 
 **https://momauricio.github.io/juntos/**
 
-Sem projeto Supabase extra, o app sobe em **modo demo**:
+A vitrine **não** é um modo de uso do app:
 
-- Dados ficam no aparelho (`localStorage`)
-- Aba **Lista** para ideias (restaurantes, filmes, etc.)
-- Aba **Viagens** para checklist + roteiro por dia + documentos (links)
-- Aba **Sync** gera um link para mandar no WhatsApp
-- A outra pessoa abre o link, entra com o nome e vê lista **e** viagens
-- Quando ela adicionar algo, manda o Sync de volta para mesclar
+- Abre direto no quadro com dados de exemplo ("Lucas & Ana": Café da Esquina, Praia do Félix e Cantina da Nonna já com nota)
+- Uma faixa fixa no topo convida a criar a conta de vocês; o botão **Criar nossa conta** leva ao `/entrar` do app real (só aparece com `NEXT_PUBLIC_APP_URL` definido)
+- Os dados ficam só no aparelho (`localStorage`); **Ajustes → Limpar dados deste aparelho** volta para os dados de exemplo
+- Não há sincronização nem convite do par na vitrine (links com `?sync=` são ignorados)
+- **Viagens** (checklist, roteiro por dia e documentos) existem só na vitrine, com o selo "em breve no app"
 
-### Fluxo rápido de viagem
-
-1. Abra **Viagens** → **+ Nova** (ex.: Chile 2026)
-2. Em **Checklist**, marque o que levar
-3. Em **Roteiro**, adicione paradas por dia
-4. Em **Docs**, cole links de passagem, reserva, entrada ou seguro
-5. Em **Sync**, compartilhe o link com a parceira
+A vitrine só liga com `NEXT_PUBLIC_DEMO_MODE=true`. Sem essa flag o app nunca cai na demo sozinho, mesmo sem as variáveis do Supabase.
 
 ```bash
 # .env.local
 NEXT_PUBLIC_DEMO_MODE=true
+# Destino do "Criar nossa conta" (o app real); sem ele, o botão some
+NEXT_PUBLIC_APP_URL=https://seu-app.vercel.app
 ```
 
-Build estático para GitHub Pages:
+Build estático para GitHub Pages (já liga `NEXT_PUBLIC_DEMO_MODE=true` sozinho; defina `NEXT_PUBLIC_APP_URL` antes, senão o botão "Criar nossa conta" some):
 
 ```bash
-npm run build:demo-static
+NEXT_PUBLIC_APP_URL=https://seu-app.vercel.app npm run build:demo-static
 ```
 
 ## Setup completo (Supabase)
@@ -44,7 +39,14 @@ npm run build:demo-static
 cp .env.local.example .env.local
 ```
 
-Defina `NEXT_PUBLIC_DEMO_MODE=false` e preencha URL + anon key do Supabase.
+Preencha `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` e deixe `NEXT_PUBLIC_DEMO_MODE` vazio ou `false`.
+
+| Variável | Para quê |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | App real. **Obrigatórias no build de produção**: `npm run build` sem elas (ou com a URL de exemplo `YOUR_PROJECT`) e sem `NEXT_PUBLIC_DEMO_MODE=true` falha com "Faltam NEXT_PUBLIC_SUPABASE_URL/ANON_KEY (ou defina NEXT_PUBLIC_DEMO_MODE=true para a vitrine)". `npm run dev` e `npm run start` não fazem essa checagem. |
+| `NEXT_PUBLIC_DEMO_MODE` | `true` liga a vitrine (obrigatório para ela). Qualquer outro valor = app real. |
+| `NEXT_PUBLIC_APP_URL` | Só na vitrine: URL do app real, destino do botão "Criar nossa conta" (`<APP_URL>/entrar`). Sem ela (ou vazia), o botão some e a faixa fica só com o texto. |
+| `NEXT_PUBLIC_DEMO_URL` | Só no app real: destino do link "Só quero dar uma olhada" da tela de boas-vindas (padrão: a vitrine pública). |
 
 ### 2. Supabase project
 
@@ -81,8 +83,6 @@ No painel do Supabase:
 
 O `supabase/config.toml` já traz essa configuração para o Supabase local (`supabase start`): templates, OTP de 6 dígitos com 10 min, 60 s entre envios e Redirect URLs de `localhost:3000`/`127.0.0.1:3000`.
 
-Opcional: `NEXT_PUBLIC_DEMO_URL` define para onde vai o link "Só quero dar uma olhada" da tela de boas-vindas (padrão: a demo pública).
-
 ## Development
 
 ```bash
@@ -96,13 +96,13 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 For a quick end-to-end check with two people or two browser profiles:
 
-1. Create account A and account B (or use demo names).
+1. Create account A and account B.
 2. Sign in as A, go through "Seu nome" (which creates the space), paste a link in "Bora começar com um lugar?" (or tap "Pular por enquanto") and share the invite link (`/c/<code>`) from "Agora chama seu par".
-3. Open the link as B, sign in and tap "Entrar no espaço de A" (in demo mode, use the Sync link instead).
+3. Open the link as B, sign in and tap "Entrar no espaço de A".
 4. Add a restaurant idea from an Instagram paste or URL.
 5. Open the item, mark it done, and save the 3 restaurant scores.
 6. Filter the list by **Já fizemos** and confirm the completed item appears.
-7. Create a trip under **Viagens**, add checklist + day stops + document links, Sync again.
+7. (Vitrine only) Create a trip under **Viagens** and add checklist + day stops + document links.
 
 ### Testing on your phone
 

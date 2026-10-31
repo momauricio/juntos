@@ -14,6 +14,7 @@ import {
   INPUT,
   TEXTAREA,
 } from "@/components/ui-classes";
+import { useLivePause } from "@/components/use-live-pause";
 import {
   COMMENT_MAX_LENGTH,
   parseScore,
@@ -53,6 +54,8 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
     INITIAL_ACTION_STATE,
   );
   const isRestaurant = item.type === "restaurant";
+  // Na disclosure: pausa o Realtime só enquanto está aberta.
+  const pauseRef = useLivePause<HTMLFormElement>();
   const displayError = error ?? state.error;
 
   function validateScores(event: FormEvent<HTMLFormElement>) {
@@ -80,6 +83,7 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
 
   return (
     <form
+      ref={pauseRef}
       action={formAction}
       onSubmit={validateScores}
       className={`${CARD} space-y-4`}

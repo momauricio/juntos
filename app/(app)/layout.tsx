@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
+import { SpaceLive } from "@/components/space-live";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,6 +31,7 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-dvh text-foreground">
+      <SpaceLive spaceId={membership.space_id} />
       {/* Navegação discreta, integrada ao gradiente (mockups 06/08/09 não têm barra) */}
       <header className="px-5 pt-2">
         <nav

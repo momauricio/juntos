@@ -108,7 +108,7 @@ h2,
   color: var(--accent-strong);
 }
 
-/* Fotos placeholder (mockups .ph1–.ph7): gradiente quando o item não tem imagem */
+/* Fotos placeholder (mockups .ph1–.ph8): gradiente quando o item não tem imagem */
 .ph1 {
   background:
     radial-gradient(circle at 30% 30%, #f5c9a8, transparent 60%),
@@ -152,6 +152,13 @@ h2,
   background:
     radial-gradient(circle at 40% 30%, #ffd6de, transparent 55%),
     linear-gradient(135deg, #d0708a, #7d3550);
+}
+
+/* Hospedagem (verde-mata) */
+.ph8 {
+  background:
+    radial-gradient(circle at 45% 30%, #e3ecd9, transparent 55%),
+    linear-gradient(135deg, #7fa47c, #3e6347);
 }
 
 /* Linha de chips com rolagem horizontal, sem barra visível */

@@ -112,6 +112,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+// A demo ainda não tem categorias de verdade: cada item aponta para a categoria
+// padrão do seu tipo, com id fixo (sem mudar nada na tela).
+export function demoCategoryId(type: ItemType): string {
+  return `demo-category-${type}`;
+}
+
 function uid(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 }
@@ -182,6 +188,12 @@ function normalizeTrip(raw: Partial<Trip> & { id: string; title: string }): Trip
 export function normalizeSpace(raw: DemoSpace | (Omit<DemoSpace, "trips"> & { trips?: Trip[] })): DemoSpace {
   return {
     ...raw,
+    // Itens salvos no localStorage antes das categorias não têm category_id.
+    items: Array.isArray(raw.items)
+      ? raw.items.map((item) =>
+          item.category_id ? item : { ...item, category_id: demoCategoryId(item.type) },
+        )
+      : [],
     trips: Array.isArray(raw.trips) ? raw.trips.map((t) => normalizeTrip(t)) : [],
   };
 }
@@ -205,6 +217,7 @@ export function sampleState(): DemoState {
     id: input.id,
     space_id: spaceId,
     type: input.type,
+    category_id: demoCategoryId(input.type),
     title: input.title,
     url: null,
     notes: input.notes,
@@ -324,6 +337,7 @@ export function addItem(
     id: uid("item"),
     space_id: space.id,
     type: input.type,
+    category_id: demoCategoryId(input.type),
     title: input.title.trim(),
     url: input.url?.trim() || null,
     notes: input.notes?.trim() || null,

@@ -6,6 +6,7 @@ import {
   addPackItem,
   addStop,
   createTrip,
+  demoCategoryId,
   normalizeSpace,
   ratingForItem,
   sampleState,
@@ -272,5 +273,29 @@ describe("trip destinations", () => {
     const normalized = normalizeSpace(legacy as never);
     expect(normalized.trips[0].destinations).toHaveLength(1);
     expect(normalized.trips[0].destinations[0].name).toBe("Santiago");
+  });
+});
+
+describe("demo: category_id por tipo (categorias, PR 1)", () => {
+  it("todo item da vitrine e todo item novo aponta para a categoria do seu tipo", () => {
+    const { user, space } = sampleState();
+    for (const item of space.items) {
+      expect(item.category_id).toBe(demoCategoryId(item.type));
+    }
+    const next = addItem(space, { type: "stay", title: "Pousada", createdBy: user.id });
+    expect(next.items[0].category_id).toBe("demo-category-stay");
+  });
+
+  it("completa category_id dos itens salvos no localStorage antes das categorias", () => {
+    const { space } = sampleState();
+    const legacy = space.items.map((item) => {
+      const copy: Partial<typeof item> = { ...item };
+      delete copy.category_id;
+      return copy as typeof item;
+    });
+    const normalized = normalizeSpace({ ...space, items: legacy });
+    expect(normalized.items.map((item) => item.category_id)).toEqual(
+      space.items.map((item) => `demo-category-${item.type}`),
+    );
   });
 });

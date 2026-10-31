@@ -264,7 +264,7 @@ function ChecklistSegment({
             type="submit"
             className="h-12 rounded-xl bg-accent px-4 text-sm font-medium text-accent-contrast"
           >
-            Add
+            Adicionar
           </button>
         </div>
       </form>

@@ -2,7 +2,7 @@
 
 import { useActionState, useState, type FormEvent } from "react";
 
-import { assertScore, displayRating, restaurantAverage } from "@/lib/ratings";
+import { assertScore, COMMENT_MAX_LENGTH } from "@/lib/ratings";
 import type { Item, Rating } from "@/lib/types";
 
 type RatingFormProps = {
@@ -10,8 +10,11 @@ type RatingFormProps = {
     state: RatingFormState,
     formData: FormData,
   ) => Promise<RatingFormState>;
-  item: Pick<Item, "type" | "status">;
-  rating: Pick<Rating, "food" | "service" | "ambiance" | "score"> | null;
+  item: Pick<Item, "type">;
+  rating: Pick<
+    Rating,
+    "food" | "service" | "ambiance" | "score" | "comment"
+  > | null;
 };
 
 const SCORE_OPTIONS = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -21,40 +24,11 @@ export type RatingFormState = {
   error: string | null;
 };
 
-function formatRating(value: number) {
-  return value.toLocaleString("pt-BR", {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: 0,
-  });
-}
-
 function scoreFromForm(formData: FormData, key: string) {
   const rawValue = formData.get(key);
   const value = typeof rawValue === "string" ? Number(rawValue) : Number.NaN;
   assertScore(value);
   return value;
-}
-
-function restaurantSummary(
-  rating: Pick<Rating, "food" | "service" | "ambiance"> | null,
-) {
-  if (
-    rating?.food == null ||
-    rating.service == null ||
-    rating.ambiance == null
-  ) {
-    return null;
-  }
-
-  const average = restaurantAverage(
-    rating.food,
-    rating.service,
-    rating.ambiance,
-  );
-
-  return `Comida ${rating.food} · Atendimento ${rating.service} · Ambiente ${
-    rating.ambiance
-  } · Média ${formatRating(average)}`;
 }
 
 export function RatingForm({ action, item, rating }: RatingFormProps) {
@@ -64,13 +38,7 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
     INITIAL_ACTION_STATE,
   );
   const isRestaurant = item.type === "restaurant";
-  const currentRating = rating ? displayRating(rating) : null;
   const displayError = error ?? state.error;
-  const currentSummary = isRestaurant
-    ? restaurantSummary(rating)
-    : currentRating != null
-      ? `Nota atual ${formatRating(currentRating)}`
-      : null;
 
   function validateScores(event: FormEvent<HTMLFormElement>) {
     const formData = new FormData(event.currentTarget);
@@ -101,24 +69,9 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
       onSubmit={validateScores}
       className="space-y-5 rounded-3xl bg-surface p-6 ring-1 ring-border"
     >
-      <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
-          Avaliação compartilhada
-        </p>
-        <h2 className="font-serif text-2xl font-semibold tracking-tight">
-          {rating ? "Editar nota" : "Marcar como feito"}
-        </h2>
-        <p className="text-sm leading-6 text-foreground/70">
-          {rating
-            ? "Atualize a nota que aparece para vocês dois."
-            : "Salve a nota para marcar esta ideia como feita."}
-        </p>
-        {currentSummary ? (
-          <p className="text-sm font-medium text-foreground/75">
-            {currentSummary}
-          </p>
-        ) : null}
-      </div>
+      <h2 className="font-serif text-2xl font-semibold tracking-tight">
+        {rating ? "Editar minha nota" : "Dar minha nota"}
+      </h2>
 
       {isRestaurant ? (
         <div className="grid gap-4 sm:grid-cols-3">
@@ -146,6 +99,17 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
         />
       )}
 
+      <label className="block space-y-2 text-sm font-medium text-foreground/85">
+        <span>Quer contar o que achou? (opcional)</span>
+        <textarea
+          name="comment"
+          maxLength={COMMENT_MAX_LENGTH}
+          rows={3}
+          defaultValue={rating?.comment ?? ""}
+          className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-base outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
+        />
+      </label>
+
       {displayError ? (
         <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-danger">
           {displayError}
@@ -157,11 +121,7 @@ export function RatingForm({ action, item, rating }: RatingFormProps) {
         disabled={isPending}
         className="h-12 w-full rounded-2xl bg-accent-strong px-5 text-base font-semibold text-accent-contrast transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
-        {isPending
-          ? "Salvando..."
-          : item.status === "want"
-            ? "Marcar como feito e salvar nota"
-            : "Salvar nota"}
+        {isPending ? "Salvando..." : "Salvar minha nota"}
       </button>
     </form>
   );

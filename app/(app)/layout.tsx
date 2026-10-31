@@ -57,7 +57,7 @@ export default async function AppLayout({
               href="/settings"
               className="flex h-11 items-center rounded-2xl px-3 text-foreground/80 transition hover:bg-accent-soft hover:text-accent-strong"
             >
-              Configurações
+              Ajustes
             </Link>
           </nav>
         </div>

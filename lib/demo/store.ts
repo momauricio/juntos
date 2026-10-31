@@ -188,11 +188,14 @@ function normalizeTrip(raw: Partial<Trip> & { id: string; title: string }): Trip
 export function normalizeSpace(raw: DemoSpace | (Omit<DemoSpace, "trips"> & { trips?: Trip[] })): DemoSpace {
   return {
     ...raw,
-    // Itens salvos no localStorage antes das categorias não têm category_id.
+    // Itens salvos no localStorage antes das categorias não têm category_id
+    // (nem city, que a demo não usa).
     items: Array.isArray(raw.items)
-      ? raw.items.map((item) =>
-          item.category_id ? item : { ...item, category_id: demoCategoryId(item.type) },
-        )
+      ? raw.items.map((item) => ({
+          ...item,
+          category_id: item.category_id || demoCategoryId(item.type),
+          city: item.city ?? null,
+        }))
       : [],
     trips: Array.isArray(raw.trips) ? raw.trips.map((t) => normalizeTrip(t)) : [],
   };
@@ -221,6 +224,7 @@ export function sampleState(): DemoState {
     title: input.title,
     url: null,
     notes: input.notes,
+    city: null,
     status: input.completedAt ? "done" : "want",
     created_by: lucas.id,
     completed_at: input.completedAt ?? null,
@@ -341,6 +345,7 @@ export function addItem(
     title: input.title.trim(),
     url: input.url?.trim() || null,
     notes: input.notes?.trim() || null,
+    city: null,
     status: "want",
     created_by: input.createdBy,
     completed_at: null,

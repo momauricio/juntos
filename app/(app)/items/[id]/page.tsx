@@ -18,6 +18,7 @@ import { RatingDisclosure } from "@/components/rating-disclosure";
 import { RatingForm, type RatingFormState } from "@/components/rating-form";
 import { SavedRatingPrompt } from "@/components/saved-rating-prompt";
 import { BACK_LINK } from "@/components/ui-classes";
+import { normalizeCity } from "@/lib/city";
 import { STATUS_LABELS } from "@/lib/labels";
 import {
   COMMENT_MAX_LENGTH,
@@ -36,6 +37,8 @@ type ItemPageProps = {
     id: string;
   }>;
 };
+
+const SAVE_ERROR = "Não foi possível salvar a ideia. Tente novamente.";
 
 type ProfileRow = {
   id: string;
@@ -169,9 +172,15 @@ export default async function ItemPage({ params }: ItemPageProps) {
     const title = formValue(formData, "title");
     const url = formValue(formData, "url");
     const notes = formValue(formData, "notes");
+    const city = normalizeCity(formData.get("city"));
 
     if (!title) {
       return { error: "Informe um título para a ideia." };
+    }
+
+    // Sem texto próprio na spec: o maxLength do campo já barra antes.
+    if (!city.ok) {
+      return { error: SAVE_ERROR };
     }
 
     const actionSupabase = await createClient();
@@ -199,13 +208,14 @@ export default async function ItemPage({ params }: ItemPageProps) {
         title,
         url: url || null,
         notes: notes || null,
+        city: city.city,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
       .eq("space_id", actionMembership.space_id);
 
     if (updateError) {
-      return { error: "Não foi possível salvar a ideia. Tente novamente." };
+      return { error: SAVE_ERROR };
     }
 
     redirect(`/items/${id}`);

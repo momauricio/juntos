@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { captureLink, PICK_TYPE_COPY } from "@/lib/capture-link";
+import { normalizeCity } from "@/lib/city";
 import { INVITE_UNKNOWN_ERROR } from "@/lib/invites";
 import { TYPE_LABELS } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
@@ -48,6 +49,7 @@ export async function savePlace(
   const type = formValue(formData, "type");
   const url = captureLink(formValue(formData, "url"));
   const notes = formValue(formData, "notes");
+  const city = normalizeCity(formData.get("city"));
   const status: ItemStatus =
     formValue(formData, "status") === "done" ? "done" : "want";
 
@@ -55,7 +57,7 @@ export async function savePlace(
     return { ok: false, error: PICK_TYPE_COPY };
   }
 
-  if (!title || !url) {
+  if (!title || !url || !city.ok) {
     return { ok: false, error: INVITE_UNKNOWN_ERROR };
   }
 
@@ -68,6 +70,7 @@ export async function savePlace(
       title,
       url,
       notes: notes || null,
+      city: city.ok ? city.city : null,
       status,
       completed_at: status === "done" ? new Date().toISOString() : null,
     })

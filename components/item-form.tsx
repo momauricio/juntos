@@ -17,6 +17,7 @@ import {
   TYPE_LABELS,
   typeLabel,
 } from "@/lib/labels";
+import { CITY_MAX_LENGTH } from "@/lib/city";
 import type { Item, ItemType } from "@/lib/types";
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
@@ -28,7 +29,7 @@ export type ItemFormState = {
 
 type ItemFormProps = {
   action: (state: ItemFormState, formData: FormData) => Promise<ItemFormState>;
-  item?: Pick<Item, "title" | "type" | "url" | "notes">;
+  item?: Pick<Item, "title" | "type" | "url" | "notes" | "city">;
   mode: "create" | "edit";
 };
 
@@ -86,6 +87,18 @@ export function ItemForm({ action, item, mode }: ItemFormProps) {
           defaultValue={item?.title ?? ""}
           className={INPUT}
           placeholder="Ex.: Jantar no restaurante novo"
+        />
+      </label>
+
+      <label className={FIELD_LABEL}>
+        <span>Cidade (opcional)</span>
+        <input
+          name="city"
+          type="text"
+          maxLength={CITY_MAX_LENGTH}
+          defaultValue={item?.city ?? ""}
+          className={INPUT}
+          placeholder="Ex.: Gramado"
         />
       </label>
 

@@ -51,6 +51,8 @@ export type Item = {
   title: string;
   url: string | null;
   notes: string | null;
+  // Cidade opcional (1 a 60 caracteres); null quando não tem.
+  city: string | null;
   status: ItemStatus;
   created_by: string;
   updated_by?: string | null;

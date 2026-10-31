@@ -1,23 +1,22 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { createServer } from "node:net";
-import { tmpdir } from "node:os";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { PG_BIN, REALTIME_STUB, SUPABASE_STUBS, startPg, type As, type Pg } from "./helpers/pg";
 
 // Critérios de aceite · Banco (spec-layout-categorias.md) num Postgres
 // descartável de verdade. Só roda com JUNTOS_PG_BIN apontando para a pasta
 // com initdb/pg_ctl/postgres (com a extensão unaccent), por exemplo:
 //   JUNTOS_PG_BIN=/caminho/para/bin npx vitest run tests/categories-db.test.ts
 // O psql vem da mesma pasta, se existir, ou do PATH.
-const PG_BIN = process.env.JUNTOS_PG_BIN;
 
 const MIGRATIONS_DIR = join(process.cwd(), "supabase/migrations");
 const CATEGORIES_MIGRATION = "20261031120000_categories.sql";
 const ROLLBACK = join(process.cwd(), "supabase/rollback/20261031_categories_down.sql");
 const FALLBACK_MIGRATION = "20261031130000_categories_switch_fallback.sql";
 const FALLBACK_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031130000_categories_switch_fallback_down.sql");
+const REALTIME_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031140000_space_realtime_down.sql");
 
 // Pessoas e espaços "de antes" da migration.
 const MAURICIO = "dc615b01-9e66-4888-9451-3a44f1a6cea0";
@@ -58,61 +57,13 @@ const DEFAULTS = [
   "8|Evento|🎟️|ph7|event",
 ].join("\n");
 
-let baseDir = "";
-let dataDir = "";
-let port = 0;
-let psqlBin = "psql";
-let started = false;
+let pg: Pg | undefined;
 let snapshotBefore = "";
 let schemaAfterCategories = "";
 
-function freePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = createServer();
-    server.unref();
-    server.on("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      server.close(() => resolve(typeof address === "object" && address ? address.port : 0));
-    });
-  });
-}
-
-type As = { as?: string; superuser?: boolean };
-
-// Roda um script no banco. { as } = como a pessoa logada (role authenticated
-// + jwt); { as, superuser: true } = dono do banco, mas com auth.uid() da pessoa.
-function prefix({ as, superuser }: As) {
-  if (!as) return "";
-  const claims = `set request.jwt.claims = '{"sub":"${as}"}';\n`;
-  return superuser ? claims : `set role authenticated;\n${claims}`;
-}
-
-function run(script: string, options: As = {}): string {
-  return execFileSync(
-    psqlBin,
-    ["-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1", "-h", baseDir, "-p", String(port), "-U", "postgres", "-d", "postgres", "-f", "-"],
-    { input: prefix(options) + script, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
-  ).trim();
-}
-
-function runFile(path: string): string {
-  return execFileSync(
-    psqlBin,
-    ["-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1", "-h", baseDir, "-p", String(port), "-U", "postgres", "-d", "postgres", "-f", path],
-    { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
-  );
-}
-
-// Espera erro; devolve o stderr do psql.
-function fails(script: string, options: As = {}): string {
-  try {
-    run(script, options);
-  } catch (error) {
-    return String((error as { stderr?: string }).stderr ?? error);
-  }
-  throw new Error(`deveria ter falhado: ${script}`);
-}
+const run = (script: string, options: As = {}) => pg!.run(script, options);
+const runFile = (path: string) => pg!.runFile(path);
+const fails = (script: string, options: As = {}) => pg!.fails(script, options);
 
 function categoryId(spaceId: string, name: string): string {
   return run(`select id from public.categories where space_id = '${spaceId}' and name = '${name}';`);
@@ -139,32 +90,11 @@ const SNAPSHOT = `select string_agg(concat_ws('|', id, type, status, updated_at,
 
 describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
   beforeAll(async () => {
-    const bin = PG_BIN!;
-    psqlBin = existsSync(join(bin, "psql")) ? join(bin, "psql") : "psql";
-    baseDir = mkdtempSync(join(tmpdir(), "juntos-pg-"));
-    dataDir = join(baseDir, "data");
-    port = await freePort();
+    pg = await startPg(PG_BIN!);
 
-    execFileSync(join(bin, "initdb"), ["-D", dataDir, "-U", "postgres", "-A", "trust", "-E", "UTF8", "--no-locale", "--no-sync"], { stdio: "pipe" });
-    execFileSync(
-      join(bin, "pg_ctl"),
-      ["-D", dataDir, "-w", "-l", join(baseDir, "postgres.log"), "-o", `-p ${port} -k ${baseDir} -c listen_addresses=''`, "start"],
-      { stdio: "pipe" },
-    );
-    started = true;
-
-    // Stubs do Supabase.
-    run(`
-      create role anon nologin;
-      create role authenticated nologin;
-      create schema auth;
-      create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
-      create function auth.uid() returns uuid language sql stable as $$
-        select nullif(current_setting('request.jwt.claims', true)::jsonb->>'sub', '')::uuid
-      $$;
-      grant usage on schema public, auth to authenticated;
-      grant execute on function auth.uid() to authenticated;
-    `);
+    // Stubs do Supabase (o realtime é para 20261031140000_space_realtime).
+    run(SUPABASE_STUBS);
+    run(REALTIME_STUB);
 
     // Todas as migrations antes de categories.
     const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
@@ -217,10 +147,7 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
   }, 120_000);
 
   afterAll(() => {
-    if (started) {
-      execFileSync(join(PG_BIN!, "pg_ctl"), ["-D", dataDir, "-m", "immediate", "stop"], { stdio: "pipe" });
-    }
-    if (baseDir) rmSync(baseDir, { recursive: true, force: true });
+    pg?.stop();
   });
 
   it("migration: 8 categorias por espaço, todo item na categoria do seu tipo, autoria intacta", () => {
@@ -809,6 +736,8 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
   });
 
   it("rollback de 20261031130000 volta exatamente ao esquema de categories", () => {
+    // Rollbacks na ordem inversa do deploy: primeiro o do Realtime (PR 2).
+    runFile(REALTIME_ROLLBACK);
     runFile(FALLBACK_ROLLBACK);
     expect(run(SCHEMA)).toBe(schemaAfterCategories);
     expect(run("select to_regprocedure('public.ensure_default_category(uuid, text)') is null;")).toBe("t");

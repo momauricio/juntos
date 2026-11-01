@@ -11,10 +11,12 @@ import {
   BTN_PRIMARY,
   CARD,
   ERROR_TEXT,
+  INPUT,
   TEXT_LINK_QUIET,
   TEXTAREA,
 } from "@/components/ui-classes";
 import { PICK_TYPE_COPY } from "@/lib/capture-link";
+import { CITY_MAX_LENGTH } from "@/lib/city";
 import {
   NOTES_PLACEHOLDER,
   STATUS_LABELS,
@@ -139,6 +141,24 @@ export function PlaceReviewCard({
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="Ex.: Café da Esquina"
                 className="h-[50px] w-full rounded-xl border border-ink/20 bg-[#fbf7f2] px-3.5 font-serif text-xl font-bold text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="place_city" className={FIELD_LABEL}>
+                Cidade{" "}
+                <span className="font-normal normal-case tracking-normal">
+                  (opcional)
+                </span>
+              </label>
+              <input
+                id="place_city"
+                name="city"
+                type="text"
+                autoComplete="off"
+                maxLength={CITY_MAX_LENGTH}
+                placeholder="Ex.: Gramado"
+                className={INPUT}
               />
             </div>
 

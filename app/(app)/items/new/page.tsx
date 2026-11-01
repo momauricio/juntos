@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ItemForm, type ItemFormState } from "@/components/item-form";
 import { EYEBROW_ACCENT, SUBTITLE, TITLE } from "@/components/ui-classes";
 import { savedRedirectPath } from "@/lib/capture-link";
+import { normalizeCity } from "@/lib/city";
 import { TYPE_LABELS } from "@/lib/labels";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 };
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
+const CREATE_ERROR = "Não foi possível criar a ideia. Tente novamente.";
 
 function formValue(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -38,6 +40,7 @@ async function createItem(
   const title = formValue(formData, "title");
   const url = formValue(formData, "url");
   const notes = formValue(formData, "notes");
+  const city = normalizeCity(formData.get("city"));
 
   if (!type) {
     return { error: "Escolha um tipo válido." };
@@ -45,6 +48,11 @@ async function createItem(
 
   if (!title) {
     return { error: "Informe um título para a ideia." };
+  }
+
+  // Sem texto próprio na spec: o maxLength do campo já barra antes.
+  if (!city.ok) {
+    return { error: CREATE_ERROR };
   }
 
   const supabase = await createClient();
@@ -74,6 +82,7 @@ async function createItem(
       title,
       url: url || null,
       notes: notes || null,
+      city: city.city,
       status: "want",
       created_by: user.id,
     })
@@ -81,7 +90,7 @@ async function createItem(
     .single();
 
   if (error || !data) {
-    return { error: "Não foi possível criar a ideia. Tente novamente." };
+    return { error: CREATE_ERROR };
   }
 
   redirect(savedRedirectPath("want", data.id as string));

@@ -22,6 +22,7 @@ import {
   categoryTiles,
   categoryTitle,
   defaultCategoryForType,
+  gridPhotoSource,
   isSingleEmoji,
   legacyTypeRedirect,
   LIST_COPY,
@@ -557,5 +558,16 @@ describe("textos e links de dentro da categoria", () => {
     expect(categoryHref("abc", "done", "recent")).toBe("/categorias/abc?status=done");
     expect(categoryHref("abc", null, "score")).toBe("/categorias/abc?ordem=nota");
     expect(newItemHref("c 1")).toBe("/items/new?categoria=c%201");
+  });
+});
+
+describe("gridPhotoSource", () => {
+  it("Instagram (com ou sem www) e outros links", () => {
+    expect(gridPhotoSource("https://www.instagram.com/p/abc/")).toBe("instagram");
+    expect(gridPhotoSource("https://instagram.com/reel/abc")).toBe("instagram");
+    expect(gridPhotoSource("https://instagr.am/p/abc")).toBe("instagram");
+    expect(gridPhotoSource("https://www.booking.com/hotel")).toBe("link");
+    expect(gridPhotoSource("https://notinstagram.com/p/abc")).toBe("link");
+    expect(gridPhotoSource("isso não é link")).toBe("link");
   });
 });

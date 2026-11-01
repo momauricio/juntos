@@ -221,6 +221,16 @@ export const GRID_COPY = {
   photoLink: "📸 link",
 } as const;
 
+// De onde veio a foto do card: link do Instagram ou outro link.
+export function gridPhotoSource(url: string): "instagram" | "link" {
+  try {
+    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+    return host === "instagram.com" || host === "instagr.am" ? "instagram" : "link";
+  } catch {
+    return "link";
+  }
+}
+
 // Selo de status na linha da busca (as duas abas juntas).
 export const STATUS_BADGES: Record<ItemStatus, string> = {
   want: "💛 Queremos",

@@ -1,8 +1,10 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Avatar, initial } from "@/components/avatar";
 import { BTN_OUTLINE, CARD } from "@/components/ui-classes";
 import { originalLink } from "@/lib/capture-link";
+import { GRID_COPY, SCORE_BAND_COLORS, scoreBand } from "@/lib/categories";
 import {
   ACTIVITY_NO_ADDRESS_COPY,
   STATUS_LABELS,
@@ -12,7 +14,7 @@ import {
   typeLabel,
 } from "@/lib/labels";
 import { formatScore } from "@/lib/ratings";
-import type { Item, ItemStatus, ItemType } from "@/lib/types";
+import type { Category, Item, ItemStatus, ItemType } from "@/lib/types";
 
 type Tone = "terracotta" | "sage";
 
@@ -29,22 +31,25 @@ export function itemSubtitle(type: ItemType, place?: string | null) {
 
 export function ItemPhoto({
   type,
+  category,
   variant = "thumb",
   children,
 }: {
   type: ItemType;
+  // Com categoria, a cor e o emoji são os dela (não os do tipo).
+  category?: CategoryLook | null;
   variant?: "thumb" | "hero";
   children?: ReactNode;
 }) {
   return (
     <div
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden ${typeGradient(type)} ${
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden ${category?.color ?? typeGradient(type)} ${
         variant === "hero"
           ? "h-[150px] w-full rounded-[20px] text-[64px]"
           : "h-16 w-16 rounded-2xl text-[28px]"
       }`}
     >
-      <span aria-hidden="true">{typeEmoji(type)}</span>
+      <span aria-hidden="true">{category?.emoji ?? typeEmoji(type)}</span>
       {children}
     </div>
   );
@@ -66,44 +71,210 @@ export function TypeHintBox({ type }: { type: ItemType }) {
   );
 }
 
-export const ITEM_CARD_CLASS =
-  "flex w-full items-center gap-3 rounded-[22px] bg-surface p-2.5 text-left text-ink shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5";
+// Cor (.ph1–.ph8) e emoji da categoria, no lugar do tipo (C14).
+export type CategoryLook = Pick<Category, "emoji" | "color">;
 
-// Miolo do cartão do quadro (mockup .item); o wrapper (Link/botão) fica com quem usa.
-export function ItemCardContent({
-  item,
-  subtitle,
-  author,
-  addedLabel,
-  score,
+// Link (app) ou botão (demo) com o mesmo visual.
+export function Pressable({
+  href,
+  onClick,
+  className,
+  children,
+  ...aria
 }: {
-  item: Pick<Item, "type" | "title">;
-  subtitle: string;
-  author: { name: string; tone: Tone };
-  addedLabel: string;
-  score?: number | null;
+  href?: string;
+  onClick?: () => void;
+  className?: string;
+  children: ReactNode;
+  "aria-label"?: string;
+}) {
+  if (onClick || !href) {
+    return (
+      <button type="button" onClick={onClick} className={className} {...aria}>
+        {children}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={href} className={className} {...aria}>
+      {children}
+    </Link>
+  );
+}
+
+// Selo da nota (.bd): cor pela faixa (verde/azul/laranja/vermelho).
+export function ScoreBadge({
+  value,
+  className = "w-[42px] rounded-[9px] py-[3px] text-sm",
+}: {
+  value: number;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap font-bold text-white ${className}`}
+      style={{ background: SCORE_BAND_COLORS[scoreBand(value)] }}
+    >
+      {formatScore(value)}
+    </span>
+  );
+}
+
+type CardAuthor = { name: string; tone: Tone };
+
+function AuthorDot({
+  author,
+  className = "",
+}: {
+  author: CardAuthor;
+  className?: string;
 }) {
   return (
     <>
-      <ItemPhoto type={item.type} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-base font-bold">{item.title}</p>
-        <p className="truncate text-[13px] text-ink/60">{subtitle}</p>
-        <p className="mt-1 flex items-center gap-1.5 text-[12.5px] text-ink/60">
-          <Avatar
-            label={initial(author.name)}
-            size="xs"
-            tone={author.tone}
-          />
-          <span className="truncate">{addedLabel}</span>
-        </p>
-      </div>
-      {score != null ? (
-        <span className="mr-1 shrink-0 self-start rounded-[10px] bg-accent-soft px-2.5 py-0.5 text-sm font-bold">
-          {formatScore(score)}
+      <Avatar
+        label={initial(author.name)}
+        size="xs"
+        tone={author.tone}
+        className={className}
+      />
+      <span className="sr-only">, de {author.name}</span>
+    </>
+  );
+}
+
+export type ItemCardProps = {
+  item: Pick<Item, "title" | "city">;
+  category: CategoryLook;
+  author: CardAuthor;
+  // Só em Já fizemos e com nota.
+  score?: number | null;
+  href?: string;
+  onClick?: () => void;
+};
+
+// Linha da Compacta (mockups 42/53): ícone da categoria, nome · cidade, selo, bolinha.
+export function ItemCompactRow({
+  item,
+  category,
+  author,
+  score,
+  statusBadge,
+  href,
+  onClick,
+}: ItemCardProps & {
+  // Busca (as duas abas juntas): "💛 Queremos" / "✓ Já fizemos".
+  statusBadge?: string;
+}) {
+  const city = item.city?.trim();
+
+  return (
+    <Pressable
+      href={href}
+      onClick={onClick}
+      className="flex min-h-11 w-full items-center gap-2.5 border-t border-ink/[0.08] px-3 py-2 text-left text-ink transition hover:bg-ink/[0.03]"
+    >
+      <span
+        aria-hidden="true"
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] text-[15px] ${category.color}`}
+      >
+        {category.emoji}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[15.5px] font-bold">
+        {item.title}
+        {city ? (
+          <span className="text-sm font-normal text-ink/60"> · {city}</span>
+        ) : null}
+      </span>
+      {statusBadge ? (
+        <span className="shrink-0 whitespace-nowrap rounded-full bg-ink/[0.07] px-2 py-0.5 text-xs font-semibold text-ink/75">
+          {statusBadge}
         </span>
       ) : null}
-    </>
+      {score != null ? <ScoreBadge value={score} /> : null}
+      <AuthorDot author={author} />
+    </Pressable>
+  );
+}
+
+// Card quadrado da Grade (mockups 41/52): foto do link quando houver, senão
+// cor + emoji da categoria; nome e cidade embaixo, bolinha no canto.
+export function ItemGridTile({
+  item,
+  category,
+  author,
+  score,
+  image,
+  href,
+  onClick,
+}: ItemCardProps & {
+  // Imagem do link (os itens ainda não guardam; o PR 5 liga quando houver).
+  image?: { url: string; source: "instagram" | "link" } | null;
+}) {
+  const city = item.city?.trim();
+
+  return (
+    <Pressable
+      href={href}
+      onClick={onClick}
+      className={`relative block aspect-square w-full overflow-hidden rounded-[22px] text-left shadow-[0_10px_24px_rgba(0,0,0,0.25)] transition hover:-translate-y-0.5 ${
+        image ? "bg-cover bg-center" : category.color
+      }`}
+    >
+      {image ? (
+        <>
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${JSON.stringify(image.url)})` }}
+          />
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(10,14,26,0.72))]"
+          />
+          <span className="absolute left-2.5 top-2.5 rounded-full bg-[rgba(10,14,26,0.45)] px-2 py-[3px] text-[11.5px] font-bold text-white">
+            {image.source === "instagram"
+              ? GRID_COPY.photoInstagram
+              : GRID_COPY.photoLink}
+          </span>
+        </>
+      ) : (
+        <>
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 top-[22px] text-center text-[52px] leading-none"
+          >
+            {category.emoji}
+          </span>
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 bg-[linear-gradient(180deg,transparent_55%,rgba(10,14,26,0.35))]"
+          />
+        </>
+      )}
+      {score != null && !image ? (
+        <ScoreBadge
+          value={score}
+          className="absolute left-2.5 top-2.5 rounded-[9px] px-2 py-0.5 text-sm"
+        />
+      ) : null}
+      <span className="absolute inset-x-3 bottom-[11px] text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.35)]">
+        <span className="line-clamp-3 block text-[17px] font-bold leading-[1.2]">
+          {item.title}
+        </span>
+        {city ? (
+          <span className="mt-px block truncate text-[13px] opacity-85">
+            {city}
+          </span>
+        ) : null}
+      </span>
+      <span className="absolute right-2.5 top-2.5">
+        <AuthorDot
+          author={author}
+          className="shadow-[0_0_0_2px_rgba(255,255,255,0.85)]"
+        />
+      </span>
+    </Pressable>
   );
 }
 
@@ -121,14 +292,20 @@ export function heroBadge(item: {
     : `✓ ${STATUS_LABELS.done}`;
 }
 
-// Linha do detalhe (mockup 22): "🧺 Programa · Lucas adicionou · ontem".
-export function heroSubtitle(type: ItemType, addedLabel: string) {
-  return `${heroTypeLabel(type)} · ${addedLabel}`;
+// "🍝 Restaurante" (começo da linha do detalhe): a categoria do item; sem
+// ela (não carregou), o tipo.
+export function heroCategoryLabel(
+  type: ItemType,
+  category?: Pick<Category, "emoji" | "name"> | null,
+) {
+  return category
+    ? `${category.emoji} ${category.name}`
+    : `${typeEmoji(type)} ${typeLabel(type)}`;
 }
 
-// "🧺 Programa" (começo da linha do detalhe).
-export function heroTypeLabel(type: ItemType) {
-  return `${typeEmoji(type)} ${typeLabel(type)}`;
+// Linha do detalhe: "🧺 Programa · Lucas adicionou · ontem".
+export function heroSubtitle(categoryLabel: string, addedLabel: string) {
+  return `${categoryLabel} · ${addedLabel}`;
 }
 
 const SECTION_LABEL =
@@ -221,6 +398,7 @@ export function ActivityNoAddressNote({
 // Cabeçalho do detalhe: foto grande, selo de status, título e subtítulo.
 export function ItemHero({
   type,
+  category,
   title,
   subtitle,
   badge,
@@ -228,6 +406,7 @@ export function ItemHero({
   children,
 }: {
   type: ItemType;
+  category?: CategoryLook | null;
   title: string;
   subtitle: string;
   badge?: string | null;
@@ -237,7 +416,7 @@ export function ItemHero({
 }) {
   return (
     <div>
-      <ItemPhoto type={type} variant="hero">
+      <ItemPhoto type={type} category={category} variant="hero">
         {badge ? (
           <span className="absolute left-3 top-3 rounded-full bg-cream px-2.5 py-1 text-[12.5px] font-bold text-ink">
             {badge}

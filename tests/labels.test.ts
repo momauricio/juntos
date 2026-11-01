@@ -75,12 +75,11 @@ describe("type maps", () => {
     expect(TYPE_EMOJI.stay).toBe("🏨");
     expect(TYPE_CHIP_LABELS.stay).toBe("Hospedagem");
     expect(TYPE_HINTS.stay).toBe("Hotel, pousada ou cabana pra dormir fora.");
-    expect(TYPE_THUMB.stay).toBe(TYPE_THUMB.city);
+    expect(TYPE_THUMB.stay).toBe("ph8");
   });
 
-  it("uses one thumbnail per type (Hospedagem shares Cidade's)", () => {
-    const others = Object.entries(TYPE_THUMB).filter(([type]) => type !== "stay");
-    expect(new Set(others.map(([, thumb]) => thumb)).size).toBe(TYPE_KEYS.length - 1);
+  it("uses one thumbnail per type (Hospedagem ganhou o ph8, verde-mata)", () => {
+    expect(new Set(Object.values(TYPE_THUMB)).size).toBe(TYPE_KEYS.length);
   });
 });
 

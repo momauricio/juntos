@@ -166,6 +166,19 @@ export const HOME_COPY = {
     count === 1 ? "média de 1 nota" : `média de ${count} notas`,
 } as const;
 
+// Telas de lista (52 e recentes).
+export const LIST_COPY = {
+  newestFirst: "Mais recentes primeiro",
+  recentScreenTitle: `${HOME_COPY.recentEmoji} ${HOME_COPY.recentTitle}`,
+  empty: "Nada aqui ainda.",
+} as const;
+
+// Selo da foto no card da Grade.
+export const GRID_COPY = {
+  photoInstagram: "📸 Instagram",
+  photoLink: "📸 link",
+} as const;
+
 // Selo de status na linha da busca (as duas abas juntas).
 export const STATUS_BADGES: Record<ItemStatus, string> = {
   want: "💛 Queremos",

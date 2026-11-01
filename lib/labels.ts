@@ -53,8 +53,8 @@ export const TYPE_HINTS: Record<ItemType, string> = {
   event: "Show, festa, exposição: tem data marcada.",
 };
 
-// Classe da miniatura (.ph1–.ph7 em globals.css; os itens ainda não têm imagem).
-// Hospedagem divide o gradiente com Cidade (os dois são de viagem).
+// Classe da miniatura (.ph1–.ph8 em globals.css; os itens ainda não têm imagem).
+// Igual à cor da categoria padrão de cada tipo (paleta P).
 export const TYPE_THUMB: Record<ItemType, string> = {
   activity: "ph5",
   restaurant: "ph3",
@@ -62,7 +62,7 @@ export const TYPE_THUMB: Record<ItemType, string> = {
   tourist_spot: "ph2",
   movie: "ph6",
   city: "ph4",
-  stay: "ph4",
+  stay: "ph8",
   event: "ph7",
 };
 

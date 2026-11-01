@@ -121,7 +121,7 @@ function SearchField({
         placeholder={HOME_COPY.searchPlaceholder(total)}
         autoComplete="off"
         enterKeyHint="search"
-        className="h-full min-w-0 flex-1 bg-transparent text-[15.5px] text-cream outline-none placeholder:text-cream/60 [&::-webkit-search-cancel-button]:hidden"
+        className="h-full min-w-0 flex-1 bg-transparent text-[15.5px] text-cream! outline-none placeholder:text-cream/60! [&::-webkit-search-cancel-button]:hidden"
       />
       {value ? (
         <button

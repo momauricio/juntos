@@ -1,4 +1,5 @@
 import { parseTypeParam } from "@/lib/item-categories";
+import { STATUS_LABELS } from "@/lib/labels";
 import { coupleScore } from "@/lib/ratings";
 import type {
   Category,
@@ -467,4 +468,195 @@ export function legacyTypeRedirect<
     if (category) return categoryHref(category.id, status);
   }
   return `/${statusQuery(status)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Gerenciar categorias (telas 54, 55, 55b e 55c): textos e regras puras.
+
+// Folha 54 (criar) e a mesma folha ao editar.
+export const CATEGORY_SHEET_COPY = {
+  createTitle: "Nova categoria",
+  editTitle: "Editar categoria",
+  subtitle: "Aparece pra vocês dois na hora.",
+  cancel: "Cancelar",
+  nameLabel: "Nome",
+  namePlaceholder: "Ex.: Pubs",
+  emojiLabel: "Emoji",
+  otherEmoji: "outro…",
+  // Sem texto na spec: o campo que abre no "outro…".
+  otherEmojiLabel: "Outro emoji",
+  otherEmojiPlaceholder: "Cole ou digite 1 emoji",
+  colorLabel: "Cor",
+  previewLabel: "Prévia",
+  previewEmpty: "ainda vazia",
+  previewHint:
+    "Assim ela fica no início de vocês, depois das outras. Dá pra mudar tudo depois.",
+  create: "Criar categoria",
+  save: "Salvar",
+  created: "Categoria criada",
+  saved: "Categoria salva",
+  deleted: "Categoria apagada",
+} as const;
+
+// 6 sugestões da folha 54 (mockup); o "outro…" aceita qualquer emoji.
+export const EMOJI_SUGGESTIONS = ["🍺", "🍻", "🍷", "🎶", "🎳", "🌙"] as const;
+
+// Menu 55 (segurar o quadrado, botão direito, tecla de menu ou "···").
+export const CATEGORY_MENU_COPY = {
+  options: "Opções da categoria",
+  rename: { emoji: "✏️", label: "Renomear" },
+  restyle: { emoji: "🎨", label: "Trocar emoji e cor" },
+  reorder: { emoji: "↕️", label: "Mudar ordem" },
+  remove: { emoji: "🗑️", label: "Apagar categoria" },
+  footer: "Vale para vocês dois.",
+  moveUp: "Mover para cima",
+  moveDown: "Mover para baixo",
+  reorderBar: "Arraste para mudar a ordem",
+  reorderDone: "Pronto",
+  // Sem texto na spec: rótulo da alça "↕" no modo de ordem.
+  reorderHandle: (name: string) => `Mover ${name}`,
+} as const;
+
+export type CategoryCounts = { want: number; done: number };
+
+// Apagar: 55b (com itens, sem botão de apagar) e 55c (vazia).
+export const CATEGORY_DELETE_COPY = {
+  blockedTitle: (name: string, total: number) =>
+    `${name} ainda tem ${total === 1 ? "1 item" : `${total} itens`}`,
+  blockedText: "Pra apagar, mova os itens pra outra categoria antes. Assim nada se perde.",
+  seeItems: "Ver os itens",
+  understood: "Entendi",
+  confirmTitle: (name: string) => `Apagar “${name}”?`,
+  confirmText: "Ela está vazia. Some pra vocês dois.",
+  confirm: "Apagar",
+  cancel: "Cancelar",
+} as const;
+
+// Sem texto na spec: falha de rede/banco que não é nenhum dos erros da folha 54.
+export const CATEGORY_UNKNOWN_ERROR = "Não deu certo agora. Tente de novo.";
+
+// C1: com item em qualquer aba → 55b; vazia → 55c.
+export function deleteDecision(counts: CategoryCounts): "blocked" | "empty" {
+  return counts.want + counts.done > 0 ? "blocked" : "empty";
+}
+
+// Chips da 55b, só os maiores que 0.
+export function deleteCountChips(counts: CategoryCounts): string[] {
+  const chips: string[] = [];
+  if (counts.want > 0) chips.push(`💛 ${counts.want} em ${STATUS_LABELS.want}`);
+  if (counts.done > 0) chips.push(`✓ ${counts.done} em ${STATUS_LABELS.done}`);
+  return chips;
+}
+
+// "Ver os itens": a aba que tem itens, Queremos primeiro.
+export function seeItemsStatus(counts: CategoryCounts): ItemStatus {
+  return counts.want > 0 || counts.done === 0 ? "want" : "done";
+}
+
+// C4: categoria nova vai para o fim da ordem (maior position + 1).
+export function nextCategoryPosition(
+  categories: readonly Pick<Category, "position">[],
+): number {
+  return categories.reduce((max, category) => Math.max(max, category.position), 0) + 1;
+}
+
+// Leva `id` para a posição `toIndex` (arrastar); o resto mantém a ordem.
+export function moveCategoryTo(
+  orderedIds: readonly string[],
+  id: string,
+  toIndex: number,
+): string[] {
+  const from = orderedIds.indexOf(id);
+  if (from === -1) return [...orderedIds];
+  const next = orderedIds.filter((candidate) => candidate !== id);
+  const index = Math.max(0, Math.min(toIndex, next.length));
+  next.splice(index, 0, id);
+  return next;
+}
+
+export type MoveDirection = "up" | "down";
+
+// "Mover para cima/baixo": uma casa antes/depois. Na ponta, não muda nada.
+export function moveCategory(
+  orderedIds: readonly string[],
+  id: string,
+  direction: MoveDirection,
+): string[] {
+  const from = orderedIds.indexOf(id);
+  if (from === -1) return [...orderedIds];
+  return moveCategoryTo(orderedIds, id, direction === "up" ? from - 1 : from + 1);
+}
+
+// Quais setas fazem sentido no menu do quadrado (no modo de ordem).
+export function categoryMoveOptions(
+  orderedIds: readonly string[],
+  id: string,
+): Record<MoveDirection, boolean> {
+  const index = orderedIds.indexOf(id);
+  return {
+    up: index > 0,
+    down: index !== -1 && index < orderedIds.length - 1,
+  };
+}
+
+export function sameOrder(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((id, index) => id === b[index]);
+}
+
+// Abre o menu 55 pelo teclado: tecla de menu ou Shift+F10.
+export function isMenuKey(event: { key: string; shiftKey: boolean }): boolean {
+  return event.key === "ContextMenu" || (event.shiftKey && event.key === "F10");
+}
+
+// Erro do banco ao criar/editar (já como CategoryErrorCode) → texto da folha 54.
+// Nome repetido (corrida com o par): procura o nome que já existe.
+export function categorySaveErrorMessage(
+  reason: CategoryErrorCode | "not_found",
+  input: CategoryInput,
+  existing: readonly Pick<Category, "id" | "name">[],
+  editingId?: string,
+): string {
+  if (reason === "limit") return CATEGORY_MESSAGES.limit;
+  if (reason === "duplicate_name") {
+    const key = categoryNameKey(input.name);
+    const same = existing.find(
+      (category) => category.id !== editingId && categoryNameKey(category.name) === key,
+    );
+    return CATEGORY_MESSAGES.duplicateName(same?.name ?? input.name.trim());
+  }
+  return CATEGORY_UNKNOWN_ERROR;
+}
+
+// ---------------------------------------------------------------------------
+// Campo "Categoria" no salvar/editar item.
+
+export const ITEM_CATEGORY_LABEL = "Categoria";
+// O antigo "Escolhe um tipo pra salvar.", agora para a categoria.
+export const PICK_CATEGORY_COPY = "Escolhe uma categoria pra salvar.";
+
+// Valor do campo category_id do formulário: o id, ou null se veio vazio ou
+// não é um uuid (no app; a demo não passa por aqui).
+export function parseCategoryField(value: FormDataEntryValue | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const id = value.trim();
+  return UUID_PATTERN.test(id) ? id : null;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Item NOVO: category_id e o type que a categoria dá (regras de nota).
+export function newItemCategoryFields(
+  category: Pick<Category, "id" | "item_type">,
+): { category_id: string; type: ItemType } {
+  return { category_id: category.id, type: category.item_type };
+}
+
+// Categoria do espaço escolhida no formulário, ou null (outro espaço, apagada
+// ou nada escolhido). O banco também recusa (category_other_space).
+export function findCategory<C extends Pick<Category, "id">>(
+  categories: readonly C[],
+  id: string | null,
+): C | null {
+  if (!id) return null;
+  return categories.find((category) => category.id === id) ?? null;
 }

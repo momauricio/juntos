@@ -68,7 +68,7 @@ const category = {
 };
 
 describe("listCategories", () => {
-  it("lê as categorias do espaço na ordem position, created_at", async () => {
+  it("lê as categorias do espaço na ordem position, created_at, id", async () => {
     const { supabase, calls } = fakeClient([{ data: [category] }]);
     expect(await listCategories(supabase, "space-1")).toEqual({ ok: true, categories: [category] });
     expect(calls[0]).toEqual({
@@ -78,6 +78,7 @@ describe("listCategories", () => {
         ["eq", "space_id", "space-1"],
         ["order", "position", { ascending: true }],
         ["order", "created_at", { ascending: true }],
+        ["order", "id", { ascending: true }],
       ],
     });
   });

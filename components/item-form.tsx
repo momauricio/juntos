@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { TypeHintBox } from "@/components/item-visuals";
+import { useLivePause } from "@/components/use-live-pause";
 import {
   BTN_PRIMARY,
   CARD,
@@ -17,6 +18,7 @@ import {
   TYPE_LABELS,
   typeLabel,
 } from "@/lib/labels";
+import { CITY_MAX_LENGTH } from "@/lib/city";
 import type { Item, ItemType } from "@/lib/types";
 
 const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
@@ -28,7 +30,8 @@ export type ItemFormState = {
 
 type ItemFormProps = {
   action: (state: ItemFormState, formData: FormData) => Promise<ItemFormState>;
-  item?: Pick<Item, "title" | "type" | "url" | "notes">;
+  item?: Pick<Item, "title" | "type" | "url" | "notes" | "city"> &
+    Partial<Pick<Item, "updated_at">>;
   mode: "create" | "edit";
 };
 
@@ -39,12 +42,19 @@ export function ItemForm({ action, item, mode }: ItemFormProps) {
     INITIAL_ACTION_STATE,
   );
   const [type, setType] = useState<ItemType>(item?.type ?? "restaurant");
+  // Aberto = sem router.refresh() do Realtime (não troca o que está sendo digitado).
+  const pauseRef = useLivePause<HTMLFormElement>();
 
   return (
     <form
+      ref={pauseRef}
       action={formAction}
       className={`${CARD} space-y-4`}
     >
+      {/* A versão que esta tela carregou: a action avisa se o par gravou depois (lib/edit-conflict.ts). */}
+      {!isCreate && item?.updated_at ? (
+        <input type="hidden" name="loaded_updated_at" value={item.updated_at} />
+      ) : null}
       {isCreate ? (
         <div className="space-y-2.5">
           <label className={FIELD_LABEL}>
@@ -86,6 +96,18 @@ export function ItemForm({ action, item, mode }: ItemFormProps) {
           defaultValue={item?.title ?? ""}
           className={INPUT}
           placeholder="Ex.: Jantar no restaurante novo"
+        />
+      </label>
+
+      <label className={FIELD_LABEL}>
+        <span>Cidade (opcional)</span>
+        <input
+          name="city"
+          type="text"
+          maxLength={CITY_MAX_LENGTH}
+          defaultValue={item?.city ?? ""}
+          className={INPUT}
+          placeholder="Ex.: Gramado"
         />
       </label>
 

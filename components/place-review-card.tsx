@@ -6,14 +6,17 @@ import { type FormEvent, useActionState, useState } from "react";
 import { useOnline } from "@/components/auth-hooks";
 import { BackLink, OfflineBanner } from "@/components/auth-ui";
 import { ItemPhoto, TypeHintBox } from "@/components/item-visuals";
+import { useLivePause } from "@/components/use-live-pause";
 import {
   BTN_PRIMARY,
   CARD,
   ERROR_TEXT,
+  INPUT,
   TEXT_LINK_QUIET,
   TEXTAREA,
 } from "@/components/ui-classes";
 import { PICK_TYPE_COPY } from "@/lib/capture-link";
+import { CITY_MAX_LENGTH } from "@/lib/city";
 import {
   NOTES_PLACEHOLDER,
   STATUS_LABELS,
@@ -78,6 +81,8 @@ export function PlaceReviewCard({
   const [title, setTitle] = useState("");
   const [type, setType] = useState<ItemType | null>(null);
   const [status, setStatus] = useState<ItemStatus>("want");
+  // Revisando = sem router.refresh() do Realtime.
+  const pauseRef = useLivePause<HTMLFormElement>();
   const [clientError, setClientError] = useState<string | null>(null);
   const error = clientError ?? state.error;
 
@@ -99,7 +104,12 @@ export function PlaceReviewCard({
         {heading}
       </h1>
 
-      <form action={formAction} onSubmit={handleSubmit} noValidate>
+      <form
+        ref={pauseRef}
+        action={formAction}
+        onSubmit={handleSubmit}
+        noValidate
+      >
         <input type="hidden" name="url" value={url} />
 
         <div className={`${CARD} mt-3.5 p-3`}>
@@ -131,6 +141,24 @@ export function PlaceReviewCard({
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="Ex.: Café da Esquina"
                 className="h-[50px] w-full rounded-xl border border-ink/20 bg-[#fbf7f2] px-3.5 font-serif text-xl font-bold text-ink outline-none transition focus:border-accent focus:ring-4 focus:ring-accent-soft"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label htmlFor="place_city" className={FIELD_LABEL}>
+                Cidade{" "}
+                <span className="font-normal normal-case tracking-normal">
+                  (opcional)
+                </span>
+              </label>
+              <input
+                id="place_city"
+                name="city"
+                type="text"
+                autoComplete="off"
+                maxLength={CITY_MAX_LENGTH}
+                placeholder="Ex.: Gramado"
+                className={INPUT}
               />
             </div>
 

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   CUSTOM_CATEGORY_ITEM_TYPE,
   categoryErrorCode,
+  parseItemView,
   type CategoryErrorCode,
   type CategoryInput,
 } from "@/lib/categories";
@@ -27,6 +28,8 @@ function failure(error: DbError): { ok: false; reason: CategoryFailureReason } {
 }
 
 const NOT_FOUND = { ok: false, reason: "not_found" } as const;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Ordem do casal (C7): position, empate por created_at e, por último, id (as
 // semeadas nascem com o mesmo created_at). Determinística: os dois veem a
@@ -160,4 +163,41 @@ export async function setItemView(
   if (error) return failure(error);
   if (!data || data.length === 0) return NOT_FOUND;
   return { ok: true };
+}
+
+// Grade/Compacta salva da pessoa. Sem linha ou com erro: Grade (o padrão),
+// para a tela abrir mesmo assim.
+export async function getItemView(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ItemView> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("item_view")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) return "grid";
+  return parseItemView((data as { item_view?: unknown } | null)?.item_view);
+}
+
+// Uma categoria do espaço. Outro espaço (a RLS esconde), inexistente ou id
+// que não é uuid → not_found.
+export async function getCategory(
+  supabase: SupabaseClient,
+  spaceId: string,
+  id: string,
+): Promise<CategoryResult<{ category: Category }>> {
+  if (!UUID.test(id)) return NOT_FOUND;
+
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .eq("space_id", spaceId)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) return failure(error);
+  if (!data) return NOT_FOUND;
+  return { ok: true, category: data as Category };
 }

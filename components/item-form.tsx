@@ -33,15 +33,21 @@ type ItemFormProps = {
   item?: Pick<Item, "title" | "type" | "url" | "notes" | "city"> &
     Partial<Pick<Item, "updated_at">>;
   mode: "create" | "edit";
+  // "+ Adicionar em {nome}" (/items/new?categoria=…): o tipo da categoria já
+  // vem marcado e, enquanto ele não mudar, o item vai para ela. O campo
+  // "Categoria" de verdade entra no PR 6.
+  category?: { id: string; item_type: ItemType } | null;
 };
 
-export function ItemForm({ action, item, mode }: ItemFormProps) {
+export function ItemForm({ action, item, mode, category }: ItemFormProps) {
   const isCreate = mode === "create";
   const [state, formAction, isPending] = useActionState(
     action,
     INITIAL_ACTION_STATE,
   );
-  const [type, setType] = useState<ItemType>(item?.type ?? "restaurant");
+  const [type, setType] = useState<ItemType>(
+    item?.type ?? category?.item_type ?? "restaurant",
+  );
   // Aberto = sem router.refresh() do Realtime (não troca o que está sendo digitado).
   const pauseRef = useLivePause<HTMLFormElement>();
 
@@ -54,6 +60,9 @@ export function ItemForm({ action, item, mode }: ItemFormProps) {
       {/* A versão que esta tela carregou: a action avisa se o par gravou depois (lib/edit-conflict.ts). */}
       {!isCreate && item?.updated_at ? (
         <input type="hidden" name="loaded_updated_at" value={item.updated_at} />
+      ) : null}
+      {isCreate && category && category.item_type === type ? (
+        <input type="hidden" name="category_id" value={category.id} />
       ) : null}
       {isCreate ? (
         <div className="space-y-2.5">

@@ -6,6 +6,7 @@ import {
   ItemGridTile,
   Pressable,
   type CategoryLook,
+  type GridImage,
 } from "@/components/item-visuals";
 import { BACK_LINK } from "@/components/ui-classes";
 import { STATUS_BADGES } from "@/lib/categories";
@@ -32,6 +33,11 @@ export type ItemListProps = {
   showStatus?: boolean;
   // Demo: abre por callback; sem ele, cada card é um link para /items/{id}.
   onOpen?: (itemId: string) => void;
+  // Grade: foto do link de cada item, por id (os itens do app ainda não
+  // guardam imagem; sem foto, vale cor + emoji).
+  imagesById?: Record<string, GridImage>;
+  // Grade em Queremos: último quadrado "＋ Adicionar em {nome}".
+  addTile?: { label: string; href?: string; onClick?: () => void } | null;
 };
 
 // Cards novos (C14) em Compacta (uma lista) ou Grade (2 colunas).
@@ -43,6 +49,8 @@ export function ItemList({
   view = "compact",
   showStatus = false,
   onOpen,
+  imagesById,
+  addTile,
 }: ItemListProps) {
   const cards = items.map((item) => {
     const props = {
@@ -60,7 +68,7 @@ export function ItemList({
 
     return view === "grid" ? (
       <li key={item.id}>
-        <ItemGridTile {...props} />
+        <ItemGridTile {...props} image={imagesById?.[item.id] ?? null} />
       </li>
     ) : (
       <li key={item.id}>
@@ -73,7 +81,25 @@ export function ItemList({
   });
 
   return view === "grid" ? (
-    <ul className="grid grid-cols-2 gap-3">{cards}</ul>
+    <ul className="grid grid-cols-2 gap-3">
+      {cards}
+      {addTile ? (
+        <li>
+          <Pressable
+            href={addTile.href}
+            onClick={addTile.onClick}
+            className="flex aspect-square w-full flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-cream/30 p-4 text-center text-cream/75 transition hover:border-cream/55 hover:text-cream"
+          >
+            <span aria-hidden="true" className="text-[34px] font-light leading-none">
+              ＋
+            </span>
+            <span className="mt-1.5 text-balance text-[15px] font-bold leading-[1.35]">
+              {addTile.label}
+            </span>
+          </Pressable>
+        </li>
+      ) : null}
+    </ul>
   ) : (
     <ul className="overflow-hidden rounded-[22px] bg-surface text-ink shadow-[0_10px_24px_rgba(0,0,0,0.18)] [&>li:first-child>*]:border-t-0">
       {cards}
@@ -81,8 +107,9 @@ export function ItemList({
   );
 }
 
-// Cabeçalho das telas de lista (mockup 52): "← Queremos", título grande e a
-// linha de baixo ("Mais recentes primeiro").
+// Cabeçalho das telas de lista (mockups 52/53): "← Queremos" e o seletor,
+// título grande (com a média à direita, em 53) e a linha de baixo ("Mais
+// recentes primeiro" ou "Ordenar: …").
 export function ListScreenHeader({
   backLabel,
   backHref,
@@ -91,19 +118,22 @@ export function ListScreenHeader({
   count,
   subtitle,
   right,
+  titleAside,
 }: {
   backLabel: string;
   backHref?: string;
   onBack?: () => void;
   title: string;
   count?: number;
-  subtitle?: string;
-  // Seletor Grade/Compacta (PR 5).
+  subtitle?: ReactNode;
+  // Seletor Grade/Compacta.
   right?: ReactNode;
+  // Média das notas (Restaurante em Já fizemos).
+  titleAside?: ReactNode;
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex min-h-11 items-center justify-between gap-3">
         <Pressable
           href={backHref}
           onClick={onBack}
@@ -113,14 +143,17 @@ export function ListScreenHeader({
         </Pressable>
         {right}
       </div>
-      <h1 className="mt-1 text-[27px] font-medium leading-tight text-cream">
-        {title}
-        {count != null ? (
-          <span className="text-cream/55"> · {count}</span>
-        ) : null}
-      </h1>
+      <div className="mt-1.5 flex items-center justify-between gap-3">
+        <h1 className="min-w-0 text-[27px] font-medium leading-tight text-cream">
+          {title}
+          {count != null ? (
+            <span className="whitespace-nowrap text-cream/55"> · {count}</span>
+          ) : null}
+        </h1>
+        {titleAside}
+      </div>
       {subtitle ? (
-        <p className="mt-1.5 text-[13.5px] text-cream/60">{subtitle}</p>
+        <div className="mt-2 text-[13.5px] text-cream/60">{subtitle}</div>
       ) : null}
     </div>
   );

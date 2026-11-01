@@ -5,6 +5,8 @@ import {
   countCategoryItems,
   createCategory,
   deleteCategory,
+  getCategory,
+  getItemView,
   listCategories,
   moveCategories,
   setItemView,
@@ -224,5 +226,53 @@ describe("setItemView", () => {
   it("sem linha atualizada: not_found", async () => {
     const { supabase } = fakeClient([{ data: [] }]);
     expect(await setItemView(supabase, "user-2", "grid")).toEqual({ ok: false, reason: "not_found" });
+  });
+});
+
+describe("getItemView", () => {
+  it("lê profiles.item_view da pessoa", async () => {
+    const { supabase, calls } = fakeClient([{ data: { item_view: "compact" } }]);
+    expect(await getItemView(supabase, "user-1")).toBe("compact");
+    expect(calls[0]).toEqual({
+      table: "profiles",
+      steps: [["select", "item_view"], ["eq", "id", "user-1"], ["maybeSingle"]],
+    });
+  });
+
+  it("sem perfil, valor estranho ou erro: Grade", async () => {
+    expect(await getItemView(fakeClient([{ data: null }]).supabase, "u")).toBe("grid");
+    expect(await getItemView(fakeClient([{ data: { item_view: "x" } }]).supabase, "u")).toBe("grid");
+    expect(
+      await getItemView(fakeClient([{ error: { message: "boom" } }]).supabase, "u"),
+    ).toBe("grid");
+  });
+});
+
+describe("getCategory", () => {
+  const id = "0b7f3c1e-2a4d-4c55-9f00-1234567890ab";
+
+  it("busca pelo id dentro do espaço", async () => {
+    const { supabase, calls } = fakeClient([{ data: category }]);
+    expect(await getCategory(supabase, "space-1", id)).toEqual({ ok: true, category });
+    expect(calls[0]).toEqual({
+      table: "categories",
+      steps: [["select", "*"], ["eq", "space_id", "space-1"], ["eq", "id", id], ["maybeSingle"]],
+    });
+  });
+
+  it("outro espaço ou inexistente: not_found", async () => {
+    const { supabase } = fakeClient([{ data: null }]);
+    expect(await getCategory(supabase, "space-1", id)).toEqual({ ok: false, reason: "not_found" });
+  });
+
+  it("id que não é uuid: not_found sem consultar", async () => {
+    const { supabase, calls } = fakeClient([]);
+    expect(await getCategory(supabase, "space-1", "nada")).toEqual({ ok: false, reason: "not_found" });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("erro do banco: unknown", async () => {
+    const { supabase } = fakeClient([{ error: { message: "boom" } }]);
+    expect(await getCategory(supabase, "space-1", id)).toEqual({ ok: false, reason: "unknown" });
   });
 });

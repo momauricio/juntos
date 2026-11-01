@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { ItemList, ListScreenHeader, type ItemWithRatings } from "@/components/item-list";
+import { saveItemView } from "@/app/(app)/item-view-action";
+import type { ItemWithRatings } from "@/components/item-list";
+import { ItemsScreen } from "@/components/items-screen";
 import { FAB } from "@/components/ui-classes";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { HOME_COPY, LIST_COPY, RECENT_LIMIT } from "@/lib/categories";
-import { listCategories } from "@/lib/categories-data";
+import { getItemView, listCategories } from "@/lib/categories-data";
 import { STATUS_LABELS } from "@/lib/labels";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
@@ -25,8 +27,8 @@ function parseStatus(value: string | string[] | undefined): ItemStatus {
   return status === "done" ? "done" : "want";
 }
 
-// Os 10 mais novos da aba, de todas as categorias (C8). Neste PR sai só em
-// Compacta; o seletor Grade/Compacta (profiles.item_view) entra no PR 5.
+// Os 10 mais novos da aba, de todas as categorias (C8), em Grade ou Compacta
+// (a escolha de cada pessoa, C11), com o cabeçalho da tela 52.
 export default async function RecentPage({ searchParams }: RecentPageProps) {
   const status = parseStatus((await searchParams).status);
   const supabase = await createClient();
@@ -45,7 +47,7 @@ export default async function RecentPage({ searchParams }: RecentPageProps) {
   }
 
   // created_at desc + limit já dá os 10 mais novos (mesma regra de recentItems).
-  const [itemsResult, categoriesResult] = await Promise.all([
+  const [itemsResult, categoriesResult, view] = await Promise.all([
     supabase
       .from("items")
       .select("*, ratings(*)")
@@ -55,6 +57,7 @@ export default async function RecentPage({ searchParams }: RecentPageProps) {
       .order("id", { ascending: true })
       .limit(RECENT_LIMIT),
     listCategories(supabase, space.id),
+    getItemView(supabase, user.id),
   ]);
 
   if (itemsResult.error || !categoriesResult.ok) {
@@ -66,30 +69,25 @@ export default async function RecentPage({ searchParams }: RecentPageProps) {
     categoriesResult.categories.map((category) => [category.id, category]),
   );
 
+  const partner = space.members.find((member) => member.userId !== user.id);
+
   return (
     <main className="px-5 pb-28 pt-1">
-      <section className="mx-auto w-full max-w-lg space-y-3.5">
-        <ListScreenHeader
+      <section className="mx-auto w-full max-w-lg">
+        <ItemsScreen
           backLabel={STATUS_LABELS[status]}
-          backHref={`/?status=${status}`}
+          back={{ href: `/?status=${status}` }}
           title={LIST_COPY.recentScreenTitle}
-          subtitle={LIST_COPY.newestFirst}
+          initialView={view}
+          onViewChange={saveItemView}
+          partnerName={partner?.displayName ?? null}
+          items={items}
+          categoriesById={categoriesById}
+          memberNames={Object.fromEntries(
+            space.members.map((member) => [member.userId, member.displayName]),
+          )}
+          memberOrder={space.members.map((member) => member.userId)}
         />
-
-        {items.length === 0 ? (
-          <p className="py-6 text-center text-[15px] text-cream/70">
-            {LIST_COPY.empty}
-          </p>
-        ) : (
-          <ItemList
-            items={items}
-            categoriesById={categoriesById}
-            memberNames={Object.fromEntries(
-              space.members.map((member) => [member.userId, member.displayName]),
-            )}
-            memberOrder={space.members.map((member) => member.userId)}
-          />
-        )}
       </section>
 
       <Link href="/colar" className={FAB}>

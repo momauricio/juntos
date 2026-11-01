@@ -87,6 +87,7 @@ export function Pressable({
   className?: string;
   children: ReactNode;
   "aria-label"?: string;
+  "aria-current"?: boolean | "page" | "true";
 }) {
   if (onClick || !href) {
     return (
@@ -142,6 +143,9 @@ function AuthorDot({
     </>
   );
 }
+
+// Foto do link no card da Grade, com o selo "📸 Instagram"/"📸 link".
+export type GridImage = { url: string; source: "instagram" | "link" };
 
 export type ItemCardProps = {
   item: Pick<Item, "title" | "city">;
@@ -219,8 +223,8 @@ export function ItemGridTile({
   href,
   onClick,
 }: ItemCardProps & {
-  // Imagem do link (os itens ainda não guardam; o PR 5 liga quando houver).
-  image?: { url: string; source: "instagram" | "link" } | null;
+  // Imagem do link (os itens do app ainda não guardam; a demo tem algumas).
+  image?: GridImage | null;
 }) {
   const city = item.city?.trim();
 

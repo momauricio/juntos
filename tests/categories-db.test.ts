@@ -20,6 +20,8 @@ const FALLBACK_MIGRATION = "20261031130000_categories_switch_fallback.sql";
 const FALLBACK_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031130000_categories_switch_fallback_down.sql");
 const PER_TYPE_MIGRATION = "20261031133000_categories_switch_per_type.sql";
 const PER_TYPE_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031133000_categories_switch_per_type_down.sql");
+const STRICT_MIGRATION = "20261031134500_categories_switch_per_type_strict.sql";
+const STRICT_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031134500_categories_switch_per_type_strict_down.sql");
 
 // Pessoas e espaços "de antes" da migration.
 const MAURICIO = "dc615b01-9e66-4888-9451-3a44f1a6cea0";
@@ -68,6 +70,7 @@ let started = false;
 let snapshotBefore = "";
 let schemaAfterCategories = "";
 let switchDefAfterFallback = "";
+let switchDefAfterPerType = "";
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -218,16 +221,23 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
     schemaAfterCategories = run(SCHEMA);
     expect(files).toContain(FALLBACK_MIGRATION);
     expect(files).toContain(PER_TYPE_MIGRATION);
-    // As migrations depois de categories também entram; guarda o switch logo
-    // depois de 20261031130000 para comparar com o rollback de 20261031133000.
+    expect(files).toContain(STRICT_MIGRATION);
+    // As migrations depois de categories também entram, em ordem; guarda o
+    // switch logo depois de 20261031130000 e de 20261031133000 para comparar
+    // com os rollbacks de 20261031133000 e 20261031134500.
     for (const file of files.filter((f) => f > CATEGORIES_MIGRATION && f <= FALLBACK_MIGRATION)) {
       runFile(join(MIGRATIONS_DIR, file));
     }
     switchDefAfterFallback = run(SWITCH_DEF);
-    for (const file of files.filter((f) => f > FALLBACK_MIGRATION)) {
+    for (const file of files.filter((f) => f > FALLBACK_MIGRATION && f <= PER_TYPE_MIGRATION)) {
       runFile(join(MIGRATIONS_DIR, file));
     }
-    expect(run(SWITCH_DEF)).not.toBe(switchDefAfterFallback);
+    switchDefAfterPerType = run(SWITCH_DEF);
+    for (const file of files.filter((f) => f > PER_TYPE_MIGRATION)) {
+      runFile(join(MIGRATIONS_DIR, file));
+    }
+    expect(switchDefAfterPerType).not.toBe(switchDefAfterFallback);
+    expect(run(SWITCH_DEF)).not.toBe(switchDefAfterPerType);
   }, 120_000);
 
   afterAll(() => {
@@ -688,7 +698,7 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
     );
   });
 
-  it("troca: padrão do tipo apagada no espaço novo + estouro -> primeira padrão que existe", () => {
+  it("troca: padrão do tipo apagada no espaço novo + estouro -> recria a padrão do tipo (31ª), não cai em outra padrão", () => {
     const old = spaceOf("SWD001");
     const target = spaceOf("SWD002");
     run(`delete from public.categories where space_id = '${target.space}' and name in ('Restaurante', 'Hospedagem');`, {
@@ -702,9 +712,16 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
 
     switchKeepingItems(old.owner, "SWD002", old.space, target.space);
 
-    // Hospedagem (1) e Restaurante (2) apagadas: a primeira padrão é Passeio (3)
-    expect(itemsByCategory(target.space, ["Cantina D"])).toBe("Cantina D>Passeio");
-    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("30");
+    // Hospedagem e Restaurante apagadas: Passeio é a primeira padrão, mas o
+    // restaurante vai para Restaurante recriada (20261031134500).
+    expect(itemsByCategory(target.space, ["Cantina D"])).toBe("Cantina D>Restaurante");
+    expect(
+      run(`select concat_ws('|', position = (select max(position) from public.categories where space_id = '${target.space}'),
+                            name, emoji, color, item_type, created_by is null) from public.categories
+           where space_id = '${target.space}' and name = 'Restaurante';`),
+    ).toBe("t|Restaurante|🍝|ph3|restaurant|t");
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}' and name = 'Hospedagem';`)).toBe("0");
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("31");
   });
 
   it("troca: nenhuma padrão no espaço novo + estouro -> recria a padrão do tipo (31ª, sem autor)", () => {
@@ -898,6 +915,64 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
            where space_id = '${target.space}' and name in ('Vazia K', 'Cheia K');`),
     ).toBe("29|Cheia K,30|Vazia K");
     expect(itemsByCategory(target.space, ["Pub K"])).toBe("Pub K>Cheia K");
+  });
+
+  // 20261031134500: cada tipo vai sempre para a padrão dele.
+  it("troca: só Filme de padrão + 30 + categoria nova com restaurante -> recria Restaurante, não cai em Filme (31)", () => {
+    const old = spaceOf("SWL001");
+    const target = spaceOf("SWL002");
+    run(`delete from public.categories where space_id = '${target.space}' and name <> 'Filme';`, { as: target.owner });
+    fillTo30(target.space, target.owner);
+    expect(
+      run(`select string_agg(name, ',') from public.categories where space_id = '${target.space}' and created_by is null;`),
+    ).toBe("Filme");
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Viagens', '✈️', 'ph4');`, {
+      as: old.owner,
+    });
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Cantina L");
+
+    switchKeepingItems(old.owner, "SWL002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("31");
+    expect(
+      run(`select concat_ws('|', position = (select max(position) from public.categories where space_id = '${target.space}'),
+                            name, emoji, color, item_type, created_by is null) from public.categories
+           where space_id = '${target.space}' and name = 'Restaurante';`),
+    ).toBe("t|Restaurante|🍝|ph3|restaurant|t");
+    expect(itemsByCategory(target.space, ["Cantina L"])).toBe("Cantina L>Restaurante");
+    expect(run(`select type from public.items where title = 'Cantina L';`)).toBe("restaurant");
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}' and name = 'Viagens';`)).toBe("0");
+  });
+
+  it("troca: restaurante e filme numa categoria que não cabe, só Filme de padrão -> Restaurante recriada e Filme existente", () => {
+    const old = spaceOf("SWM001");
+    const target = spaceOf("SWM002");
+    run(`delete from public.categories where space_id = '${target.space}' and name = 'Restaurante';`, { as: target.owner });
+    fillTo30(target.space, target.owner);
+    const filme = categoryId(target.space, "Filme");
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Viagens', '✈️', 'ph4');`, {
+      as: old.owner,
+    });
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Cantina M");
+    addItem(old.space, old.owner, "Viagens", "movie", "Filme M");
+
+    switchKeepingItems(old.owner, "SWM002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("31");
+    expect(
+      run(`select concat_ws('|', name, emoji, color, item_type, created_by is null) from public.categories
+           where space_id = '${target.space}' and name = 'Restaurante';`),
+    ).toBe("Restaurante|🍝|ph3|restaurant|t");
+    expect(itemsByCategory(target.space, ["Cantina M", "Filme M"])).toBe("Cantina M>Restaurante,Filme M>Filme");
+    expect(run(`select category_id from public.items where title = 'Filme M';`)).toBe(filme);
+    expect(
+      run(`select string_agg(type, ',' order by title) from public.items where title in ('Cantina M', 'Filme M');`),
+    ).toBe("restaurant,movie");
+  });
+
+  it("rollback de 20261031134500 volta o switch exatamente ao de 20261031133000", () => {
+    runFile(STRICT_ROLLBACK);
+    expect(run(SWITCH_DEF)).toBe(switchDefAfterPerType);
   });
 
   it("rollback de 20261031133000 volta o switch exatamente ao de 20261031130000", () => {

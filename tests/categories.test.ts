@@ -17,19 +17,29 @@ import {
   categoryHref,
   categoryNameKey,
   categorySampleText,
+  categoryItems,
   categoryScoreAverage,
   categoryTiles,
+  categoryTitle,
   defaultCategoryForType,
   isSingleEmoji,
   legacyTypeRedirect,
+  LIST_COPY,
+  newItemHref,
+  parseItemView,
+  parseSortParam,
   recentHref,
   recentItems,
   recentTileText,
   scoreBand,
   showsScoreAverage,
+  showsScoreSort,
   sortByScore,
   sortCategories,
   validateCategoryInput,
+  VIEW_COPY,
+  VIEW_TOAST_TITLE,
+  viewToast,
 } from "@/lib/categories";
 import { TYPE_CHIP_LABELS, TYPE_EMOJI } from "@/lib/labels";
 import type { ItemType } from "@/lib/types";
@@ -417,5 +427,135 @@ describe("legacyTypeRedirect (C15)", () => {
     expect(legacyTypeRedirect("movie", "done", categories)).toBe("/?status=done");
     expect(legacyTypeRedirect("nada", "xx", categories)).toBe("/");
     expect(legacyTypeRedirect("all", undefined, categories)).toBe("/");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dentro da categoria (52/53)
+
+describe("parseSortParam (C10)", () => {
+  it("?ordem=nota é Melhor nota; o resto é Mais recentes", () => {
+    expect(parseSortParam("nota")).toBe("score");
+    expect(parseSortParam(["nota", "x"])).toBe("score");
+    expect(parseSortParam(undefined)).toBe("recent");
+    expect(parseSortParam(null)).toBe("recent");
+    expect(parseSortParam("")).toBe("recent");
+    expect(parseSortParam("NOTA")).toBe("recent");
+    expect(parseSortParam("recentes")).toBe("recent");
+  });
+});
+
+describe("showsScoreSort (C10)", () => {
+  it("só Restaurante (item_type) em Já fizemos", () => {
+    expect(showsScoreSort({ item_type: "restaurant" }, "done")).toBe(true);
+    expect(showsScoreSort({ item_type: "restaurant" }, "want")).toBe(false);
+    expect(showsScoreSort({ item_type: "activity" }, "done")).toBe(false);
+    expect(showsScoreSort({ item_type: "stay" }, "done")).toBe(false);
+  });
+});
+
+describe("categoryItems (C10)", () => {
+  const rest = { id: "rest", item_type: "restaurant" as ItemType };
+  const pubs = { id: "pubs", item_type: "activity" as ItemType };
+  const rated = (
+    id: string,
+    category: string,
+    status: "want" | "done",
+    created: number,
+    score: number | null,
+  ) => ({ ...item(id, category, status, created), ratings: score == null ? [] : [rating(score)] });
+  const items = [
+    rated("a", "rest", "done", 1, 8),
+    rated("b", "rest", "done", 2, 9.5),
+    rated("c", "rest", "done", 3, 8),
+    rated("d", "rest", "done", 4, null),
+    rated("e", "rest", "done", 5, null),
+    rated("f", "rest", "want", 6, null),
+    rated("g", "pubs", "done", 7, 10),
+    rated("h", "pubs", "done", 8, 2),
+  ];
+
+  it("padrão: só a categoria e a aba, mais recentes primeiro", () => {
+    expect(categoryItems(items, rest, "done").map((i) => i.id)).toEqual(["e", "d", "c", "b", "a"]);
+    expect(categoryItems(items, rest, "want").map((i) => i.id)).toEqual(["f"]);
+  });
+
+  it("Melhor nota: nota desc, empate pelo mais recente, sem nota no fim", () => {
+    expect(categoryItems(items, rest, "done", "score").map((i) => i.id)).toEqual([
+      "b", "c", "a", "e", "d",
+    ]);
+  });
+
+  it("Melhor nota não vale fora de Restaurante em Já fizemos", () => {
+    expect(categoryItems(items, pubs, "done", "score").map((i) => i.id)).toEqual(["h", "g"]);
+    expect(categoryItems(items, rest, "want", "score").map((i) => i.id)).toEqual(["f"]);
+  });
+
+  it("nota do casal: média das duas pessoas", () => {
+    const both = [
+      { ...item("x", "rest", "done", 1), ratings: [rating(9), rating(7)] },
+      { ...item("y", "rest", "done", 2), ratings: [rating(8.5)] },
+    ];
+    expect(categoryItems(both, rest, "done", "score").map((i) => i.id)).toEqual(["y", "x"]);
+  });
+
+  it("não muda a lista recebida", () => {
+    const before = items.map((i) => i.id);
+    categoryItems(items, rest, "done", "score");
+    expect(items.map((i) => i.id)).toEqual(before);
+  });
+});
+
+describe("parseItemView (C11)", () => {
+  it("compact é Compacta; o resto (inclusive vazio) é Grade", () => {
+    expect(parseItemView("compact")).toBe("compact");
+    expect(parseItemView("grid")).toBe("grid");
+    expect(parseItemView(null)).toBe("grid");
+    expect(parseItemView(undefined)).toBe("grid");
+    expect(parseItemView("list")).toBe("grid");
+    expect(parseItemView(1)).toBe("grid");
+  });
+});
+
+describe("viewToast (C11)", () => {
+  it("com par: as duas linhas", () => {
+    expect(viewToast("Manuela")).toEqual({
+      title: "Pronto, o Juntos vai lembrar do seu jeito",
+      description: "Do lado de Manuela, nada muda.",
+    });
+  });
+
+  it("sem par (ou nome vazio): só a 1ª linha", () => {
+    expect(viewToast(null)).toEqual({ title: VIEW_TOAST_TITLE });
+    expect(viewToast(undefined)).toEqual({ title: VIEW_TOAST_TITLE });
+    expect(viewToast("  ")).toEqual({ title: VIEW_TOAST_TITLE });
+  });
+});
+
+describe("textos e links de dentro da categoria", () => {
+  it("seletor: Grade/Compacta com aria-label", () => {
+    expect(VIEW_COPY).toEqual({
+      grid: { label: "Grade", ariaLabel: "Ver em grade" },
+      compact: { label: "Compacta", ariaLabel: "Ver compacta" },
+    });
+  });
+
+  it("título, adicionar, ordenar e média", () => {
+    expect(categoryTitle({ emoji: "🏨", name: "Hospedagem" })).toBe("🏨 Hospedagem");
+    expect(LIST_COPY.addIn("Hospedagem")).toBe("Adicionar em Hospedagem");
+    expect(LIST_COPY.empty).toBe("Nada aqui ainda.");
+    expect(LIST_COPY.newestFirst).toBe("Mais recentes primeiro");
+    expect([LIST_COPY.sortLabel, LIST_COPY.sortScore, LIST_COPY.sortRecent]).toEqual([
+      "Ordenar:", "Melhor nota", "Mais recentes",
+    ]);
+    expect(LIST_COPY.scoreAverage(89)).toBe("média · 89 notas");
+    expect(LIST_COPY.scoreAverage(1)).toBe("média · 1 nota");
+  });
+
+  it("categoryHref com ?ordem=nota e newItemHref", () => {
+    expect(categoryHref("abc", "done", "score")).toBe("/categorias/abc?status=done&ordem=nota");
+    expect(categoryHref("abc", "done", "recent")).toBe("/categorias/abc?status=done");
+    expect(categoryHref("abc", null, "score")).toBe("/categorias/abc?ordem=nota");
+    expect(newItemHref("c 1")).toBe("/items/new?categoria=c%201");
   });
 });

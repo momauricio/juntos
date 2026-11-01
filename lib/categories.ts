@@ -1,6 +1,13 @@
 import { parseTypeParam } from "@/lib/item-categories";
 import { coupleScore } from "@/lib/ratings";
-import type { Category, CategoryColor, Item, ItemStatus, ItemType } from "@/lib/types";
+import type {
+  Category,
+  CategoryColor,
+  Item,
+  ItemStatus,
+  ItemType,
+  ItemView,
+} from "@/lib/types";
 
 type RatingValues = Parameters<typeof coupleScore>[0][number];
 
@@ -166,12 +173,47 @@ export const HOME_COPY = {
     count === 1 ? "média de 1 nota" : `média de ${count} notas`,
 } as const;
 
-// Telas de lista (52 e recentes).
+// Telas de lista (52/53 e recentes).
 export const LIST_COPY = {
   newestFirst: "Mais recentes primeiro",
   recentScreenTitle: `${HOME_COPY.recentEmoji} ${HOME_COPY.recentTitle}`,
   empty: "Nada aqui ainda.",
+  addIn: (name: string) => `Adicionar em ${name}`,
+  sortLabel: "Ordenar:",
+  sortScore: "Melhor nota",
+  sortRecent: "Mais recentes",
+  scoreAverage: (count: number) =>
+    count === 1 ? "média · 1 nota" : `média · ${count} notas`,
 } as const;
+
+// Seletor Grade/Compacta (C11): o nome aparece só no ícone ativo.
+export const VIEW_COPY: Record<ItemView, { label: string; ariaLabel: string }> = {
+  grid: { label: "Grade", ariaLabel: "Ver em grade" },
+  compact: { label: "Compacta", ariaLabel: "Ver compacta" },
+};
+
+export const VIEW_TOAST_TITLE = "Pronto, o Juntos vai lembrar do seu jeito";
+
+// Toast da troca de visualização. Sem par ainda: só a 1ª linha.
+export function viewToast(partnerName: string | null | undefined): {
+  title: string;
+  description?: string;
+} {
+  const name = partnerName?.trim();
+  return name
+    ? { title: VIEW_TOAST_TITLE, description: `Do lado de ${name}, nada muda.` }
+    : { title: VIEW_TOAST_TITLE };
+}
+
+// profiles.item_view → visualização; qualquer outra coisa vira Grade (padrão).
+export function parseItemView(value: unknown): ItemView {
+  return value === "compact" ? "compact" : "grid";
+}
+
+// "🏨 Hospedagem" (título da tela da categoria, sem a contagem).
+export function categoryTitle(category: Pick<Category, "emoji" | "name">): string {
+  return `${category.emoji} ${category.name}`;
+}
 
 // Selo da foto no card da Grade.
 export const GRID_COPY = {
@@ -305,7 +347,7 @@ export const SCORE_BAND_COLORS: Record<ScoreBand, string> = {
   red: "#b83b4b",
 };
 
-// Melhor nota (C10, para o PR 5): nota desc, empate pelo mais recente;
+// Melhor nota (C10): nota desc, empate pelo mais recente;
 // sem nota no fim, por mais recentes.
 export function sortByScore<I extends Pick<Item, "id" | "created_at">>(
   items: readonly I[],
@@ -325,12 +367,60 @@ export function sortByScore<I extends Pick<Item, "id" | "created_at">>(
     .map(({ item }) => item);
 }
 
+// Ordem dentro da categoria (C10). Fica só na URL (?ordem=nota), não no perfil.
+export type ItemSort = "recent" | "score";
+
+export const SORT_PARAM = "ordem";
+const SORT_SCORE_VALUE = "nota";
+
+export function parseSortParam(value: string | string[] | null | undefined): ItemSort {
+  const param = Array.isArray(value) ? value[0] : value;
+  return param === SORT_SCORE_VALUE ? "score" : "recent";
+}
+
+// "Ordenar: Melhor nota · Mais recentes" só em Restaurante na aba Já fizemos;
+// a mesma regra da média (C13).
+export const showsScoreSort = showsScoreAverage;
+
+type CategoryListItem = Pick<Item, "id" | "status" | "category_id" | "created_at"> &
+  RatedItem;
+
+// Itens da categoria naquela aba, na ordem da tela. "Melhor nota" só vale
+// onde o controle aparece; em qualquer outra, Mais recentes.
+export function categoryItems<I extends CategoryListItem>(
+  items: readonly I[],
+  category: Pick<Category, "id" | "item_type">,
+  status: ItemStatus,
+  sort: ItemSort = "recent",
+): I[] {
+  const list = items.filter(
+    (item) => item.category_id === category.id && item.status === status,
+  );
+  if (sort === "score" && showsScoreSort(category, status)) {
+    return sortByScore(list, (item) => coupleScore([...(item.ratings ?? [])]));
+  }
+  return list.sort(newestFirst);
+}
+
 function statusQuery(status: ItemStatus | null | undefined) {
   return status ? `?status=${status}` : "";
 }
 
-export function categoryHref(categoryId: string, status?: ItemStatus | null) {
-  return `/categorias/${encodeURIComponent(categoryId)}${statusQuery(status)}`;
+export function categoryHref(
+  categoryId: string,
+  status?: ItemStatus | null,
+  sort: ItemSort = "recent",
+) {
+  const path = `/categorias/${encodeURIComponent(categoryId)}${statusQuery(status)}`;
+  if (sort !== "score") return path;
+  return `${path}${status ? "&" : "?"}${SORT_PARAM}=${SORT_SCORE_VALUE}`;
+}
+
+// "+ Adicionar em {nome}": o formulário abre com a categoria pré-marcada.
+export const NEW_ITEM_CATEGORY_PARAM = "categoria";
+
+export function newItemHref(categoryId: string) {
+  return `/items/new?${NEW_ITEM_CATEGORY_PARAM}=${encodeURIComponent(categoryId)}`;
 }
 
 export function recentHref(status: ItemStatus) {

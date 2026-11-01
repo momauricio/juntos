@@ -223,7 +223,7 @@ type GridProps = {
   status: ItemStatus;
   onOpen?: (target: HomeTarget) => void;
   menu?: TileMenu;
-  onNewCategory?: () => void;
+  onNewCategory?: (trigger: HTMLElement) => void;
 };
 
 // Grade de quadrados com o menu ligado: o gerente (folhas/menu/toast) e o
@@ -465,7 +465,7 @@ function CategoryGrid({
         <li>
           <button
             type="button"
-            onClick={onNewCategory}
+            onClick={(event) => onNewCategory(event.currentTarget)}
             className="flex aspect-square w-full flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-cream/35 p-3.5 text-center text-cream transition hover:border-cream/60"
           >
             <span aria-hidden="true" className="text-[40px] font-light leading-none">
@@ -528,7 +528,11 @@ function ReorderGrid({
   const byId = new Map(tiles.map((tile) => [tile.category.id, tile]));
   const [dragId, setDragId] = useState<string | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [moveMenu, setMoveMenu] = useState<{ id: string; anchor: DOMRect } | null>(null);
+  const [moveMenu, setMoveMenu] = useState<{
+    id: string;
+    anchor: DOMRect;
+    trigger: HTMLElement;
+  } | null>(null);
   const drag = useRef<Drag | null>(null);
   const offsetRef = useRef({ x: 0, y: 0 });
   const tileRefs = useRef(new Map<string, HTMLElement>());
@@ -697,7 +701,11 @@ function ReorderGrid({
                     suppressClick.current = false;
                     return;
                   }
-                  setMoveMenu({ id, anchor: event.currentTarget.getBoundingClientRect() });
+                  setMoveMenu({
+                    id,
+                    anchor: event.currentTarget.getBoundingClientRect(),
+                    trigger: event.currentTarget,
+                  });
                 }}
                 style={
                   dragging
@@ -766,6 +774,7 @@ function ReorderGrid({
               : []),
           ]}
           footer={CATEGORY_MENU_COPY.footer}
+          returnFocus={moveMenu.trigger}
           onClose={() => setMoveMenu(null)}
         />
       ) : null}

@@ -8,12 +8,20 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // Fundo escurecido das folhas e do menu (mockups 54–55c: .dim).
-export const DIM = "fixed inset-0 z-40 bg-[rgba(10,14,26,0.62)]";
+export const DIM = "fixed inset-0 z-40 m-0 bg-[rgba(10,14,26,0.62)]";
+
+// Folha e menu vão direto no <body>: dentro da página, um pai com space-y-*
+// dá margem aos filhos e encurtava o escurecido e a folha (faixa clara de
+// 14px embaixo, no computador).
+function OnBody({ children }: { children: ReactNode }) {
+  return createPortal(children, document.body);
+}
 
 function focusables(container: HTMLElement): HTMLElement[] {
   return [...container.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
@@ -28,19 +36,26 @@ function focusables(container: HTMLElement): HTMLElement[] {
 export function useModalFocus(
   containerRef: RefObject<HTMLElement | null>,
   onClose: () => void,
-  options: { initialFocus?: RefObject<HTMLElement | null> } = {},
+  options: {
+    initialFocus?: RefObject<HTMLElement | null>;
+    // Quem recebe o foco ao fechar. Sem isso, quem tinha o foco ao abrir
+    // (segurar ou botão direito não focam o quadrado: aí vale passar ele).
+    returnFocus?: HTMLElement | null;
+  } = {},
 ) {
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
   });
   const initialFocus = options.initialFocus;
+  const returnFocus = options.returnFocus;
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     const trigger =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      returnFocus ??
+      (document.activeElement instanceof HTMLElement ? document.activeElement : null);
 
     const first = initialFocus?.current ?? focusables(container)[0] ?? container;
     first.focus({ preventScroll: true });
@@ -81,7 +96,7 @@ export function useModalFocus(
       // Quem abriu pode ter saído da tela (ex.: categoria apagada).
       if (trigger?.isConnected) trigger.focus({ preventScroll: true });
     };
-  }, [containerRef, initialFocus]);
+  }, [containerRef, initialFocus, returnFocus]);
 }
 
 // Folha de baixo (mockups 54, 55b, 55c): fundo escurecido, alça, foco preso.
@@ -89,20 +104,22 @@ export function Sheet({
   title,
   onClose,
   initialFocus,
+  returnFocus,
   children,
 }: {
   // Renderiza o título com o id que a folha usa no aria-labelledby.
   title: (id: string) => ReactNode;
   onClose: () => void;
   initialFocus?: RefObject<HTMLElement | null>;
+  returnFocus?: HTMLElement | null;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  useModalFocus(ref, onClose, { initialFocus });
+  useModalFocus(ref, onClose, { initialFocus, returnFocus });
 
   return (
-    <>
+    <OnBody>
       <div aria-hidden="true" className={DIM} onClick={onClose} />
       <div
         ref={ref}
@@ -116,7 +133,7 @@ export function Sheet({
         {title(titleId)}
         {children}
       </div>
-    </>
+    </OnBody>
   );
 }
 
@@ -158,9 +175,14 @@ function menuPosition(anchor: DOMRect, height: number) {
   left = Math.max(SCREEN_MARGIN, Math.min(left, window.innerWidth - SCREEN_MARGIN - width));
   const below = anchor.bottom + MENU_GAP;
   const fitsBelow = below + height <= window.innerHeight - 64;
-  const top = fitsBelow
-    ? below
-    : Math.max(SCREEN_MARGIN, anchor.top - MENU_GAP - height);
+  // Sempre dentro da tela, mesmo com o gatilho meio escondido.
+  const top = Math.max(
+    SCREEN_MARGIN,
+    Math.min(
+      fitsBelow ? below : anchor.top - MENU_GAP - height,
+      window.innerHeight - SCREEN_MARGIN - height,
+    ),
+  );
   return { left, top, width };
 }
 
@@ -171,21 +193,23 @@ export function AnchoredMenu({
   anchor,
   entries,
   footer,
+  returnFocus,
   onClose,
 }: {
   label: string;
   anchor: DOMRect;
+  returnFocus?: HTMLElement | null;
   entries: MenuEntry[];
   footer?: string;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  useModalFocus(ref, onClose);
+  useModalFocus(ref, onClose, { returnFocus });
   // Altura conhecida (46px por item + 12 de respiro): sem medir depois do render.
   const position = menuPosition(anchor, entries.length * 46 + 12);
 
   return (
-    <>
+    <OnBody>
       <div aria-hidden="true" className={DIM} onClick={onClose} />
       <div
         ref={ref}
@@ -217,6 +241,6 @@ export function AnchoredMenu({
           {footer}
         </p>
       ) : null}
-    </>
+    </OnBody>
   );
 }

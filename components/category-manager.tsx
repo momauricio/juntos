@@ -84,15 +84,20 @@ export function useCategoryManager({
   onDeleted?: (category: ManagedCategory) => void;
 }) {
   const [overlay, setOverlay] = useState<Overlay>({ kind: "none" });
+  // Quem abriu (quadrado, "···", "+ Nova categoria"): o foco volta para ele
+  // ao fechar o menu e as folhas que saem dele.
+  const [returnTo, setReturnTo] = useState<HTMLElement | null>(null);
   const [toast, showToast] = useToast(TOAST_MS);
 
   const close = () => setOverlay({ kind: "none" });
 
-  function openMenu(category: ManagedCategory, anchor: Element, preview?: TilePreview) {
+  function openMenu(category: ManagedCategory, anchor: HTMLElement, preview?: TilePreview) {
+    setReturnTo(anchor);
     setOverlay({ kind: "menu", category, anchor: anchor.getBoundingClientRect(), preview });
   }
 
-  function openCreate() {
+  function openCreate(trigger?: HTMLElement) {
+    setReturnTo(trigger ?? null);
     setOverlay({ kind: "sheet", category: null, focus: "name" });
   }
 
@@ -148,6 +153,7 @@ export function useCategoryManager({
         anchor={overlay.anchor}
         entries={menuEntries(overlay.category, overlay.preview)}
         footer={CATEGORY_MENU_COPY.footer}
+        returnFocus={returnTo}
         onClose={close}
       />
     );
@@ -172,6 +178,7 @@ export function useCategoryManager({
           return null;
         }}
         onClose={close}
+        returnFocus={returnTo}
       />
     );
   } else if (overlay.kind === "blocked") {
@@ -185,6 +192,7 @@ export function useCategoryManager({
           onSeeItems(category, seeItemsStatus(counts));
         }}
         onClose={close}
+        returnFocus={returnTo}
       />
     );
   } else if (overlay.kind === "confirm") {
@@ -214,6 +222,7 @@ export function useCategoryManager({
           return CATEGORY_UNKNOWN_ERROR;
         }}
         onClose={close}
+        returnFocus={returnTo}
       />
     );
   }

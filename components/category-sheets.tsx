@@ -44,6 +44,7 @@ export function CategorySheet({
   validate,
   onSubmit,
   onClose,
+  returnFocus,
 }: {
   // null = nova.
   category: SheetCategory | null;
@@ -54,6 +55,8 @@ export function CategorySheet({
   validate: (input: CategoryInput) => string | null;
   onSubmit: (input: CategoryInput) => Promise<string | null>;
   onClose: () => void;
+  // O quadrado (ou o "···") que abriu o menu: o foco volta para ele.
+  returnFocus?: HTMLElement | null;
 }) {
   const editing = category !== null;
   const initialEmoji = category?.emoji ?? EMOJI_SUGGESTIONS[0];
@@ -95,6 +98,7 @@ export function CategorySheet({
   return (
     <Sheet
       onClose={onClose}
+      returnFocus={returnFocus}
       initialFocus={focus === "emoji" ? emojiRef : nameRef}
       title={(id) => (
         <div className="flex items-start justify-between gap-3">
@@ -264,17 +268,20 @@ export function CategoryBlockedSheet({
   counts,
   onSeeItems,
   onClose,
+  returnFocus,
 }: {
   category: SheetCategory;
   counts: CategoryCounts;
   onSeeItems: () => void;
   onClose: () => void;
+  returnFocus?: HTMLElement | null;
 }) {
   const total = counts.want + counts.done;
 
   return (
     <Sheet
       onClose={onClose}
+      returnFocus={returnFocus}
       title={(id) => (
         <>
           <div aria-hidden="true" className="text-[34px] leading-tight">
@@ -314,10 +321,12 @@ export function CategoryDeleteSheet({
   category,
   onConfirm,
   onClose,
+  returnFocus,
 }: {
   category: SheetCategory;
   onConfirm: () => Promise<string | null>;
   onClose: () => void;
+  returnFocus?: HTMLElement | null;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -326,6 +335,7 @@ export function CategoryDeleteSheet({
   return (
     <Sheet
       onClose={onClose}
+      returnFocus={returnFocus}
       // Ação perigosa: o foco começa no "Cancelar".
       initialFocus={cancelRef}
       title={(id) => (

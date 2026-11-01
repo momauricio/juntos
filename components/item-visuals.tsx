@@ -180,17 +180,28 @@ export function ItemCompactRow({
       >
         {category.emoji}
       </span>
-      <span className="min-w-0 flex-1 truncate text-[15.5px] font-bold">
-        {item.title}
-        {city ? (
-          <span className="text-sm font-normal text-ink/60"> · {city}</span>
-        ) : null}
-      </span>
       {statusBadge ? (
-        <span className="shrink-0 whitespace-nowrap rounded-full bg-ink/[0.07] px-2 py-0.5 text-xs font-semibold text-ink/75">
-          {statusBadge}
+        // Busca: o nome fica com a linha toda; o selo e a cidade descem para
+        // uma 2ª linha pequena (no celular, o selo ao lado cortava o nome).
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-[15.5px] font-bold leading-tight">
+            {item.title}
+          </span>
+          <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] leading-tight">
+            <span className="shrink-0 whitespace-nowrap rounded-full bg-ink/[0.07] px-1.5 py-px font-semibold text-ink/75">
+              {statusBadge}
+            </span>
+            {city ? <span className="truncate text-ink/60">{city}</span> : null}
+          </span>
         </span>
-      ) : null}
+      ) : (
+        <span className="min-w-0 flex-1 truncate text-[15.5px] font-bold">
+          {item.title}
+          {city ? (
+            <span className="text-sm font-normal text-ink/60"> · {city}</span>
+          ) : null}
+        </span>
+      )}
       {score != null ? <ScoreBadge value={score} /> : null}
       <AuthorDot author={author} />
     </Pressable>

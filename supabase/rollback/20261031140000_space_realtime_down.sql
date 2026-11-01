@@ -4,7 +4,7 @@
 -- realtime.messages e as três funções. O app continua funcionando; só deixa
 -- de atualizar na hora (volta a atualizar ao navegar ou ao voltar o foco).
 -- Para desfazer as categorias também: rode este arquivo ANTES dos rollbacks
--- de 20261031130000 e de categories.
+-- de 20261031133000, de 20261031130000 e de categories.
 
 begin;
 

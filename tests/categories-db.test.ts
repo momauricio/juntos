@@ -16,6 +16,9 @@ const CATEGORIES_MIGRATION = "20261031120000_categories.sql";
 const ROLLBACK = join(process.cwd(), "supabase/rollback/20261031_categories_down.sql");
 const FALLBACK_MIGRATION = "20261031130000_categories_switch_fallback.sql";
 const FALLBACK_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031130000_categories_switch_fallback_down.sql");
+const PER_TYPE_MIGRATION = "20261031133000_categories_switch_per_type.sql";
+const PER_TYPE_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031133000_categories_switch_per_type_down.sql");
+const REALTIME_MIGRATION = "20261031140000_space_realtime.sql";
 const REALTIME_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031140000_space_realtime_down.sql");
 
 // Pessoas e espaços "de antes" da migration.
@@ -60,6 +63,7 @@ const DEFAULTS = [
 let pg: Pg | undefined;
 let snapshotBefore = "";
 let schemaAfterCategories = "";
+let switchDefAfterFallback = "";
 
 const run = (script: string, options: As = {}) => pg!.run(script, options);
 const runFile = (path: string) => pg!.runFile(path);
@@ -85,6 +89,10 @@ const SCHEMA = `select concat_ws(E'\\n',
    from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public'),
   (select string_agg(t.tgname || '|' || t.tgrelid::regclass::text, E'\\n' order by t.tgname, t.tgrelid::regclass::text)
    from pg_trigger t where not t.tgisinternal));`;
+
+// Definição completa do switch (corpo, security definer, search_path) e grants.
+const SWITCH_DEF = `select pg_get_functiondef(p.oid) || E'\\n' || p.proacl::text from pg_proc p
+  where p.oid = 'public.switch_space_and_redeem(text, boolean)'::regprocedure;`;
 
 const SNAPSHOT = `select string_agg(concat_ws('|', id, type, status, updated_at, updated_by), E'\\n' order by id) from public.items;`;
 
@@ -140,10 +148,18 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
     runFile(join(MIGRATIONS_DIR, CATEGORIES_MIGRATION));
     schemaAfterCategories = run(SCHEMA);
     expect(files).toContain(FALLBACK_MIGRATION);
-    // As migrations depois de categories (se houver) também entram.
-    for (const file of files.filter((f) => f > CATEGORIES_MIGRATION)) {
+    expect(files).toContain(PER_TYPE_MIGRATION);
+    expect(files).toContain(REALTIME_MIGRATION);
+    // As migrations depois de categories também entram; guarda o switch logo
+    // depois de 20261031130000 para comparar com o rollback de 20261031133000.
+    for (const file of files.filter((f) => f > CATEGORIES_MIGRATION && f <= FALLBACK_MIGRATION)) {
       runFile(join(MIGRATIONS_DIR, file));
     }
+    switchDefAfterFallback = run(SWITCH_DEF);
+    for (const file of files.filter((f) => f > FALLBACK_MIGRATION)) {
+      runFile(join(MIGRATIONS_DIR, file));
+    }
+    expect(run(SWITCH_DEF)).not.toBe(switchDefAfterFallback);
   }, 120_000);
 
   afterAll(() => {
@@ -492,15 +508,19 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
     return { owner, space: createSpace(owner, `${code.toLowerCase()}@x`, code) };
   }
 
-  // Completa o espaço com categorias próprias até 30.
-  function fillTo30(space: string, owner: string, prefix = "Própria") {
+  // Completa o espaço com categorias próprias até `total` (30 por padrão).
+  function fillTo(space: string, owner: string, total: number, prefix = "Própria") {
     run(
       `insert into public.categories (space_id, name, emoji, color)
        select '${space}', '${prefix} ' || g, '⭐', 'ph1'
-       from generate_series(1, 30 - (select count(*) from public.categories where space_id = '${space}')) g;`,
+       from generate_series(1, ${total} - (select count(*) from public.categories where space_id = '${space}')) g;`,
       { as: owner },
     );
-    expect(run(`select count(*) from public.categories where space_id = '${space}';`)).toBe("30");
+    expect(run(`select count(*) from public.categories where space_id = '${space}';`)).toBe(String(total));
+  }
+
+  function fillTo30(space: string, owner: string, prefix = "Própria") {
+    fillTo(space, owner, 30, prefix);
   }
 
   // Item numa categoria escolhida pelo nome.
@@ -735,9 +755,88 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
     expect(run(`select space_id from public.space_members where user_id = '${old.owner}';`)).toBe(target.space);
   });
 
-  it("rollback de 20261031130000 volta exatamente ao esquema de categories", () => {
+  // 20261031133000: padrão de cada tipo e categoria vazia só se sobrar vaga.
+  it("troca: nenhuma padrão no espaço novo + categoria com 2 tipos -> cada tipo recria a sua (32)", () => {
+    const old = spaceOf("SWI001");
+    const target = spaceOf("SWI002");
+    run(`delete from public.categories where space_id = '${target.space}';`, { as: target.owner });
+    fillTo30(target.space, target.owner);
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Viagens', '✈️', 'ph4');`, {
+      as: old.owner,
+    });
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Cantina I");
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Trattoria I");
+    addItem(old.space, old.owner, "Viagens", "movie", "Filme I");
+
+    switchKeepingItems(old.owner, "SWI002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("32");
+    expect(
+      run(`select string_agg(concat_ws('|', name, item_type, created_by is null), ',' order by name) from public.categories
+           where space_id = '${target.space}' and created_by is null;`),
+    ).toBe("Filme|movie|t,Restaurante|restaurant|t");
+    expect(itemsByCategory(target.space, ["Cantina I", "Trattoria I", "Filme I"])).toBe(
+      "Cantina I>Restaurante,Filme I>Filme,Trattoria I>Restaurante",
+    );
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}' and name = 'Viagens';`)).toBe("0");
+  });
+
+  it("troca: espaço novo com 29 + vazia antes de uma com itens -> a com itens fica com a 30ª vaga", () => {
+    const old = spaceOf("SWJ001");
+    const target = spaceOf("SWJ002");
+    fillTo(target.space, target.owner, 29);
+    run(
+      `insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Aaa', '🅰️', 'ph1');
+       insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Pubs', '🍺', 'ph5');`,
+      { as: old.owner },
+    );
+    expect(
+      run(`select (select position from public.categories where space_id = '${old.space}' and name = 'Aaa')
+                < (select position from public.categories where space_id = '${old.space}' and name = 'Pubs');`),
+    ).toBe("t");
+    addItem(old.space, old.owner, "Pubs", "activity", "Pub J");
+    addItem(old.space, old.owner, "Pubs", "restaurant", "Bar com comida J");
+
+    switchKeepingItems(old.owner, "SWJ002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("30");
+    expect(
+      run(`select concat_ws('|', position, item_type, created_by) from public.categories
+           where space_id = '${target.space}' and name = 'Pubs';`),
+    ).toBe(`30|activity|${old.owner}`);
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}' and name = 'Aaa';`)).toBe("0");
+    expect(itemsByCategory(target.space, ["Pub J", "Bar com comida J"])).toBe("Bar com comida J>Pubs,Pub J>Pubs");
+  });
+
+  it("troca: espaço novo com 28 + uma vazia e uma com itens, novas -> as duas, com itens primeiro (30)", () => {
+    const old = spaceOf("SWK001");
+    const target = spaceOf("SWK002");
+    fillTo(target.space, target.owner, 28);
+    run(
+      `insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Vazia K', '🫙', 'ph1');
+       insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Cheia K', '🍺', 'ph5');`,
+      { as: old.owner },
+    );
+    addItem(old.space, old.owner, "Cheia K", "activity", "Pub K");
+
+    switchKeepingItems(old.owner, "SWK002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("30");
+    expect(
+      run(`select string_agg(position || '|' || name, ',' order by position) from public.categories
+           where space_id = '${target.space}' and name in ('Vazia K', 'Cheia K');`),
+    ).toBe("29|Cheia K,30|Vazia K");
+    expect(itemsByCategory(target.space, ["Pub K"])).toBe("Pub K>Cheia K");
+  });
+
+  it("rollback de 20261031133000 volta o switch exatamente ao de 20261031130000", () => {
     // Rollbacks na ordem inversa do deploy: primeiro o do Realtime (PR 2).
     runFile(REALTIME_ROLLBACK);
+    runFile(PER_TYPE_ROLLBACK);
+    expect(run(SWITCH_DEF)).toBe(switchDefAfterFallback);
+  });
+
+  it("rollback de 20261031130000 volta exatamente ao esquema de categories", () => {
     runFile(FALLBACK_ROLLBACK);
     expect(run(SCHEMA)).toBe(schemaAfterCategories);
     expect(run("select to_regprocedure('public.ensure_default_category(uuid, text)') is null;")).toBe("t");

@@ -10,7 +10,7 @@ import {
   CoupleScoreCard,
   EditDisclosure,
   heroBadge,
-  heroTypeLabel,
+  heroCategoryLabel,
   ItemHero,
   ItemNotesCard,
   ratingChips,
@@ -41,7 +41,7 @@ import {
 } from "@/lib/relative-time";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
-import type { Item, Rating } from "@/lib/types";
+import type { Category, Item, Rating } from "@/lib/types";
 
 type ItemPageProps = {
   params: Promise<{
@@ -137,6 +137,14 @@ export default async function ItemPage({
   if (membersError) {
     throw new Error("Não foi possível carregar os membros.");
   }
+
+  // Categoria do item: emoji, nome e cor no topo do detalhe.
+  const { data: categoryRow } = await supabase
+    .from("categories")
+    .select("name,emoji,color")
+    .eq("id", item.category_id)
+    .maybeSingle();
+  const category = categoryRow as Pick<Category, "name" | "emoji" | "color"> | null;
 
   const memberIds = (memberRows ?? []).map(
     (member) => member.user_id as string,
@@ -393,8 +401,9 @@ export default async function ItemPage({
 
         <ItemHero
           type={item.type}
+          category={category}
           title={item.title}
-          subtitle={heroTypeLabel(item.type)}
+          subtitle={heroCategoryLabel(item.type, category)}
           author={{
             name: creatorName,
             tone: memberTone(memberIds.indexOf(item.created_by)),

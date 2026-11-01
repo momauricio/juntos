@@ -1,6 +1,18 @@
-import { categoryNameKey, DEFAULT_CATEGORIES } from "@/lib/categories";
+import {
+  categoryNameKey,
+  DEFAULT_CATEGORIES,
+  gridPhotoSource,
+  parseItemView,
+} from "@/lib/categories";
 import { displayRating } from "@/lib/ratings";
-import type { Category, Item, ItemStatus, ItemType, Rating } from "@/lib/types";
+import type {
+  Category,
+  Item,
+  ItemStatus,
+  ItemType,
+  ItemView,
+  Rating,
+} from "@/lib/types";
 
 export type DemoUser = {
   id: string;
@@ -108,6 +120,8 @@ export const DOC_CATEGORY_LABELS: Record<DocCategory, string> = {
 export const DOC_CATEGORIES = Object.keys(DOC_CATEGORY_LABELS) as DocCategory[];
 
 const STORAGE_KEY = "juntos-demo-v1";
+// Grade/Compacta de quem usa a demo (no app, profiles.item_view).
+const ITEM_VIEW_STORAGE_KEY = "juntos-demo-item-view";
 
 function nowIso() {
   return new Date().toISOString();
@@ -235,6 +249,7 @@ type SampleExtra = {
   city?: string;
   byAna?: boolean;
   daysAgo: number;
+  url?: string;
   // Já fizemos: há quantos dias; com nota: [comida, atendimento, ambiente] ou [nota].
   doneDaysAgo?: number;
   rating?: [number, number, number] | [number];
@@ -243,9 +258,12 @@ type SampleExtra = {
 // Itens fictícios extras da vitrine: todas as categorias com alguma coisa,
 // cidades em parte deles e notas em Já fizemos (Evento fica vazio em Queremos).
 const SAMPLE_EXTRA: SampleExtra[] = [
-  { id: "item_pousada_vale_verde", type: "stay", title: "Pousada Vale Verde", city: "Gonçalves", byAna: true, daysAgo: 3 },
-  { id: "item_cabana_do_lago", type: "stay", title: "Cabana do Lago", city: "Cambará do Sul", daysAgo: 9 },
+  // Hospedagem em Queremos: a tela 52 (5 itens, 2 com cidade, 1 com link do Instagram e foto).
+  { id: "item_pousada_vale_verde", type: "stay", title: "Pousada Vale Verde", city: "Gonçalves", daysAgo: 3, url: "https://www.instagram.com/p/DemoValeVerde/" },
+  { id: "item_cabana_do_lago", type: "stay", title: "Cabana do Lago", byAna: true, daysAgo: 9 },
   { id: "item_chale_da_serra", type: "stay", title: "Chalé da Serra", byAna: true, daysAgo: 21 },
+  { id: "item_eco_refugio", type: "stay", title: "Eco Refúgio Araucária", byAna: true, daysAgo: 27 },
+  { id: "item_hotel_bela_vista", type: "stay", title: "Hotel Bela Vista", city: "São Bento do Sul", byAna: true, daysAgo: 33 },
   { id: "item_bistro_da_praca", type: "restaurant", title: "Bistrô da Praça", city: "Curitiba", byAna: true, daysAgo: 4 },
   { id: "item_sushi_do_porto", type: "restaurant", title: "Sushi do Porto", city: "Santos", daysAgo: 7 },
   { id: "item_taberna_velha", type: "restaurant", title: "Taberna Velha", byAna: true, daysAgo: 15 },
@@ -262,6 +280,14 @@ const SAMPLE_EXTRA: SampleExtra[] = [
   { id: "item_peixaria_do_cais", type: "restaurant", title: "Peixaria do Cais", city: "Florianópolis", byAna: true, daysAgo: 40, doneDaysAgo: 3, rating: [9.5, 9, 9.5] },
   { id: "item_emporio_mineiro", type: "restaurant", title: "Empório Mineiro", city: "Belo Horizonte", daysAgo: 60, doneDaysAgo: 12, rating: [7, 8, 7] },
   { id: "item_hamburgueria_22", type: "restaurant", title: "Hamburgueria 22", daysAgo: 70, doneDaysAgo: 30 },
+  // Mais restaurantes em Já fizemos: a tela 53 (notas nas 4 faixas e empates).
+  { id: "item_sushi_kaze", type: "restaurant", title: "Sushi Kaze", city: "Gramado", daysAgo: 150, doneDaysAgo: 100, rating: [9.5, 10, 9.5] },
+  { id: "item_trattoria_bella", type: "restaurant", title: "Trattoria Bella", byAna: true, daysAgo: 140, doneDaysAgo: 90, rating: [9.5, 9, 9.5] },
+  { id: "item_taqueria_la_lupe", type: "restaurant", title: "Taquería La Lupe 🇲🇽", daysAgo: 130, doneDaysAgo: 80, rating: [9, 9, 9.5] },
+  { id: "item_bodega_andina", type: "restaurant", title: "Bodega Andina 🇦🇷", byAna: true, daysAgo: 125, doneDaysAgo: 75, rating: [9, 8.5, 9] },
+  { id: "item_cafe_colonial", type: "restaurant", title: "Café Colonial da Vó", city: "Gramado", byAna: true, daysAgo: 115, doneDaysAgo: 66, rating: [8, 8.5, 8] },
+  { id: "item_churrascaria_gaucha", type: "restaurant", title: "Churrascaria Gaúcha", daysAgo: 110, doneDaysAgo: 58, rating: [8, 7, 7.5] },
+  { id: "item_pastelaria_da_feira", type: "restaurant", title: "Pastelaria da Feira", byAna: true, daysAgo: 105, doneDaysAgo: 50, rating: [6, 7, 6] },
   { id: "item_jardim_botanico", type: "tourist_spot", title: "Jardim Botânico", city: "Curitiba", byAna: true, daysAgo: 45, doneDaysAgo: 5, rating: [9] },
   { id: "item_trilha_do_morro", type: "tourist_spot", title: "Trilha do Morro", daysAgo: 80, doneDaysAgo: 40 },
   { id: "item_aula_de_vinho", type: "activity", title: "Aula de vinho", byAna: true, daysAgo: 50, doneDaysAgo: 8, rating: [8.5] },
@@ -287,6 +313,7 @@ export function sampleState(): DemoState {
       createdAt: string;
       completedAt?: string;
       city?: string;
+      url?: string;
       by?: DemoUser;
     },
   ): Item => ({
@@ -295,7 +322,7 @@ export function sampleState(): DemoState {
     type: input.type,
     category_id: demoCategoryId(input.type),
     title: input.title,
-    url: null,
+    url: input.url ?? null,
     notes: input.notes,
     city: input.city ?? null,
     status: input.completedAt ? "done" : "want",
@@ -363,6 +390,7 @@ export function sampleState(): DemoState {
         title: extra.title,
         notes: null,
         city: extra.city,
+        url: extra.url,
         by: extra.byAna ? ana : lucas,
         createdAt: at(extra.daysAgo * DAY),
         completedAt: extra.doneDaysAgo != null ? at(extra.doneDaysAgo * DAY) : undefined,
@@ -415,6 +443,41 @@ export function sampleState(): DemoState {
       updatedAt: at(0),
     },
   };
+}
+
+// "Fotos" do link de alguns itens da vitrine (os itens não guardam imagem;
+// no app, sem foto, o card fica com a cor + emoji da categoria).
+const DEMO_PHOTOS: Record<string, string> = {
+  item_pousada_vale_verde: "/demo-fotos/serra.svg",
+};
+
+// Foto e selo ("📸 Instagram"/"📸 link") por item, para a Grade.
+export function demoItemImages(
+  items: readonly Pick<Item, "id" | "url">[],
+): Record<string, { url: string; source: "instagram" | "link" }> {
+  const images: Record<string, { url: string; source: "instagram" | "link" }> = {};
+  for (const item of items) {
+    const photo = DEMO_PHOTOS[item.id];
+    if (photo && item.url) images[item.id] = { url: photo, source: gridPhotoSource(item.url) };
+  }
+  return images;
+}
+
+export function loadItemView(): ItemView {
+  if (typeof window === "undefined") return "grid";
+  try {
+    return parseItemView(window.localStorage.getItem(ITEM_VIEW_STORAGE_KEY));
+  } catch {
+    return "grid";
+  }
+}
+
+export function saveItemView(view: ItemView) {
+  try {
+    window.localStorage.setItem(ITEM_VIEW_STORAGE_KEY, view);
+  } catch {
+    // Sem localStorage (aba anônima cheia): vale só nesta sessão.
+  }
 }
 
 export function loadState(): DemoState {

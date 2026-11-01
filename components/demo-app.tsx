@@ -13,20 +13,27 @@ import {
 import { addedByLabel } from "@/lib/relative-time";
 import { ratingSavedMessage } from "@/lib/demo/after-rating";
 import {
-  categoryTiles,
+  categoryItems,
+  categoryScoreAverage,
+  categoryTitle,
   LIST_COPY,
   recentItems,
+  showsScoreSort,
+  type ItemSort,
 } from "@/lib/categories";
 import { countByStatus } from "@/lib/item-categories";
-import type { ItemStatus } from "@/lib/types";
+import type { ItemStatus, ItemType, ItemView } from "@/lib/types";
 import {
   addItem,
   createTrip,
   demoCategories,
+  demoItemImages,
   itemsWithRatings,
+  loadItemView,
   loadState,
   memberName,
   sampleState,
+  saveItemView,
   saveState,
   upsertRating,
   type DemoSpace,
@@ -37,7 +44,7 @@ import { memberTone } from "@/components/avatar";
 import { CategoryHome, type HomeTarget } from "@/components/category-home";
 import { DemoHub } from "@/components/demo-hub";
 import { StatusTabs } from "@/components/item-filters";
-import { ItemList, ListScreenHeader } from "@/components/item-list";
+import { ItemsScreen } from "@/components/items-screen";
 import {
   ActivityNoAddressNote,
   heroBadge,
@@ -65,8 +72,8 @@ import { ScoreInput } from "@/components/rating-form";
 type Screen =
   | { name: "hub" }
   | { name: "ideas" }
-  | { name: "idea-wizard" }
-  | { name: "category"; categoryId: string }
+  | { name: "idea-wizard"; type?: ItemType; from?: ListScreen }
+  | { name: "category"; categoryId: string; sort?: ItemSort }
   | { name: "recent" }
   | { name: "detail"; itemId: string; from: ListScreen }
   | { name: "trips" }
@@ -77,7 +84,7 @@ type Screen =
 // Telas de onde o detalhe abre (o "← voltar" do detalhe volta para ela).
 type ListScreen =
   | { name: "ideas" }
-  | { name: "category"; categoryId: string }
+  | { name: "category"; categoryId: string; sort?: ItemSort }
   | { name: "recent" };
 
 type MessageAction = { forMessage: string; label: string; onClick: () => void };
@@ -88,10 +95,13 @@ export function DemoApp() {
   const [message, setMessage] = useState<string | null>(null);
   const [messageAction, setMessageAction] = useState<MessageAction | null>(null);
   const [statusFilter, setStatusFilter] = useState<ItemStatus>("want");
+  // Grade/Compacta de quem usa a demo (C11), no localStorage da demo.
+  const [itemView, setItemView] = useState<ItemView>("grid");
 
   useEffect(() => {
     // localStorage só existe no cliente; o primeiro render é o do servidor.
     setState(loadState());
+    setItemView(loadItemView());
   }, []);
 
   function persist(next: DemoState) {
@@ -142,7 +152,7 @@ export function DemoApp() {
         </div>
       ) : null}
 
-      <main className="flex-1 px-4 pb-10 pt-4">
+      <main className="flex-1 px-5 pb-10 pt-4">
         {screen.name === "hub" ? (
           <DemoHub
             onIdea={() => setScreen({ name: "idea-wizard" })}
@@ -174,12 +184,27 @@ export function DemoApp() {
         ) : null}
 
         {screen.name === "category" || screen.name === "recent" ? (
-          <ItemsScreen
+          <DemoItemsScreen
+            // Uma tela nova por categoria/aba: a visualização começa na salva.
+            key={`${screen.name === "category" ? screen.categoryId : "recent"}-${statusFilter}`}
             space={space}
+            user={user}
             categories={categories}
             status={statusFilter}
             categoryId={screen.name === "category" ? screen.categoryId : null}
+            sort={screen.name === "category" ? (screen.sort ?? "recent") : "recent"}
+            view={itemView}
+            onViewChange={(view) => {
+              setItemView(view);
+              saveItemView(view);
+            }}
+            onSortChange={(sort) =>
+              screen.name === "category" && setScreen({ ...screen, sort })
+            }
             onBack={() => setScreen({ name: "ideas" })}
+            onAdd={(type) =>
+              setScreen({ name: "idea-wizard", type, from: screen })
+            }
             onOpen={(itemId) =>
               setScreen({ name: "detail", itemId, from: screen })
             }
@@ -188,14 +213,15 @@ export function DemoApp() {
 
         {screen.name === "idea-wizard" ? (
           <IdeaWizard
-            onCancel={() => setScreen({ name: "hub" })}
+            initialType={screen.type}
+            onCancel={() => setScreen(screen.from ?? { name: "hub" })}
             onSave={(input) => {
               const nextSpace = addItem(space, {
                 ...input,
                 createdBy: user.id,
               });
               persist({ user, space: nextSpace });
-              setScreen({ name: "hub" });
+              setScreen(screen.from ?? { name: "hub" });
               setMessage("Ideia salva neste aparelho.");
             }}
           />
@@ -364,67 +390,90 @@ function Home({
   );
 }
 
-// Dentro da categoria (prévia do PR 5) e "Adicionados recentemente" (C8):
-// cabeçalho da 52 e os cards em Compacta.
-function ItemsScreen({
+// Dentro da categoria (52/53) e "Adicionados recentemente" (C8): a mesma
+// ItemsScreen do app, com a ordem em estado (no app, ?ordem=nota).
+function DemoItemsScreen({
   space,
+  user,
   categories,
   status,
   categoryId,
+  sort,
+  view,
+  onViewChange,
+  onSortChange,
   onBack,
+  onAdd,
   onOpen,
 }: {
   space: DemoSpace;
+  user: DemoUser;
   categories: ReturnType<typeof demoCategories>;
   status: ItemStatus;
   // null = recentes.
   categoryId: string | null;
+  sort: ItemSort;
+  view: ItemView;
+  onViewChange: (view: ItemView) => void;
+  onSortChange: (sort: ItemSort) => void;
   onBack: () => void;
+  onAdd: (type: ItemType) => void;
   onOpen: (itemId: string) => void;
 }) {
   const all = itemsWithRatings(space);
   const category = categoryId
     ? categories.find((candidate) => candidate.id === categoryId)
     : null;
+  const withSort = category ? showsScoreSort(category, status) : false;
   const items = category
-    ? recentItems(
-        all.filter((item) => item.category_id === category.id),
-        status,
-        Infinity,
-      )
+    ? categoryItems(all, category, status, sort)
     : recentItems(all, status);
-  const count = category
-    ? categoryTiles([category], all, status)[0].count
-    : undefined;
+  const partner = space.members.find((member) => member.id !== user.id);
 
   return (
-    <div className="space-y-3.5 pb-20">
-      <ListScreenHeader
+    <div className="pb-20">
+      <ItemsScreen
         backLabel={STATUS_LABELS[status]}
-        onBack={onBack}
-        title={
-          category
-            ? `${category.emoji} ${category.name}`
-            : LIST_COPY.recentScreenTitle
+        back={{ onClick: onBack }}
+        title={category ? categoryTitle(category) : LIST_COPY.recentScreenTitle}
+        count={category ? items.length : undefined}
+        initialView={view}
+        onViewChange={onViewChange}
+        partnerName={partner?.name ?? null}
+        sort={
+          withSort
+            ? {
+                value: sort,
+                options: {
+                  score: { onClick: () => onSortChange("score") },
+                  recent: { onClick: () => onSortChange("recent") },
+                },
+              }
+            : null
         }
-        count={count}
-        subtitle={LIST_COPY.newestFirst}
+        average={withSort ? categoryScoreAverage(items) : null}
+        add={
+          category
+            ? {
+                name: category.name,
+                onClick: () => onAdd(category.item_type),
+                tile: status === "want",
+              }
+            : null
+        }
+        items={items}
+        categoriesById={Object.fromEntries(
+          categories.map((candidate) => [candidate.id, candidate]),
+        )}
+        memberNames={memberNamesOf(space)}
+        memberOrder={space.members.map((member) => member.id)}
+        imagesById={demoItemImages(items)}
+        onOpen={onOpen}
       />
-      {items.length === 0 ? (
-        <p className="py-6 text-center text-[15px] text-cream/70">
-          {LIST_COPY.empty}
-        </p>
-      ) : (
-        <ItemList
-          items={items}
-          categoriesById={Object.fromEntries(
-            categories.map((candidate) => [candidate.id, candidate]),
-          )}
-          memberNames={memberNamesOf(space)}
-          memberOrder={space.members.map((member) => member.id)}
-          onOpen={onOpen}
-        />
-      )}
+      <button type="button" className={FAB} onClick={() => onAdd(category?.item_type ?? "restaurant")}>
+        <span aria-hidden="true">＋</span>
+        Nova ideia
+      </button>
     </div>
   );
 }

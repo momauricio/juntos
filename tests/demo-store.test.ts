@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   DEFAULT_CATEGORIES,
+  categoryItems,
   categoryScoreAverage,
   categoryTiles,
+  scoreBand,
 } from "@/lib/categories";
 import {
   addDocLink,
@@ -13,10 +15,13 @@ import {
   createTrip,
   demoCategories,
   demoCategoryId,
+  demoItemImages,
   itemsWithRatings,
+  loadItemView,
   normalizeSpace,
   ratingForItem,
   sampleState,
+  saveItemView,
   tripDateRange,
   togglePackItem,
   upsertRating,
@@ -61,8 +66,8 @@ describe("sampleState", () => {
   it("has more fictitious items for the home tiles, by Lucas and Ana, some with city", () => {
     const { space } = sampleState();
     const [lucas, ana] = space.members;
-    expect(space.items).toHaveLength(34);
-    expect(new Set(space.items.map((item) => item.id)).size).toBe(34);
+    expect(space.items).toHaveLength(43);
+    expect(new Set(space.items.map((item) => item.id)).size).toBe(43);
     expect(space.items.some((item) => item.created_by === ana.id)).toBe(true);
     expect(space.items.some((item) => item.created_by === lucas.id)).toBe(true);
     expect(space.items.filter((item) => item.city).length).toBeGreaterThan(5);
@@ -103,7 +108,7 @@ describe("sampleState", () => {
   it("returns a fresh copy each time", () => {
     const first = sampleState();
     first.space.items.pop();
-    expect(sampleState().space.items).toHaveLength(34);
+    expect(sampleState().space.items).toHaveLength(43);
   });
 
   it("works with the store helpers", () => {
@@ -113,7 +118,7 @@ describe("sampleState", () => {
       title: "Filme",
       createdBy: user.id,
     });
-    expect(next.items).toHaveLength(35);
+    expect(next.items).toHaveLength(44);
     const praia = space.items.find((item) => item.title === "Praia do Félix")!;
     const rated = upsertRating(space, { itemId: praia.id, ratedBy: user.id, score: 8 });
     expect(rated.items.find((item) => item.id === praia.id)?.status).toBe("done");
@@ -362,7 +367,61 @@ describe("demo: categorias padrão em memória (C16)", () => {
     const average = categoryScoreAverage(
       items.filter((i) => i.category_id === restaurant.id && i.status === "done"),
     );
-    // Cantina 8,7 · Peixaria 9,3 · Empório 7,3 (+1 sem nota) → 8,4.
-    expect(average).toEqual({ value: 8.4, count: 3 });
+    // 10 restaurantes com nota (Cantina 8,7, Peixaria 9,3, Empório 7,3 e os
+    // 7 da tela 53) e 1 sem nota → 8,4.
+    expect(average).toEqual({ value: 8.4, count: 10 });
+  });
+});
+
+describe("telas 52/53 na demo", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("Hospedagem em Queremos: 5 itens, alguns com cidade, 1 com foto do Instagram", () => {
+    const { space } = sampleState();
+    const stay = demoCategories(space.id).find((c) => c.item_type === "stay")!;
+    const items = categoryItems(itemsWithRatings(space), stay, "want");
+    expect(items).toHaveLength(5);
+    expect(items.filter((item) => item.city).length).toBeGreaterThanOrEqual(2);
+    const images = demoItemImages(items);
+    expect(Object.values(images)).toEqual([
+      { url: "/demo-fotos/serra.svg", source: "instagram" },
+    ]);
+    // A foto é do mais novo (primeiro card da Grade, como na 52).
+    expect(Object.keys(images)).toEqual([items[0].id]);
+  });
+
+  it("Restaurante em Já fizemos: ~10 itens com notas nas 4 faixas e um sem nota", () => {
+    const { space } = sampleState();
+    const restaurant = demoCategories(space.id).find((c) => c.item_type === "restaurant")!;
+    const items = categoryItems(itemsWithRatings(space), restaurant, "done", "score");
+    expect(items.length).toBeGreaterThanOrEqual(10);
+    const scores = items.map((item) => ratingForItem(space, item.id));
+    expect(new Set(scores.filter((s): s is number => s != null).map(scoreBand))).toEqual(
+      new Set(["green", "blue", "orange", "red"]),
+    );
+    // Melhor nota: sem nota no fim.
+    expect(scores.at(-1)).toBeNull();
+  });
+
+  it("item sem link não ganha foto", () => {
+    expect(demoItemImages([{ id: "item_pousada_vale_verde", url: null }])).toEqual({});
+  });
+
+  it("Grade/Compacta fica no localStorage da demo (padrão Grade)", () => {
+    expect(loadItemView()).toBe("grid");
+    const store = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => store.set(key, value),
+      },
+    });
+    expect(loadItemView()).toBe("grid");
+    saveItemView("compact");
+    expect(loadItemView()).toBe("compact");
+    store.set("juntos-demo-item-view", "estranho");
+    expect(loadItemView()).toBe("grid");
   });
 });

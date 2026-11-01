@@ -10,14 +10,17 @@ const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 const STEP_COUNT = 3;
 
 export function IdeaWizard({
+  initialType = null,
   onCancel,
   onSave,
 }: {
+  // "+ Adicionar em {nome}": o tipo da categoria já vem marcado.
+  initialType?: ItemType | null;
   onCancel: () => void;
   onSave: (input: { type: ItemType; title: string; url?: string }) => void;
 }): JSX.Element {
   const [step, setStep] = useState(0);
-  const [type, setType] = useState<ItemType | null>(null);
+  const [type, setType] = useState<ItemType | null>(initialType);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
 

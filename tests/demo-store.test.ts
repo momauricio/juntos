@@ -6,24 +6,35 @@ import {
   categoryScoreAverage,
   categoryTiles,
   scoreBand,
+  sortCategories,
 } from "@/lib/categories";
 import {
   addDocLink,
   addItem,
   addPackItem,
   addStop,
+  clearDemoCategories,
+  countDemoCategoryItems,
+  createDemoCategory,
   createTrip,
+  deleteDemoCategory,
   demoCategories,
   demoCategoryId,
   demoItemImages,
   itemsWithRatings,
+  loadDemoCategories,
   loadItemView,
+  moveDemoCategories,
   normalizeSpace,
   ratingForItem,
   sampleState,
+  reconcileItemCategories,
+  saveDemoCategories,
   saveItemView,
+  setItemCategory,
   tripDateRange,
   togglePackItem,
+  updateDemoCategory,
   upsertRating,
   type DemoState,
 } from "@/lib/demo/store";
@@ -423,5 +434,169 @@ describe("telas 52/53 na demo", () => {
     expect(loadItemView()).toBe("compact");
     store.set("juntos-demo-item-view", "estranho");
     expect(loadItemView()).toBe("grid");
+  });
+});
+
+describe("demo: gerenciar categorias na sessão (54/55, C16)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const pubs = { name: "Pubs", emoji: "🍺", color: "ph5" as const };
+
+  function setup() {
+    const { user, space } = sampleState();
+    return { user, space, categories: demoCategories(space.id) };
+  }
+
+  it("cria no fim da ordem, com item_type activity e quem criou", () => {
+    const { user, space, categories } = setup();
+    const result = createDemoCategory(categories, pubs, { spaceId: space.id, userId: user.id });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.categories).toHaveLength(9);
+    expect(result.category).toMatchObject({
+      name: "Pubs",
+      emoji: "🍺",
+      color: "ph5",
+      position: 9,
+      item_type: "activity",
+      created_by: user.id,
+      space_id: space.id,
+    });
+    expect(sortCategories(result.categories).at(-1)?.id).toBe(result.category.id);
+  });
+
+  it("recusa nome repetido sem acento/maiúscula, emoji duplo e o limite", () => {
+    const { user, space, categories } = setup();
+    const ctx = { spaceId: space.id, userId: user.id };
+    expect(createDemoCategory(categories, { ...pubs, name: " hospedágem " }, ctx)).toEqual({
+      ok: false,
+      error: "Vocês já têm uma categoria “Hospedagem”.",
+    });
+    expect(createDemoCategory(categories, { ...pubs, emoji: "🍺🍻" }, ctx)).toEqual({
+      ok: false,
+      error: "Escolha um emoji só.",
+    });
+    let many = categories;
+    for (let n = 0; many.length < 30; n += 1) {
+      const next = createDemoCategory(many, { ...pubs, name: `Extra ${n}` }, ctx);
+      if (!next.ok) throw new Error(next.error);
+      many = next.categories;
+    }
+    expect(createDemoCategory(many, pubs, ctx)).toEqual({
+      ok: false,
+      error: "Vocês chegaram ao limite de 30 categorias.",
+    });
+  });
+
+  it("edita nome, emoji e cor; renomear só a maiúscula pode", () => {
+    const { categories } = setup();
+    const stay = categories.find((c) => c.item_type === "stay")!;
+    const result = updateDemoCategory(categories, stay.id, {
+      name: "HOSPEDAGEM",
+      emoji: "🛏️",
+      color: "ph2",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.category).toMatchObject({
+      id: stay.id,
+      name: "HOSPEDAGEM",
+      emoji: "🛏️",
+      color: "ph2",
+      item_type: "stay",
+      position: stay.position,
+    });
+    expect(
+      updateDemoCategory(categories, stay.id, { name: "Cidade", emoji: "🏨", color: "ph8" }),
+    ).toEqual({ ok: false, error: "Vocês já têm uma categoria “Cidade”." });
+  });
+
+  it("reordena: o 1º id fica com position 1", () => {
+    const { categories } = setup();
+    const ids = sortCategories(categories).map((c) => c.id);
+    const moved = moveDemoCategories(categories, [ids[3], ...ids.filter((id) => id !== ids[3])]);
+    expect(moved.map((c) => c.id)[0]).toBe(ids[3]);
+    expect(moved.map((c) => c.position)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  });
+
+  it("apaga só vazia (C1); com itens devolve os números da 55b", () => {
+    const { user, space, categories } = setup();
+    const stay = categories.find((c) => c.item_type === "stay")!;
+    expect(countDemoCategoryItems(space, stay.id)).toEqual({ want: 5, done: 1 });
+    expect(deleteDemoCategory(categories, space, stay.id)).toEqual({
+      ok: false,
+      reason: "not_empty",
+      want: 5,
+      done: 1,
+    });
+
+    const created = createDemoCategory(categories, pubs, { spaceId: space.id, userId: user.id });
+    if (!created.ok) throw new Error(created.error);
+    const removed = deleteDemoCategory(created.categories, space, created.category.id);
+    expect(removed.ok).toBe(true);
+    if (removed.ok) expect(removed.categories).toHaveLength(8);
+  });
+
+  it("mover item de categoria muda só category_id, não o type", () => {
+    const { user, space, categories } = setup();
+    const created = createDemoCategory(categories, pubs, { spaceId: space.id, userId: user.id });
+    if (!created.ok) throw new Error(created.error);
+    const restaurant = space.items.find((item) => item.type === "restaurant")!;
+    const next = setItemCategory(space, restaurant.id, created.category.id);
+    const moved = next.items.find((item) => item.id === restaurant.id)!;
+    expect(moved.category_id).toBe(created.category.id);
+    expect(moved.type).toBe("restaurant");
+    expect(countDemoCategoryItems(next, created.category.id)).toEqual({
+      want: restaurant.status === "want" ? 1 : 0,
+      done: restaurant.status === "done" ? 1 : 0,
+    });
+    // Agora Pubs tem item: não apaga.
+    expect(deleteDemoCategory(created.categories, next, created.category.id).ok).toBe(false);
+  });
+
+  it("item novo numa categoria criada leva o category_id dela", () => {
+    const { user, space, categories } = setup();
+    const created = createDemoCategory(categories, pubs, { spaceId: space.id, userId: user.id });
+    if (!created.ok) throw new Error(created.error);
+    const next = addItem(space, {
+      type: created.category.item_type,
+      categoryId: created.category.id,
+      title: "Pub do Centro",
+      createdBy: user.id,
+    });
+    expect(next.items[0]).toMatchObject({ category_id: created.category.id, type: "activity" });
+  });
+
+  it("nova sessão: item em categoria que sumiu volta para a padrão do tipo", () => {
+    const { user, space, categories } = setup();
+    const created = createDemoCategory(categories, pubs, { spaceId: space.id, userId: user.id });
+    if (!created.ok) throw new Error(created.error);
+    const item = space.items[0];
+    const moved = setItemCategory(space, item.id, created.category.id);
+    const fresh = reconcileItemCategories(moved, demoCategories(space.id));
+    expect(fresh.items[0].category_id).toBe(demoCategoryId(item.type));
+    // Tudo certo: devolve o mesmo objeto.
+    expect(reconcileItemCategories(space, categories)).toBe(space);
+  });
+
+  it("categorias ficam no sessionStorage (só esta sessão); sem nada, as 8 padrão", () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("window", {
+      sessionStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => store.set(key, value),
+        removeItem: (key: string) => store.delete(key),
+      },
+    });
+    const { user, space, categories } = setup();
+    expect(loadDemoCategories(space.id)).toHaveLength(8);
+    const created = createDemoCategory(categories, pubs, { spaceId: space.id, userId: user.id });
+    if (!created.ok) throw new Error(created.error);
+    saveDemoCategories(created.categories);
+    expect(loadDemoCategories(space.id).map((c) => c.name)).toContain("Pubs");
+    clearDemoCategories();
+    expect(loadDemoCategories(space.id)).toHaveLength(8);
   });
 });

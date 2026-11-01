@@ -1,8 +1,16 @@
 import {
+  CATEGORY_UNKNOWN_ERROR,
   categoryNameKey,
+  CUSTOM_CATEGORY_ITEM_TYPE,
   DEFAULT_CATEGORIES,
+  defaultCategoryForType,
   gridPhotoSource,
+  nextCategoryPosition,
   parseItemView,
+  sortCategories,
+  validateCategoryInput,
+  type CategoryCounts,
+  type CategoryInput,
 } from "@/lib/categories";
 import { displayRating } from "@/lib/ratings";
 import type {
@@ -505,6 +513,8 @@ export function addItem(
     url?: string;
     notes?: string;
     createdBy: string;
+    // Categoria escolhida (o type vem dela); sem isso, a padrão do tipo.
+    categoryId?: string;
   },
 ): DemoSpace {
   const stamp = nowIso();
@@ -512,7 +522,7 @@ export function addItem(
     id: uid("item"),
     space_id: space.id,
     type: input.type,
-    category_id: demoCategoryId(input.type),
+    category_id: input.categoryId ?? demoCategoryId(input.type),
     title: input.title.trim(),
     url: input.url?.trim() || null,
     notes: input.notes?.trim() || null,
@@ -786,4 +796,160 @@ export function formatTripDates(trip: Trip): string | null {
   if (!trip.startDate && !trip.endDate) return null;
   if (trip.startDate && trip.endDate) return `${trip.startDate} → ${trip.endDate}`;
   return trip.startDate || trip.endDate;
+}
+
+// ---------------------------------------------------------------------------
+// Gerenciar categorias na demo (telas 54/55, C16): vale só nesta sessão do
+// navegador (sessionStorage), sem banco. As mesmas regras do app: nome único
+// sem acento/maiúscula, 1 emoji, paleta P, até 30, apagar só vazia.
+
+const CATEGORIES_SESSION_KEY = "juntos-demo-categories-v1";
+
+export function loadDemoCategories(spaceId: string): Category[] {
+  if (typeof window === "undefined") return demoCategories(spaceId);
+  try {
+    const raw = window.sessionStorage.getItem(CATEGORIES_SESSION_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Category[] | null) : null;
+    return Array.isArray(parsed) && parsed.length > 0
+      ? sortCategories(parsed)
+      : demoCategories(spaceId);
+  } catch {
+    return demoCategories(spaceId);
+  }
+}
+
+export function saveDemoCategories(categories: Category[]) {
+  try {
+    window.sessionStorage.setItem(CATEGORIES_SESSION_KEY, JSON.stringify(categories));
+  } catch {
+    // Sem sessionStorage: vale só enquanto a página está aberta.
+  }
+}
+
+export function clearDemoCategories() {
+  try {
+    window.sessionStorage.removeItem(CATEGORIES_SESSION_KEY);
+  } catch {
+    // nada a limpar
+  }
+}
+
+// Item que aponta para uma categoria que não existe nesta sessão (ex.: movido
+// para "Pubs" numa sessão anterior) volta para a padrão do seu tipo.
+export function reconcileItemCategories(space: DemoSpace, categories: Category[]): DemoSpace {
+  const ids = new Set(categories.map((category) => category.id));
+  if (space.items.every((item) => ids.has(item.category_id))) return space;
+  const fallback = sortCategories(categories)[0]?.id;
+  return {
+    ...space,
+    items: space.items.map((item) =>
+      ids.has(item.category_id)
+        ? item
+        : {
+            ...item,
+            category_id:
+              defaultCategoryForType(categories, item.type)?.id ?? fallback ?? item.category_id,
+          },
+    ),
+  };
+}
+
+type DemoCategoryResult =
+  | { ok: true; categories: Category[]; category: Category }
+  | { ok: false; error: string };
+
+// C4: no fim da ordem, item_type 'activity'.
+export function createDemoCategory(
+  categories: Category[],
+  input: CategoryInput,
+  context: { spaceId: string; userId: string },
+): DemoCategoryResult {
+  const problem = validateCategoryInput(input, categories);
+  if (problem) return { ok: false, error: problem };
+  const stamp = nowIso();
+  const name = input.name.trim();
+  const category: Category = {
+    id: uid("category"),
+    space_id: context.spaceId,
+    name,
+    name_key: categoryNameKey(name),
+    emoji: input.emoji.trim(),
+    color: input.color,
+    position: nextCategoryPosition(categories),
+    item_type: CUSTOM_CATEGORY_ITEM_TYPE,
+    created_by: context.userId,
+    created_at: stamp,
+    updated_at: stamp,
+  };
+  return { ok: true, categories: [...categories, category], category };
+}
+
+export function updateDemoCategory(
+  categories: Category[],
+  id: string,
+  input: CategoryInput,
+): DemoCategoryResult {
+  const current = categories.find((category) => category.id === id);
+  if (!current) return { ok: false, error: CATEGORY_UNKNOWN_ERROR };
+  const problem = validateCategoryInput(input, categories, { editingId: id });
+  if (problem) return { ok: false, error: problem };
+  const name = input.name.trim();
+  const category: Category = {
+    ...current,
+    name,
+    name_key: categoryNameKey(name),
+    emoji: input.emoji.trim(),
+    color: input.color,
+    updated_at: nowIso(),
+  };
+  return {
+    ok: true,
+    categories: categories.map((candidate) => (candidate.id === id ? category : candidate)),
+    category,
+  };
+}
+
+// Mesma regra do moveCategories do app: o 1º id fica com position 1...
+export function moveDemoCategories(categories: Category[], orderedIds: readonly string[]): Category[] {
+  const position = new Map(orderedIds.map((id, index) => [id, index + 1]));
+  return sortCategories(
+    categories.map((category) =>
+      position.has(category.id) ? { ...category, position: position.get(category.id)! } : category,
+    ),
+  );
+}
+
+export function countDemoCategoryItems(space: DemoSpace, categoryId: string): CategoryCounts {
+  const counts = { want: 0, done: 0 };
+  for (const item of space.items) {
+    if (item.category_id === categoryId) counts[item.status] += 1;
+  }
+  return counts;
+}
+
+// C1: só apaga vazia; com itens, devolve os números para a 55b.
+export function deleteDemoCategory(
+  categories: Category[],
+  space: DemoSpace,
+  categoryId: string,
+):
+  | { ok: true; categories: Category[] }
+  | ({ ok: false; reason: "not_empty" } & CategoryCounts) {
+  const counts = countDemoCategoryItems(space, categoryId);
+  if (counts.want + counts.done > 0) return { ok: false, reason: "not_empty", ...counts };
+  return { ok: true, categories: categories.filter((category) => category.id !== categoryId) };
+}
+
+// Mudar o item de categoria muda só category_id (o type é imutável).
+export function setItemCategory(space: DemoSpace, itemId: string, categoryId: string): DemoSpace {
+  const stamp = nowIso();
+  return {
+    ...space,
+    items: space.items.map((item) =>
+      item.id === itemId && item.category_id !== categoryId
+        ? { ...item, category_id: categoryId, updated_at: stamp }
+        : item,
+    ),
+    updatedAt: stamp,
+  };
 }

@@ -1,5 +1,6 @@
+import { categoryNameKey, DEFAULT_CATEGORIES } from "@/lib/categories";
 import { displayRating } from "@/lib/ratings";
-import type { Item, ItemStatus, ItemType, Rating } from "@/lib/types";
+import type { Category, Item, ItemStatus, ItemType, Rating } from "@/lib/types";
 
 export type DemoUser = {
   id: string;
@@ -118,6 +119,30 @@ export function demoCategoryId(type: ItemType): string {
   return `demo-category-${type}`;
 }
 
+// As 8 categorias padrão (C16), derivadas dos tipos, em memória: nada vai
+// para o localStorage nem para o banco.
+const DEMO_CATEGORY_CREATED_AT = "2026-01-01T00:00:00.000Z";
+
+export function demoCategories(spaceId: string): Category[] {
+  return DEFAULT_CATEGORIES.map((category) => ({
+    ...category,
+    id: demoCategoryId(category.item_type),
+    space_id: spaceId,
+    name_key: categoryNameKey(category.name),
+    created_by: null,
+    created_at: DEMO_CATEGORY_CREATED_AT,
+    updated_at: DEMO_CATEGORY_CREATED_AT,
+  }));
+}
+
+// Itens com as notas penduradas (mesmo formato do app: items + ratings(*)).
+export function itemsWithRatings(space: DemoSpace): Array<Item & { ratings: Rating[] }> {
+  return space.items.map((item) => ({
+    ...item,
+    ratings: space.ratings.filter((rating) => rating.item_id === item.id),
+  }));
+}
+
 function uid(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 }
@@ -203,6 +228,52 @@ export function normalizeSpace(raw: DemoSpace | (Omit<DemoSpace, "trips"> & { tr
 
 const HOUR_MS = 60 * 60 * 1000;
 
+type SampleExtra = {
+  id: string;
+  type: ItemType;
+  title: string;
+  city?: string;
+  byAna?: boolean;
+  daysAgo: number;
+  // Já fizemos: há quantos dias; com nota: [comida, atendimento, ambiente] ou [nota].
+  doneDaysAgo?: number;
+  rating?: [number, number, number] | [number];
+};
+
+// Itens fictícios extras da vitrine: todas as categorias com alguma coisa,
+// cidades em parte deles e notas em Já fizemos (Evento fica vazio em Queremos).
+const SAMPLE_EXTRA: SampleExtra[] = [
+  { id: "item_pousada_vale_verde", type: "stay", title: "Pousada Vale Verde", city: "Gonçalves", byAna: true, daysAgo: 3 },
+  { id: "item_cabana_do_lago", type: "stay", title: "Cabana do Lago", city: "Cambará do Sul", daysAgo: 9 },
+  { id: "item_chale_da_serra", type: "stay", title: "Chalé da Serra", byAna: true, daysAgo: 21 },
+  { id: "item_bistro_da_praca", type: "restaurant", title: "Bistrô da Praça", city: "Curitiba", byAna: true, daysAgo: 4 },
+  { id: "item_sushi_do_porto", type: "restaurant", title: "Sushi do Porto", city: "Santos", daysAgo: 7 },
+  { id: "item_taberna_velha", type: "restaurant", title: "Taberna Velha", byAna: true, daysAgo: 15 },
+  { id: "item_forno_a_lenha", type: "restaurant", title: "Pizzaria Forno a Lenha", daysAgo: 28 },
+  { id: "item_mirante_do_pico", type: "tourist_spot", title: "Mirante do Pico", city: "Campos do Jordão", byAna: true, daysAgo: 6 },
+  { id: "item_cachoeira_veu_azul", type: "tourist_spot", title: "Cachoeira Véu Azul", daysAgo: 18 },
+  { id: "item_piquenique", type: "activity", title: "Piquenique no parque", byAna: true, daysAgo: 5 },
+  { id: "item_bolo_de_fuba", type: "food_idea", title: "Bolo de fubá da vó", byAna: true, daysAgo: 11 },
+  { id: "item_paraty", type: "city", title: "Paraty", byAna: true, daysAgo: 8 },
+  { id: "item_tiradentes", type: "city", title: "Tiradentes", daysAgo: 24 },
+  { id: "item_cinema_paradiso", type: "movie", title: "Cinema Paradiso", daysAgo: 10 },
+  { id: "item_amelie", type: "movie", title: "O fabuloso destino de Amélie", byAna: true, daysAgo: 16 },
+  // Já fizemos
+  { id: "item_peixaria_do_cais", type: "restaurant", title: "Peixaria do Cais", city: "Florianópolis", byAna: true, daysAgo: 40, doneDaysAgo: 3, rating: [9.5, 9, 9.5] },
+  { id: "item_emporio_mineiro", type: "restaurant", title: "Empório Mineiro", city: "Belo Horizonte", daysAgo: 60, doneDaysAgo: 12, rating: [7, 8, 7] },
+  { id: "item_hamburgueria_22", type: "restaurant", title: "Hamburgueria 22", daysAgo: 70, doneDaysAgo: 30 },
+  { id: "item_jardim_botanico", type: "tourist_spot", title: "Jardim Botânico", city: "Curitiba", byAna: true, daysAgo: 45, doneDaysAgo: 5, rating: [9] },
+  { id: "item_trilha_do_morro", type: "tourist_spot", title: "Trilha do Morro", daysAgo: 80, doneDaysAgo: 40 },
+  { id: "item_aula_de_vinho", type: "activity", title: "Aula de vinho", byAna: true, daysAgo: 50, doneDaysAgo: 8, rating: [8.5] },
+  { id: "item_boliche", type: "activity", title: "Boliche de sexta", daysAgo: 90, doneDaysAgo: 20 },
+  { id: "item_panqueca", type: "food_idea", title: "Panqueca de domingo", byAna: true, daysAgo: 35, doneDaysAgo: 14, rating: [8] },
+  { id: "item_cidade_de_deus", type: "movie", title: "Cidade de Deus", daysAgo: 55, doneDaysAgo: 9, rating: [9.6] },
+  { id: "item_auto_da_compadecida", type: "movie", title: "O Auto da Compadecida", byAna: true, daysAgo: 65, doneDaysAgo: 25, rating: [9.2] },
+  { id: "item_ouro_preto", type: "city", title: "Ouro Preto", daysAgo: 120, doneDaysAgo: 60, rating: [8.8] },
+  { id: "item_hotel_fazenda_sol", type: "stay", title: "Hotel Fazenda Sol", city: "Atibaia", byAna: true, daysAgo: 100, doneDaysAgo: 45 },
+  { id: "item_festival_de_jazz", type: "event", title: "Festival de Jazz", city: "Rio das Ostras", daysAgo: 75, doneDaysAgo: 33, rating: [9.4] },
+];
+
 /** Dados de exemplo da vitrine (mockups 06, 09 e 21). */
 export function sampleState(): DemoState {
   const now = Date.now();
@@ -215,6 +286,8 @@ export function sampleState(): DemoState {
     input: Pick<Item, "id" | "type" | "title" | "notes"> & {
       createdAt: string;
       completedAt?: string;
+      city?: string;
+      by?: DemoUser;
     },
   ): Item => ({
     id: input.id,
@@ -224,21 +297,24 @@ export function sampleState(): DemoState {
     title: input.title,
     url: null,
     notes: input.notes,
-    city: null,
+    city: input.city ?? null,
     status: input.completedAt ? "done" : "want",
-    created_by: lucas.id,
+    created_by: (input.by ?? lucas).id,
     completed_at: input.completedAt ?? null,
     created_at: input.createdAt,
     updated_at: input.completedAt ?? input.createdAt,
   });
 
   const cantinaDoneAt = at(20);
+  const DAY = 24;
+  // Os 6 primeiros são os da vitrine de sempre (mockups 06, 09 e 21).
   const items: Item[] = [
     item({
       id: "item_cafe_da_esquina",
       type: "food_idea",
       title: "Café da Esquina",
       notes: "São Paulo",
+      city: "São Paulo",
       createdAt: at(0),
     }),
     item({
@@ -260,6 +336,7 @@ export function sampleState(): DemoState {
       type: "tourist_spot",
       title: "Praia do Félix",
       notes: "Ubatuba",
+      city: "Ubatuba",
       createdAt: at(26),
     }),
     item({
@@ -267,6 +344,7 @@ export function sampleState(): DemoState {
       type: "restaurant",
       title: "Cantina da Nonna",
       notes: "São Paulo",
+      city: "São Paulo",
       createdAt: at(30),
       completedAt: cantinaDoneAt,
     }),
@@ -277,6 +355,19 @@ export function sampleState(): DemoState {
       notes: null,
       createdAt: at(50),
     }),
+    // Mais exemplos (fictícios) para os quadrados do início (telas 50/51).
+    ...SAMPLE_EXTRA.map((extra) =>
+      item({
+        id: extra.id,
+        type: extra.type,
+        title: extra.title,
+        notes: null,
+        city: extra.city,
+        by: extra.byAna ? ana : lucas,
+        createdAt: at(extra.daysAgo * DAY),
+        completedAt: extra.doneDaysAgo != null ? at(extra.doneDaysAgo * DAY) : undefined,
+      }),
+    ),
   ];
 
   // A demo guarda uma nota por item; nota por pessoa é do app real (PR3).
@@ -293,6 +384,23 @@ export function sampleState(): DemoState {
       created_at: cantinaDoneAt,
       updated_at: cantinaDoneAt,
     },
+    ...SAMPLE_EXTRA.filter((extra) => extra.rating).map((extra): Rating => {
+      const stamp = at((extra.doneDaysAgo ?? 0) * DAY);
+      const [food, service, ambiance] =
+        extra.rating && extra.rating.length === 3 ? extra.rating : [null, null, null];
+      return {
+        id: `rating_${extra.id.slice("item_".length)}`,
+        item_id: extra.id,
+        rated_by: extra.byAna ? ana.id : lucas.id,
+        food,
+        service,
+        ambiance,
+        score: extra.rating && extra.rating.length === 1 ? extra.rating[0] : null,
+        comment: null,
+        created_at: stamp,
+        updated_at: stamp,
+      };
+    }),
   ];
 
   return {

@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_CATEGORIES,
+  categoryScoreAverage,
+  categoryTiles,
+} from "@/lib/categories";
+import {
   addDocLink,
   addItem,
   addPackItem,
   addStop,
   createTrip,
+  demoCategories,
   demoCategoryId,
+  itemsWithRatings,
   normalizeSpace,
   ratingForItem,
   sampleState,
@@ -30,10 +37,10 @@ describe("sampleState", () => {
     expect(space.members[0].id).toBe(user.id);
   });
 
-  it("has the places and Programas from the mockups, all added by Lucas", () => {
+  it("starts with the places and Programas from the mockups, added by Lucas", () => {
     const { user, space } = sampleState();
     expect(
-      space.items.map(({ title, type, notes, status }) => ({ title, type, notes, status })),
+      space.items.slice(0, 6).map(({ title, type, notes, status }) => ({ title, type, notes, status })),
     ).toEqual([
       { title: "Café da Esquina", type: "food_idea", notes: "São Paulo", status: "want" },
       { title: "Trilha da Pedra Exemplo", type: "activity", notes: null, status: "want" },
@@ -47,25 +54,41 @@ describe("sampleState", () => {
       { title: "Cantina da Nonna", type: "restaurant", notes: "São Paulo", status: "done" },
       { title: "Aprender a dançar forró", type: "activity", notes: null, status: "want" },
     ]);
-    expect(space.items.every((item) => item.created_by === user.id)).toBe(true);
+    expect(space.items.slice(0, 6).every((item) => item.created_by === user.id)).toBe(true);
     expect(space.items.every((item) => item.space_id === space.id)).toBe(true);
   });
 
-  it("marks only the Cantina as done, with completed_at", () => {
+  it("has more fictitious items for the home tiles, by Lucas and Ana, some with city", () => {
+    const { space } = sampleState();
+    const [lucas, ana] = space.members;
+    expect(space.items).toHaveLength(34);
+    expect(new Set(space.items.map((item) => item.id)).size).toBe(34);
+    expect(space.items.some((item) => item.created_by === ana.id)).toBe(true);
+    expect(space.items.some((item) => item.created_by === lucas.id)).toBe(true);
+    expect(space.items.filter((item) => item.city).length).toBeGreaterThan(5);
+    // Todos os tipos aparecem em Já fizemos; Evento fica vazio em Queremos (C6).
+    const doneTypes = new Set(space.items.filter((i) => i.status === "done").map((i) => i.type));
+    expect(doneTypes.size).toBe(8);
+    expect(space.items.some((i) => i.status === "want" && i.type === "event")).toBe(false);
+  });
+
+  it("done items have completed_at; want items don't", () => {
     const { space } = sampleState();
     for (const item of space.items) {
-      if (item.title === "Cantina da Nonna") {
-        expect(item.completed_at).not.toBeNull();
-      } else {
-        expect(item.completed_at).toBeNull();
-      }
+      expect(item.completed_at == null).toBe(item.status === "want");
     }
   });
 
-  it("has one rating for the Cantina by Lucas (9/8/9)", () => {
+  it("every rating points to a done item of the space", () => {
+    const { space } = sampleState();
+    for (const rating of space.ratings) {
+      expect(space.items.find((item) => item.id === rating.item_id)?.status).toBe("done");
+    }
+  });
+
+  it("has a rating for the Cantina by Lucas (9/8/9)", () => {
     const { user, space } = sampleState();
     const cantina = space.items.find((item) => item.title === "Cantina da Nonna")!;
-    expect(space.ratings).toHaveLength(1);
     expect(space.ratings[0]).toMatchObject({
       item_id: cantina.id,
       rated_by: user.id,
@@ -80,7 +103,7 @@ describe("sampleState", () => {
   it("returns a fresh copy each time", () => {
     const first = sampleState();
     first.space.items.pop();
-    expect(sampleState().space.items).toHaveLength(6);
+    expect(sampleState().space.items).toHaveLength(34);
   });
 
   it("works with the store helpers", () => {
@@ -90,7 +113,7 @@ describe("sampleState", () => {
       title: "Filme",
       createdBy: user.id,
     });
-    expect(next.items).toHaveLength(7);
+    expect(next.items).toHaveLength(35);
     const praia = space.items.find((item) => item.title === "Praia do Félix")!;
     const rated = upsertRating(space, { itemId: praia.id, ratedBy: user.id, score: 8 });
     expect(rated.items.find((item) => item.id === praia.id)?.status).toBe("done");
@@ -297,5 +320,49 @@ describe("demo: category_id por tipo (categorias, PR 1)", () => {
     expect(normalized.items.map((item) => item.category_id)).toEqual(
       space.items.map((item) => `demo-category-${item.type}`),
     );
+  });
+});
+
+describe("demo: categorias padrão em memória (C16)", () => {
+  it("deriva as 8 categorias padrão, uma por tipo, com os ids dos itens", () => {
+    const { space } = sampleState();
+    const categories = demoCategories(space.id);
+    expect(categories.map((c) => [c.position, c.name, c.emoji, c.color, c.item_type])).toEqual(
+      DEFAULT_CATEGORIES.map((c) => [c.position, c.name, c.emoji, c.color, c.item_type]),
+    );
+    for (const category of categories) {
+      expect(category.id).toBe(demoCategoryId(category.item_type));
+      expect(category.space_id).toBe(space.id);
+    }
+    const ids = new Set(categories.map((c) => c.id));
+    expect(space.items.every((item) => ids.has(item.category_id))).toBe(true);
+  });
+
+  it("não guarda categorias no estado salvo", () => {
+    expect(Object.keys(sampleState().space)).not.toContain("categories");
+  });
+
+  it("pendura as notas nos itens, como items + ratings(*) do app", () => {
+    const { space } = sampleState();
+    const items = itemsWithRatings(space);
+    const cantina = items.find((item) => item.title === "Cantina da Nonna")!;
+    expect(cantina.ratings).toHaveLength(1);
+    expect(items.find((item) => item.title === "Café da Esquina")!.ratings).toEqual([]);
+  });
+
+  it("início da vitrine: quadrados somam as abas e Restaurante tem média em Já fizemos", () => {
+    const { space } = sampleState();
+    const categories = demoCategories(space.id);
+    const items = itemsWithRatings(space);
+    for (const status of ["want", "done"] as const) {
+      const sum = categoryTiles(categories, items, status).reduce((n, t) => n + t.count, 0);
+      expect(sum).toBe(items.filter((item) => item.status === status).length);
+    }
+    const restaurant = categories.find((c) => c.item_type === "restaurant")!;
+    const average = categoryScoreAverage(
+      items.filter((i) => i.category_id === restaurant.id && i.status === "done"),
+    );
+    // Cantina 8,7 · Peixaria 9,3 · Empório 7,3 (+1 sem nota) → 8,4.
+    expect(average).toEqual({ value: 8.4, count: 3 });
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { STATUS_LABELS } from "@/lib/labels";
 import {
@@ -11,20 +11,21 @@ import {
   scoreInputValue,
 } from "@/lib/ratings";
 import { addedByLabel } from "@/lib/relative-time";
+import { ratingSavedMessage } from "@/lib/demo/after-rating";
 import {
-  filterItems,
-  ratingSavedMessage,
-  typeFilterAfterRating,
-  type TypeFilter,
-} from "@/lib/demo/after-rating";
-import { countByStatus, typeFilterSummary } from "@/lib/item-categories";
-import type { Item, ItemStatus } from "@/lib/types";
+  categoryTiles,
+  LIST_COPY,
+  recentItems,
+} from "@/lib/categories";
+import { countByStatus } from "@/lib/item-categories";
+import type { ItemStatus } from "@/lib/types";
 import {
   addItem,
   createTrip,
+  demoCategories,
+  itemsWithRatings,
   loadState,
   memberName,
-  ratingForItem,
   sampleState,
   saveState,
   upsertRating,
@@ -32,20 +33,21 @@ import {
   type DemoState,
   type DemoUser,
 } from "@/lib/demo/store";
-import { Avatar, initial, memberTone } from "@/components/avatar";
+import { memberTone } from "@/components/avatar";
+import { CategoryHome, type HomeTarget } from "@/components/category-home";
 import { DemoHub } from "@/components/demo-hub";
-import { ItemFilters, TypeFilterFooter } from "@/components/item-filters";
+import { StatusTabs } from "@/components/item-filters";
+import { ItemList, ListScreenHeader } from "@/components/item-list";
 import {
   ActivityNoAddressNote,
   heroBadge,
+  heroCategoryLabel,
   heroSubtitle,
-  ITEM_CARD_CLASS,
-  ItemCardContent,
   ItemHero,
-  itemSubtitle,
   CoupleScoreCard,
   ratingChips,
 } from "@/components/item-visuals";
+import { SpaceHeader, TopNav } from "@/components/space-header";
 import {
   BACK_LINK,
   BTN_OUTLINE,
@@ -64,24 +66,28 @@ type Screen =
   | { name: "hub" }
   | { name: "ideas" }
   | { name: "idea-wizard" }
-  | { name: "detail"; itemId: string }
+  | { name: "category"; categoryId: string }
+  | { name: "recent" }
+  | { name: "detail"; itemId: string; from: ListScreen }
   | { name: "trips" }
   | { name: "trip-new" }
   | { name: "trip-detail"; tripId: string }
   | { name: "settings" };
 
-type MessageAction = { forMessage: string; label: string; onClick: () => void };
+// Telas de onde o detalhe abre (o "← voltar" do detalhe volta para ela).
+type ListScreen =
+  | { name: "ideas" }
+  | { name: "category"; categoryId: string }
+  | { name: "recent" };
 
-const HIGHLIGHT_MS = 2000;
+type MessageAction = { forMessage: string; label: string; onClick: () => void };
 
 export function DemoApp() {
   const [state, setState] = useState<DemoState | null>(null);
   const [screen, setScreen] = useState<Screen>({ name: "hub" });
   const [message, setMessage] = useState<string | null>(null);
   const [messageAction, setMessageAction] = useState<MessageAction | null>(null);
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<ItemStatus>("want");
-  const [highlightItemId, setHighlightItemId] = useState<string | null>(null);
 
   useEffect(() => {
     // localStorage só existe no cliente; o primeiro render é o do servidor.
@@ -93,10 +99,11 @@ export function DemoApp() {
     saveState(next);
   }
 
-  const filteredItems = useMemo(() => {
-    if (!state) return [];
-    return filterItems(state.space.items, typeFilter, statusFilter);
-  }, [state, typeFilter, statusFilter]);
+  // Categorias padrão derivadas dos tipos, em memória (C16).
+  const categories = useMemo(
+    () => (state ? demoCategories(state.space.id) : []),
+    [state],
+  );
 
   if (!state) {
     return (
@@ -149,16 +156,33 @@ export function DemoApp() {
         {screen.name === "ideas" ? (
           <Home
             space={space}
-            items={filteredItems}
-            typeFilter={typeFilter}
-            statusFilter={statusFilter}
-            onTypeFilter={setTypeFilter}
-            onStatusFilter={setStatusFilter}
-            highlightItemId={highlightItemId}
-            onHighlightDone={() => setHighlightItemId(null)}
-            onOpen={(itemId) => setScreen({ name: "detail", itemId })}
-            onBack={() => setScreen({ name: "hub" })}
+            categories={categories}
+            status={statusFilter}
+            onStatusChange={setStatusFilter}
+            onOpen={(target) => {
+              if (target.kind === "item") {
+                setScreen({ name: "detail", itemId: target.id, from: { name: "ideas" } });
+              } else if (target.kind === "category") {
+                setScreen({ name: "category", categoryId: target.id });
+              } else {
+                setScreen({ name: "recent" });
+              }
+            }}
             onNewIdea={() => setScreen({ name: "idea-wizard" })}
+            onSettings={() => setScreen({ name: "settings" })}
+          />
+        ) : null}
+
+        {screen.name === "category" || screen.name === "recent" ? (
+          <ItemsScreen
+            space={space}
+            categories={categories}
+            status={statusFilter}
+            categoryId={screen.name === "category" ? screen.categoryId : null}
+            onBack={() => setScreen({ name: "ideas" })}
+            onOpen={(itemId) =>
+              setScreen({ name: "detail", itemId, from: screen })
+            }
           />
         ) : null}
 
@@ -181,8 +205,9 @@ export function DemoApp() {
           <Detail
             space={space}
             itemId={screen.itemId}
+            categories={categories}
             user={user}
-            onBack={() => setScreen({ name: "ideas" })}
+            onBack={() => setScreen(screen.from)}
             onRate={(payload) => {
               try {
                 if (payload.score != null) assertScore(payload.score);
@@ -200,13 +225,11 @@ export function DemoApp() {
                 if (item) {
                   // Item com nota fica em "Já fizemos": troca a aba para ele seguir visível.
                   setStatusFilter("done");
-                  setTypeFilter(typeFilterAfterRating(typeFilter, item.type));
-                  setHighlightItemId(item.id);
                 }
                 const text = ratingSavedMessage(item?.title ?? "", wasWant);
                 setMessage(text);
                 setMessageAction(wasWant ? { forMessage: text, label: "Ver Queremos", onClick: () => setStatusFilter("want") } : null);
-                setScreen({ name: "ideas" });
+                setScreen(screen.from);
               } catch (error) {
                 setMessage(
                   error instanceof Error ? error.message : "Não foi possível salvar a nota.",
@@ -291,119 +314,47 @@ export function DemoApp() {
 
 function Home({
   space,
-  items,
-  typeFilter,
-  statusFilter,
-  onTypeFilter,
-  onStatusFilter,
-  highlightItemId,
-  onHighlightDone,
+  categories,
+  status,
+  onStatusChange,
   onOpen,
-  onBack,
   onNewIdea,
+  onSettings,
 }: {
   space: DemoSpace;
-  items: Item[];
-  typeFilter: TypeFilter;
-  statusFilter: ItemStatus;
-  onTypeFilter: (v: TypeFilter) => void;
-  onStatusFilter: (v: ItemStatus) => void;
-  highlightItemId: string | null;
-  onHighlightDone: () => void;
-  onOpen: (id: string) => void;
-  onBack: () => void;
+  categories: ReturnType<typeof demoCategories>;
+  status: ItemStatus;
+  onStatusChange: (status: ItemStatus) => void;
+  onOpen: (target: HomeTarget) => void;
   onNewIdea: () => void;
+  onSettings: () => void;
 }) {
-  const listRef = useRef<HTMLUListElement>(null);
-  const onHighlightDoneRef = useRef(onHighlightDone);
-  useEffect(() => {
-    onHighlightDoneRef.current = onHighlightDone;
-  });
-
-  useEffect(() => {
-    if (!highlightItemId) return;
-    const el = listRef.current?.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(highlightItemId)}"]`);
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
-    const timeout = window.setTimeout(() => onHighlightDoneRef.current(), HIGHLIGHT_MS);
-    return () => window.clearTimeout(timeout);
-  }, [highlightItemId]);
-
-  // Contagem das abas: respeita o tipo escolhido, ignora o status.
-  const counts = countByStatus(filterItems(space.items, typeFilter, "all"));
-
   return (
     <div className="space-y-3.5 pb-20">
-      <button type="button" className={BACK_LINK} onClick={onBack}>
-        ← Voltar
-      </button>
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cream/60">
-            Juntos
-          </p>
-          <h1 className="mt-1 text-[28px] font-medium leading-tight text-cream">
-            {space.name}
-          </h1>
-        </div>
-        <div aria-hidden="true" className="flex shrink-0 -space-x-2">
-          {space.members.map((member, index) => (
-            <Avatar
-              key={member.id}
-              label={initial(member.name)}
-              size="md"
-              tone={memberTone(index)}
-            />
-          ))}
-        </div>
-      </div>
-
-      <ItemFilters
-        typeChip={typeFilter}
-        status={statusFilter}
-        counts={counts}
-        onTypeChange={onTypeFilter}
-        onStatusChange={onStatusFilter}
+      <TopNav
+        list={{ onClick: () => window.scrollTo({ top: 0 }) }}
+        add={{ onClick: onNewIdea }}
+        settings={{ onClick: onSettings }}
+      />
+      <SpaceHeader
+        name={space.name}
+        memberNames={space.members.map((member) => member.name)}
       />
 
-      {items.length === 0 ? (
-        <p className={`${CARD} px-4 py-8 text-center text-sm text-ink/70`}>
-          Nenhuma ideia ainda
-        </p>
-      ) : (
-        <ul ref={listRef} className="flex flex-col gap-2.5">
-          {items.map((item) => {
-            const authorName = memberName(space, item.created_by);
-            return (
-              <li key={item.id} data-item-id={item.id}>
-                <button
-                  type="button"
-                  onClick={() => onOpen(item.id)}
-                  className={`${ITEM_CARD_CLASS} duration-300 ${item.id === highlightItemId ? "ring-2 ring-accent" : ""}`}
-                >
-                  <ItemCardContent
-                    item={item}
-                    subtitle={itemSubtitle(item.type, item.notes)}
-                    author={{
-                      name: authorName,
-                      tone: memberTone(memberIndex(space, item.created_by)),
-                    }}
-                    addedLabel={addedByLabel(authorName, item.created_at)}
-                    score={ratingForItem(space, item.id)}
-                  />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <StatusTabs
+        status={status}
+        counts={countByStatus(space.items)}
+        onStatusChange={onStatusChange}
+      />
 
-      {typeFilter !== "all" ? (
-        <TypeFilterFooter
-          summary={typeFilterSummary(typeFilter, counts[statusFilter], statusFilter)}
-          onShowAll={() => onTypeFilter("all")}
-        />
-      ) : null}
+      <CategoryHome
+        categories={categories}
+        items={itemsWithRatings(space)}
+        status={status}
+        memberNames={memberNamesOf(space)}
+        memberOrder={space.members.map((member) => member.id)}
+        onOpen={onOpen}
+      />
 
       <button type="button" className={FAB} onClick={onNewIdea}>
         <span aria-hidden="true">＋</span>
@@ -413,19 +364,88 @@ function Home({
   );
 }
 
-function memberIndex(space: DemoSpace, userId: string) {
-  return space.members.findIndex((member) => member.id === userId);
+// Dentro da categoria (prévia do PR 5) e "Adicionados recentemente" (C8):
+// cabeçalho da 52 e os cards em Compacta.
+function ItemsScreen({
+  space,
+  categories,
+  status,
+  categoryId,
+  onBack,
+  onOpen,
+}: {
+  space: DemoSpace;
+  categories: ReturnType<typeof demoCategories>;
+  status: ItemStatus;
+  // null = recentes.
+  categoryId: string | null;
+  onBack: () => void;
+  onOpen: (itemId: string) => void;
+}) {
+  const all = itemsWithRatings(space);
+  const category = categoryId
+    ? categories.find((candidate) => candidate.id === categoryId)
+    : null;
+  const items = category
+    ? recentItems(
+        all.filter((item) => item.category_id === category.id),
+        status,
+        Infinity,
+      )
+    : recentItems(all, status);
+  const count = category
+    ? categoryTiles([category], all, status)[0].count
+    : undefined;
+
+  return (
+    <div className="space-y-3.5 pb-20">
+      <ListScreenHeader
+        backLabel={STATUS_LABELS[status]}
+        onBack={onBack}
+        title={
+          category
+            ? `${category.emoji} ${category.name}`
+            : LIST_COPY.recentScreenTitle
+        }
+        count={count}
+        subtitle={LIST_COPY.newestFirst}
+      />
+      {items.length === 0 ? (
+        <p className="py-6 text-center text-[15px] text-cream/70">
+          {LIST_COPY.empty}
+        </p>
+      ) : (
+        <ItemList
+          items={items}
+          categoriesById={Object.fromEntries(
+            categories.map((candidate) => [candidate.id, candidate]),
+          )}
+          memberNames={memberNamesOf(space)}
+          memberOrder={space.members.map((member) => member.id)}
+          onOpen={onOpen}
+        />
+      )}
+    </div>
+  );
+}
+
+function memberNamesOf(space: DemoSpace): Record<string, string> {
+  return Object.fromEntries(
+    space.members.map((member) => [member.id, member.name]),
+  );
 }
 
 function Detail({
   space,
   itemId,
+  categories,
   user,
   onBack,
   onRate,
 }: {
   space: DemoSpace;
   itemId: string;
+  categories: ReturnType<typeof demoCategories>;
   user: DemoUser;
   onBack: () => void;
   onRate: (payload: {
@@ -468,6 +488,7 @@ function Detail({
     );
   }
 
+  const category = categories.find((candidate) => candidate.id === item.category_id);
   const raterName = rating ? memberName(space, rating.rated_by) : null;
   const couple = coupleScore(rating ? [rating] : []);
 
@@ -479,9 +500,10 @@ function Detail({
 
       <ItemHero
         type={item.type}
+        category={category}
         title={item.title}
         subtitle={heroSubtitle(
-          item.type,
+          heroCategoryLabel(item.type, category),
           addedByLabel(memberName(space, item.created_by), item.created_at),
         )}
         badge={heroBadge(item)}

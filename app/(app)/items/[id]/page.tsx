@@ -19,6 +19,12 @@ import { RatingDisclosure } from "@/components/rating-disclosure";
 import { RatingForm, type RatingFormState } from "@/components/rating-form";
 import { SavedRatingPrompt } from "@/components/saved-rating-prompt";
 import { BACK_LINK } from "@/components/ui-classes";
+import {
+  findCategory,
+  parseCategoryField,
+  PICK_CATEGORY_COPY,
+} from "@/lib/categories";
+import { getCategory, listCategories } from "@/lib/categories-data";
 import { normalizeCity } from "@/lib/city";
 import {
   EDIT_CONFLICT_PARAM,
@@ -138,13 +144,12 @@ export default async function ItemPage({
     throw new Error("Não foi possível carregar os membros.");
   }
 
-  // Categoria do item: emoji, nome e cor no topo do detalhe.
-  const { data: categoryRow } = await supabase
-    .from("categories")
-    .select("name,emoji,color")
-    .eq("id", item.category_id)
-    .maybeSingle();
-  const category = categoryRow as Pick<Category, "name" | "emoji" | "color"> | null;
+  // Categorias do espaço: a do item no topo do detalhe (emoji, nome e cor) e
+  // todas no campo "Categoria" do ✎ Editar.
+  const categoriesResult = await listCategories(supabase, membership.space_id);
+  const categories = categoriesResult.ok ? categoriesResult.categories : [];
+  const category: Pick<Category, "name" | "emoji" | "color"> | null =
+    findCategory(categories, item.category_id);
 
   const memberIds = (memberRows ?? []).map(
     (member) => member.user_id as string,
@@ -202,6 +207,11 @@ export default async function ItemPage({
     const url = formValue(formData, "url");
     const notes = formValue(formData, "notes");
     const city = normalizeCity(formData.get("city"));
+    const categoryId = parseCategoryField(formData.get("category_id"));
+
+    if (!categoryId) {
+      return { error: PICK_CATEGORY_COPY };
+    }
 
     if (!title) {
       return { error: "Informe um título para a ideia." };
@@ -229,6 +239,17 @@ export default async function ItemPage({
 
     if (!actionMembership) {
       redirect("/onboarding");
+    }
+
+    // Categoria de outro espaço (ou que sumiu): recusa antes do banco
+    // (que também recusa: category_other_space). O type não muda.
+    const targetCategory = await getCategory(
+      actionSupabase,
+      actionMembership.space_id,
+      categoryId,
+    );
+    if (!targetCategory.ok) {
+      return { error: PICK_CATEGORY_COPY };
     }
 
     // Vale a última gravação; só olha antes para saber se o par mexeu depois
@@ -261,6 +282,7 @@ export default async function ItemPage({
         url: url || null,
         notes: notes || null,
         city: city.city,
+        category_id: targetCategory.category.id,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
@@ -457,7 +479,12 @@ export default async function ItemPage({
 
         {/* Remonta depois de salvar (updated_at muda): fecha e pega os valores novos. */}
         <EditDisclosure key={item.updated_at}>
-          <ItemForm action={updateItem} item={item} mode="edit" />
+          <ItemForm
+            action={updateItem}
+            item={item}
+            mode="edit"
+            categories={categories}
+          />
         </EditDisclosure>
       </section>
     </main>

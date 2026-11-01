@@ -7,7 +7,7 @@ import {
 } from "@/components/place-review-card";
 import { SCREEN } from "@/components/ui-classes";
 import { captureLink } from "@/lib/capture-link";
-import { requireSpace, savePlace } from "@/lib/save-place";
+import { loadSpaceCategories, savePlace } from "@/lib/save-place";
 
 export const metadata: Metadata = {
   title: "Revisar lugar",
@@ -47,7 +47,7 @@ export default async function RevisarPage({ searchParams }: RevisarPageProps) {
     redirect(PRIMEIRO_LUGAR_PATH);
   }
 
-  await requireSpace(PRIMEIRO_LUGAR_PATH);
+  const categories = await loadSpaceCategories(PRIMEIRO_LUGAR_PATH);
 
   return (
     <main className={SCREEN}>
@@ -55,6 +55,7 @@ export default async function RevisarPage({ searchParams }: RevisarPageProps) {
         url={url}
         backHref={PRIMEIRO_LUGAR_PATH}
         saveAction={save}
+        categories={categories}
       />
     </main>
   );

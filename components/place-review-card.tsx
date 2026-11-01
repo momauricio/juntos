@@ -5,7 +5,8 @@ import { type FormEvent, useActionState, useState } from "react";
 
 import { useOnline } from "@/components/auth-hooks";
 import { BackLink, OfflineBanner } from "@/components/auth-ui";
-import { ItemPhoto, TypeHintBox } from "@/components/item-visuals";
+import { CategoryField, type FieldCategory } from "@/components/category-field";
+import { ItemPhoto } from "@/components/item-visuals";
 import { useLivePause } from "@/components/use-live-pause";
 import {
   BTN_PRIMARY,
@@ -15,15 +16,10 @@ import {
   TEXT_LINK_QUIET,
   TEXTAREA,
 } from "@/components/ui-classes";
-import { PICK_TYPE_COPY } from "@/lib/capture-link";
+import { PICK_CATEGORY_COPY } from "@/lib/categories";
 import { CITY_MAX_LENGTH } from "@/lib/city";
-import {
-  NOTES_PLACEHOLDER,
-  STATUS_LABELS,
-  TYPE_EMOJI,
-  TYPE_LABELS,
-} from "@/lib/labels";
-import type { ItemStatus, ItemType } from "@/lib/types";
+import { NOTES_PLACEHOLDER, STATUS_LABELS } from "@/lib/labels";
+import type { Category, ItemStatus } from "@/lib/types";
 
 export type PlaceReviewState = {
   error: string | null;
@@ -38,9 +34,10 @@ type PlaceReviewCardProps = {
   ) => Promise<PlaceReviewState>;
   // "＋ Colar link" pede "O que vocês querem guardar?"; o onboarding mantém o padrão.
   heading?: string;
+  // Categorias do espaço (campo "Categoria", na ordem do casal).
+  categories: (FieldCategory & Pick<Category, "color">)[];
 };
 
-const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 const STATUS_OPTIONS: { value: ItemStatus; label: string }[] = [
   { value: "want", label: `💛 ${STATUS_LABELS.want}` },
   { value: "done", label: `✓ ${STATUS_LABELS.done}` },
@@ -72,6 +69,7 @@ export function PlaceReviewCard({
   backHref,
   saveAction,
   heading = "Como chama esse lugar?",
+  categories,
 }: PlaceReviewCardProps) {
   const online = useOnline();
   const [state, formAction, isPending] = useActionState(
@@ -79,7 +77,8 @@ export function PlaceReviewCard({
     INITIAL_STATE,
   );
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<ItemType | null>(null);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const category = categories.find((candidate) => candidate.id === categoryId) ?? null;
   const [status, setStatus] = useState<ItemStatus>("want");
   // Revisando = sem router.refresh() do Realtime.
   const pauseRef = useLivePause<HTMLFormElement>();
@@ -87,9 +86,9 @@ export function PlaceReviewCard({
   const error = clientError ?? state.error;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (!type) {
+    if (!category) {
       event.preventDefault();
-      setClientError(PICK_TYPE_COPY);
+      setClientError(PICK_CATEGORY_COPY);
       return;
     }
 
@@ -114,8 +113,8 @@ export function PlaceReviewCard({
 
         <div className={`${CARD} mt-3.5 p-3`}>
           <div aria-hidden="true">
-            {type ? (
-              <ItemPhoto type={type} variant="hero">
+            {category ? (
+              <ItemPhoto type={category.item_type} category={category} variant="hero">
                 <ViaBadge url={url} />
               </ItemPhoto>
             ) : (
@@ -162,36 +161,15 @@ export function PlaceReviewCard({
               />
             </div>
 
-            <fieldset>
-              <legend className={FIELD_LABEL}>Tipo</legend>
-              <div className="flex flex-wrap gap-x-1.5 pt-1">
-                {ITEM_TYPES.map((option) => (
-                  <label key={option} className="flex min-h-11 items-center">
-                    <input
-                      type="radio"
-                      name="type"
-                      value={option}
-                      checked={type === option}
-                      onChange={() => {
-                        setType(option);
-                        setClientError(null);
-                      }}
-                      className="peer sr-only"
-                    />
-                    <span className={CHIP}>
-                      <span aria-hidden="true">{TYPE_EMOJI[option]}</span>
-                      {TYPE_LABELS[option]}
-                      {type === option ? " ✓" : null}
-                    </span>
-                  </label>
-                ))}
-              </div>
-              {type ? (
-                <div className="mt-1.5">
-                  <TypeHintBox type={type} />
-                </div>
-              ) : null}
-            </fieldset>
+            <CategoryField
+              categories={categories}
+              value={categoryId}
+              onChange={(id) => {
+                setCategoryId(id);
+                setClientError(null);
+              }}
+              legendClassName={FIELD_LABEL}
+            />
 
             <fieldset>
               <legend className={FIELD_LABEL}>Vai para</legend>

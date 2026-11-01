@@ -29,7 +29,7 @@ export default async function PrimeiroLugarPage() {
         {/* TODO(P1): voltar para "A gente preenche o resto." quando o extrator entrar. */}
         <p className={`${SUBTITLE} mt-3`}>
           Cola o link de um post que vocês salvaram. O link fica guardado no
-          card. Você só completa o nome e o tipo.
+          card. Você só completa o nome e a categoria.
         </p>
       </section>
 

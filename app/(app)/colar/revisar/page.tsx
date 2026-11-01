@@ -6,7 +6,7 @@ import {
   type PlaceReviewState,
 } from "@/components/place-review-card";
 import { captureLink, savedRedirectPath } from "@/lib/capture-link";
-import { savePlace } from "@/lib/save-place";
+import { loadSpaceCategories, savePlace } from "@/lib/save-place";
 
 export const metadata: Metadata = {
   title: "Revisar lugar",
@@ -46,12 +46,15 @@ export default async function ColarRevisarPage({
     redirect(COLAR_PATH);
   }
 
+  const categories = await loadSpaceCategories(COLAR_PATH);
+
   return (
     <main className="mx-auto flex w-full max-w-md flex-col px-5 pb-24 pt-2">
       <PlaceReviewCard
         url={url}
         backHref={COLAR_PATH}
         saveAction={save}
+        categories={categories}
         heading="O que vocês querem guardar?"
       />
     </main>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { DOMAttributes, ReactNode } from "react";
 
 import { Avatar, initial } from "@/components/avatar";
 import { BTN_OUTLINE, CARD } from "@/components/ui-classes";
@@ -74,6 +74,19 @@ export function TypeHintBox({ type }: { type: ItemType }) {
 // Cor (.ph1–.ph8) e emoji da categoria, no lugar do tipo (C14).
 export type CategoryLook = Pick<Category, "emoji" | "color">;
 
+// Segurar, botão direito e tecla de menu (menu 55 nos quadrados).
+type PressHandlers = Pick<
+  DOMAttributes<HTMLElement>,
+  | "onClickCapture"
+  | "onContextMenu"
+  | "onKeyDown"
+  | "onPointerCancel"
+  | "onPointerDown"
+  | "onPointerLeave"
+  | "onPointerMove"
+  | "onPointerUp"
+>;
+
 // Link (app) ou botão (demo) com o mesmo visual.
 export function Pressable({
   href,
@@ -88,7 +101,7 @@ export function Pressable({
   children: ReactNode;
   "aria-label"?: string;
   "aria-current"?: boolean | "page" | "true";
-}) {
+} & PressHandlers) {
   if (onClick || !href) {
     return (
       <button type="button" onClick={onClick} className={className} {...aria}>

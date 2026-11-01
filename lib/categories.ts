@@ -660,3 +660,15 @@ export function findCategory<C extends Pick<Category, "id">>(
   if (!id) return null;
   return categories.find((category) => category.id === id) ?? null;
 }
+
+// "Mudar ordem" pelo "···" da categoria: o início abre já no modo de ordem.
+export const REORDER_PARAM = "mudar-ordem";
+// Apagou a categoria aberta: o início mostra o toast "Categoria apagada".
+export const CATEGORY_DELETED_PARAM = "categoria-apagada";
+
+export function homeHref(
+  status: ItemStatus,
+  flag?: typeof REORDER_PARAM | typeof CATEGORY_DELETED_PARAM,
+) {
+  return `/?status=${status}${flag ? `&${flag}=1` : ""}`;
+}

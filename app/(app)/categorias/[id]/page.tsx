@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { saveItemView } from "@/app/(app)/item-view-action";
+import { AppCategoryOptions } from "@/components/app-categories";
 import type { ItemWithRatings } from "@/components/item-list";
 import { ItemsScreen } from "@/components/items-screen";
 import { FAB } from "@/components/ui-classes";
@@ -10,13 +11,14 @@ import { signInPathWithNext } from "@/lib/auth-callback";
 import {
   categoryHref,
   categoryItems,
+  categorySampleText,
   categoryScoreAverage,
   categoryTitle,
   newItemHref,
   parseSortParam,
   showsScoreSort,
 } from "@/lib/categories";
-import { getCategory, getItemView } from "@/lib/categories-data";
+import { getCategory, getItemView, listCategories } from "@/lib/categories-data";
 import { STATUS_LABELS } from "@/lib/labels";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
@@ -74,7 +76,7 @@ export default async function CategoryPage({
   }
 
   const category = categoryResult.category;
-  const [itemsResult, view] = await Promise.all([
+  const [itemsResult, view, categoriesResult] = await Promise.all([
     supabase
       .from("items")
       .select("*, ratings(*)")
@@ -82,6 +84,8 @@ export default async function CategoryPage({
       .eq("category_id", category.id)
       .eq("status", status),
     getItemView(supabase, user.id),
+    // Para a folha de editar avisar nome repetido.
+    listCategories(supabase, space.id),
   ]);
 
   if (itemsResult.error) {
@@ -127,6 +131,23 @@ export default async function CategoryPage({
             href: newItemHref(category.id),
             tile: status === "want",
           }}
+          options={
+            <AppCategoryOptions
+              category={category}
+              categories={categoriesResult.ok ? categoriesResult.categories : [category]}
+              status={status}
+              preview={{
+                count: items.length,
+                // Amostra do quadrado: os 2 mais novos, mesmo em "Melhor nota".
+                sample: categorySampleText(
+                  categoryItems(items, category, status)
+                    .slice(0, 2)
+                    .map((item) => item.title),
+                  items.length,
+                ),
+              }}
+            />
+          }
           items={items}
           categoriesById={{ [category.id]: category }}
           memberNames={Object.fromEntries(

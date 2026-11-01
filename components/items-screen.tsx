@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   ItemList,
@@ -53,6 +53,8 @@ export type ItemsScreenProps = Pick<
   // "＋ Adicionar em {nome}": quadrado no fim da Grade (só se tile) e link da
   // categoria vazia.
   add?: (Action & { name: string; tile: boolean }) | null;
+  // "···" (menu 55 da categoria), ao lado do seletor. Os recentes não têm.
+  options?: ReactNode;
 };
 
 // Dentro da categoria (52/53) e "Adicionados recentemente": cabeçalho,
@@ -68,6 +70,7 @@ export function ItemsScreen({
   sort,
   average,
   add,
+  options,
   items,
   ...listProps
 }: ItemsScreenProps) {
@@ -91,7 +94,12 @@ export function ItemsScreen({
         onBack={back.onClick}
         title={title}
         count={count}
-        right={<ViewSwitch view={view} onChange={chooseView} />}
+        right={
+          <div className="flex items-center gap-2">
+            <ViewSwitch view={view} onChange={chooseView} />
+            {options}
+          </div>
+        }
         titleAside={average ? <AverageAside average={average} /> : null}
         subtitle={
           sort ? <SortControl sort={sort} /> : LIST_COPY.newestFirst

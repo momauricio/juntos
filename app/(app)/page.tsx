@@ -2,15 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { CategoryHome } from "@/components/category-home";
+import { AppCategoryHome } from "@/components/app-categories";
 import { UrlStatusTabs } from "@/components/item-filters";
 import type { ItemWithRatings } from "@/components/item-list";
 import { SavedToast } from "@/components/saved-toast";
 import { SpaceHeader } from "@/components/space-header";
+import { UrlToast } from "@/components/url-toast";
 import { FAB } from "@/components/ui-classes";
 import { WelcomeToast } from "@/components/welcome-toast";
 import { parseSavedStatus } from "@/lib/capture-link";
-import { legacyTypeRedirect } from "@/lib/categories";
+import {
+  CATEGORY_DELETED_PARAM,
+  CATEGORY_SHEET_COPY,
+  legacyTypeRedirect,
+  REORDER_PARAM,
+} from "@/lib/categories";
 import { listCategories } from "@/lib/categories-data";
 import { spaceDisplayName } from "@/lib/invites";
 import { countByStatus } from "@/lib/item-categories";
@@ -31,6 +37,8 @@ type HomePageProps = {
     "bem-vindo"?: string | string[];
     salvo?: string | string[];
     novo?: string | string[];
+    [REORDER_PARAM]?: string | string[];
+    [CATEGORY_DELETED_PARAM]?: string | string[];
   }>;
 };
 
@@ -138,7 +146,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
         <UrlStatusTabs status={selectedStatus} counts={counts} />
 
-        <CategoryHome
+        <AppCategoryHome
+          // ?mudar-ordem=1 vem do "Mudar ordem" da tela da categoria.
+          key={firstParam(params[REORDER_PARAM]) === "1" ? "reorder" : "home"}
+          initialReorder={firstParam(params[REORDER_PARAM]) === "1"}
           categories={categories}
           items={items}
           status={selectedStatus}
@@ -156,6 +167,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </Link>
 
       {firstParam(params["bem-vindo"]) === "1" ? <WelcomeToast /> : null}
+      {firstParam(params[CATEGORY_DELETED_PARAM]) === "1" ? (
+        <UrlToast param={CATEGORY_DELETED_PARAM} title={CATEGORY_SHEET_COPY.deleted} />
+      ) : null}
       {saved ? (
         <SavedToast
           status={saved}

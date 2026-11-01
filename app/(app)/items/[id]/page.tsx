@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { memberTone } from "@/components/avatar";
+import { EditConflictToast } from "@/components/edit-conflict-toast";
 import { ItemForm, type ItemFormState } from "@/components/item-form";
 import {
   ActivityNoAddressNote,
@@ -19,6 +20,12 @@ import { RatingForm, type RatingFormState } from "@/components/rating-form";
 import { SavedRatingPrompt } from "@/components/saved-rating-prompt";
 import { BACK_LINK } from "@/components/ui-classes";
 import { normalizeCity } from "@/lib/city";
+import {
+  EDIT_CONFLICT_PARAM,
+  editConflictMessage,
+  editConflictWith,
+  isUuid,
+} from "@/lib/edit-conflict";
 import { STATUS_LABELS } from "@/lib/labels";
 import {
   COMMENT_MAX_LENGTH,
@@ -27,7 +34,11 @@ import {
   personAverage,
   SCORE_ERROR,
 } from "@/lib/ratings";
-import { addedByLabel, editedByLabel } from "@/lib/relative-time";
+import {
+  addedByLabel,
+  editedByLabel,
+  UNKNOWN_AUTHOR_NAME,
+} from "@/lib/relative-time";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { createClient } from "@/lib/supabase/server";
 import type { Item, Rating } from "@/lib/types";
@@ -35,6 +46,9 @@ import type { Item, Rating } from "@/lib/types";
 type ItemPageProps = {
   params: Promise<{
     id: string;
+  }>;
+  searchParams: Promise<{
+    [EDIT_CONFLICT_PARAM]?: string | string[];
   }>;
 };
 
@@ -69,8 +83,14 @@ export async function generateMetadata({
   return { title: data?.title?.trim() || "Ideia" };
 }
 
-export default async function ItemPage({ params }: ItemPageProps) {
+export default async function ItemPage({
+  params,
+  searchParams,
+}: ItemPageProps) {
   const { id } = await params;
+  // Quem gravou antes de mim enquanto eu editava (?mexeu=id, ver updateItem).
+  const conflictParam = (await searchParams)[EDIT_CONFLICT_PARAM];
+  const conflictWith = isUuid(conflictParam) ? conflictParam : null;
   const supabase = await createClient();
   const {
     data: { user },
@@ -127,6 +147,7 @@ export default async function ItemPage({ params }: ItemPageProps) {
       ...ratings.map((rating) => rating.rated_by),
       item.created_by,
       ...(item.updated_by ? [item.updated_by] : []),
+      ...(conflictWith ? [conflictWith] : []),
     ]),
   );
   const { data: profileRows } = await supabase
@@ -202,6 +223,29 @@ export default async function ItemPage({ params }: ItemPageProps) {
       redirect("/onboarding");
     }
 
+    // Vale a última gravação; só olha antes para saber se o par mexeu depois
+    // que esta tela carregou (lib/edit-conflict.ts).
+    const { data: current, error: currentError } = await actionSupabase
+      .from("items")
+      .select("updated_at,updated_by")
+      .eq("id", id)
+      .eq("space_id", actionMembership.space_id)
+      .maybeSingle();
+
+    if (currentError) {
+      return { error: "Não foi possível salvar a ideia. Tente novamente." };
+    }
+
+    if (!current) {
+      notFound();
+    }
+
+    const otherEditor = editConflictWith({
+      loadedUpdatedAt: formValue(formData, "loaded_updated_at"),
+      current,
+      userId: actionUser.id,
+    });
+
     const { error: updateError } = await actionSupabase
       .from("items")
       .update({
@@ -218,7 +262,11 @@ export default async function ItemPage({ params }: ItemPageProps) {
       return { error: SAVE_ERROR };
     }
 
-    redirect(`/items/${id}`);
+    redirect(
+      otherEditor
+        ? `/items/${id}?${EDIT_CONFLICT_PARAM}=${otherEditor}`
+        : `/items/${id}`,
+    );
   }
 
   async function saveRating(
@@ -324,6 +372,14 @@ export default async function ItemPage({ params }: ItemPageProps) {
 
   return (
     <main className="px-5 pb-24 pt-0">
+      {conflictWith ? (
+        <EditConflictToast
+          key={item.updated_at}
+          message={editConflictMessage(
+            profilesById.get(conflictWith) ?? UNKNOWN_AUTHOR_NAME,
+          )}
+        />
+      ) : null}
       <section className="mx-auto w-full max-w-lg space-y-3.5">
         {item.status === "done" ? (
           <Link href="/?status=done" className={BACK_LINK}>

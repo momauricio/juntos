@@ -6,6 +6,7 @@ import { type FormEvent, useActionState, useState } from "react";
 import { useOnline } from "@/components/auth-hooks";
 import { BackLink, OfflineBanner } from "@/components/auth-ui";
 import { ItemPhoto, TypeHintBox } from "@/components/item-visuals";
+import { useLivePause } from "@/components/use-live-pause";
 import {
   BTN_PRIMARY,
   CARD,
@@ -80,6 +81,8 @@ export function PlaceReviewCard({
   const [title, setTitle] = useState("");
   const [type, setType] = useState<ItemType | null>(null);
   const [status, setStatus] = useState<ItemStatus>("want");
+  // Revisando = sem router.refresh() do Realtime.
+  const pauseRef = useLivePause<HTMLFormElement>();
   const [clientError, setClientError] = useState<string | null>(null);
   const error = clientError ?? state.error;
 
@@ -101,7 +104,12 @@ export function PlaceReviewCard({
         {heading}
       </h1>
 
-      <form action={formAction} onSubmit={handleSubmit} noValidate>
+      <form
+        ref={pauseRef}
+        action={formAction}
+        onSubmit={handleSubmit}
+        noValidate
+      >
         <input type="hidden" name="url" value={url} />
 
         <div className={`${CARD} mt-3.5 p-3`}>

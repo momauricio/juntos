@@ -1,23 +1,25 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { createServer } from "node:net";
-import { tmpdir } from "node:os";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { PG_BIN, REALTIME_STUB, SUPABASE_STUBS, startPg, type As, type Pg } from "./helpers/pg";
 
 // Critérios de aceite · Banco (spec-layout-categorias.md) num Postgres
 // descartável de verdade. Só roda com JUNTOS_PG_BIN apontando para a pasta
 // com initdb/pg_ctl/postgres (com a extensão unaccent), por exemplo:
 //   JUNTOS_PG_BIN=/caminho/para/bin npx vitest run tests/categories-db.test.ts
 // O psql vem da mesma pasta, se existir, ou do PATH.
-const PG_BIN = process.env.JUNTOS_PG_BIN;
 
 const MIGRATIONS_DIR = join(process.cwd(), "supabase/migrations");
 const CATEGORIES_MIGRATION = "20261031120000_categories.sql";
 const ROLLBACK = join(process.cwd(), "supabase/rollback/20261031_categories_down.sql");
 const FALLBACK_MIGRATION = "20261031130000_categories_switch_fallback.sql";
 const FALLBACK_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031130000_categories_switch_fallback_down.sql");
+const PER_TYPE_MIGRATION = "20261031133000_categories_switch_per_type.sql";
+const PER_TYPE_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031133000_categories_switch_per_type_down.sql");
+const REALTIME_MIGRATION = "20261031140000_space_realtime.sql";
+const REALTIME_ROLLBACK = join(process.cwd(), "supabase/rollback/20261031140000_space_realtime_down.sql");
 
 // Pessoas e espaços "de antes" da migration.
 const MAURICIO = "dc615b01-9e66-4888-9451-3a44f1a6cea0";
@@ -58,61 +60,14 @@ const DEFAULTS = [
   "8|Evento|🎟️|ph7|event",
 ].join("\n");
 
-let baseDir = "";
-let dataDir = "";
-let port = 0;
-let psqlBin = "psql";
-let started = false;
+let pg: Pg | undefined;
 let snapshotBefore = "";
 let schemaAfterCategories = "";
+let switchDefAfterFallback = "";
 
-function freePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = createServer();
-    server.unref();
-    server.on("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      server.close(() => resolve(typeof address === "object" && address ? address.port : 0));
-    });
-  });
-}
-
-type As = { as?: string; superuser?: boolean };
-
-// Roda um script no banco. { as } = como a pessoa logada (role authenticated
-// + jwt); { as, superuser: true } = dono do banco, mas com auth.uid() da pessoa.
-function prefix({ as, superuser }: As) {
-  if (!as) return "";
-  const claims = `set request.jwt.claims = '{"sub":"${as}"}';\n`;
-  return superuser ? claims : `set role authenticated;\n${claims}`;
-}
-
-function run(script: string, options: As = {}): string {
-  return execFileSync(
-    psqlBin,
-    ["-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1", "-h", baseDir, "-p", String(port), "-U", "postgres", "-d", "postgres", "-f", "-"],
-    { input: prefix(options) + script, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
-  ).trim();
-}
-
-function runFile(path: string): string {
-  return execFileSync(
-    psqlBin,
-    ["-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1", "-h", baseDir, "-p", String(port), "-U", "postgres", "-d", "postgres", "-f", path],
-    { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
-  );
-}
-
-// Espera erro; devolve o stderr do psql.
-function fails(script: string, options: As = {}): string {
-  try {
-    run(script, options);
-  } catch (error) {
-    return String((error as { stderr?: string }).stderr ?? error);
-  }
-  throw new Error(`deveria ter falhado: ${script}`);
-}
+const run = (script: string, options: As = {}) => pg!.run(script, options);
+const runFile = (path: string) => pg!.runFile(path);
+const fails = (script: string, options: As = {}) => pg!.fails(script, options);
 
 function categoryId(spaceId: string, name: string): string {
   return run(`select id from public.categories where space_id = '${spaceId}' and name = '${name}';`);
@@ -135,36 +90,19 @@ const SCHEMA = `select concat_ws(E'\\n',
   (select string_agg(t.tgname || '|' || t.tgrelid::regclass::text, E'\\n' order by t.tgname, t.tgrelid::regclass::text)
    from pg_trigger t where not t.tgisinternal));`;
 
+// Definição completa do switch (corpo, security definer, search_path) e grants.
+const SWITCH_DEF = `select pg_get_functiondef(p.oid) || E'\\n' || p.proacl::text from pg_proc p
+  where p.oid = 'public.switch_space_and_redeem(text, boolean)'::regprocedure;`;
+
 const SNAPSHOT = `select string_agg(concat_ws('|', id, type, status, updated_at, updated_by), E'\\n' order by id) from public.items;`;
 
 describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
   beforeAll(async () => {
-    const bin = PG_BIN!;
-    psqlBin = existsSync(join(bin, "psql")) ? join(bin, "psql") : "psql";
-    baseDir = mkdtempSync(join(tmpdir(), "juntos-pg-"));
-    dataDir = join(baseDir, "data");
-    port = await freePort();
+    pg = await startPg(PG_BIN!);
 
-    execFileSync(join(bin, "initdb"), ["-D", dataDir, "-U", "postgres", "-A", "trust", "-E", "UTF8", "--no-locale", "--no-sync"], { stdio: "pipe" });
-    execFileSync(
-      join(bin, "pg_ctl"),
-      ["-D", dataDir, "-w", "-l", join(baseDir, "postgres.log"), "-o", `-p ${port} -k ${baseDir} -c listen_addresses=''`, "start"],
-      { stdio: "pipe" },
-    );
-    started = true;
-
-    // Stubs do Supabase.
-    run(`
-      create role anon nologin;
-      create role authenticated nologin;
-      create schema auth;
-      create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
-      create function auth.uid() returns uuid language sql stable as $$
-        select nullif(current_setting('request.jwt.claims', true)::jsonb->>'sub', '')::uuid
-      $$;
-      grant usage on schema public, auth to authenticated;
-      grant execute on function auth.uid() to authenticated;
-    `);
+    // Stubs do Supabase (o realtime é para 20261031140000_space_realtime).
+    run(SUPABASE_STUBS);
+    run(REALTIME_STUB);
 
     // Todas as migrations antes de categories.
     const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
@@ -210,17 +148,22 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
     runFile(join(MIGRATIONS_DIR, CATEGORIES_MIGRATION));
     schemaAfterCategories = run(SCHEMA);
     expect(files).toContain(FALLBACK_MIGRATION);
-    // As migrations depois de categories (se houver) também entram.
-    for (const file of files.filter((f) => f > CATEGORIES_MIGRATION)) {
+    expect(files).toContain(PER_TYPE_MIGRATION);
+    expect(files).toContain(REALTIME_MIGRATION);
+    // As migrations depois de categories também entram; guarda o switch logo
+    // depois de 20261031130000 para comparar com o rollback de 20261031133000.
+    for (const file of files.filter((f) => f > CATEGORIES_MIGRATION && f <= FALLBACK_MIGRATION)) {
       runFile(join(MIGRATIONS_DIR, file));
     }
+    switchDefAfterFallback = run(SWITCH_DEF);
+    for (const file of files.filter((f) => f > FALLBACK_MIGRATION)) {
+      runFile(join(MIGRATIONS_DIR, file));
+    }
+    expect(run(SWITCH_DEF)).not.toBe(switchDefAfterFallback);
   }, 120_000);
 
   afterAll(() => {
-    if (started) {
-      execFileSync(join(PG_BIN!, "pg_ctl"), ["-D", dataDir, "-m", "immediate", "stop"], { stdio: "pipe" });
-    }
-    if (baseDir) rmSync(baseDir, { recursive: true, force: true });
+    pg?.stop();
   });
 
   it("migration: 8 categorias por espaço, todo item na categoria do seu tipo, autoria intacta", () => {
@@ -565,15 +508,19 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
     return { owner, space: createSpace(owner, `${code.toLowerCase()}@x`, code) };
   }
 
-  // Completa o espaço com categorias próprias até 30.
-  function fillTo30(space: string, owner: string, prefix = "Própria") {
+  // Completa o espaço com categorias próprias até `total` (30 por padrão).
+  function fillTo(space: string, owner: string, total: number, prefix = "Própria") {
     run(
       `insert into public.categories (space_id, name, emoji, color)
        select '${space}', '${prefix} ' || g, '⭐', 'ph1'
-       from generate_series(1, 30 - (select count(*) from public.categories where space_id = '${space}')) g;`,
+       from generate_series(1, ${total} - (select count(*) from public.categories where space_id = '${space}')) g;`,
       { as: owner },
     );
-    expect(run(`select count(*) from public.categories where space_id = '${space}';`)).toBe("30");
+    expect(run(`select count(*) from public.categories where space_id = '${space}';`)).toBe(String(total));
+  }
+
+  function fillTo30(space: string, owner: string, prefix = "Própria") {
+    fillTo(space, owner, 30, prefix);
   }
 
   // Item numa categoria escolhida pelo nome.
@@ -806,6 +753,87 @@ describe.skipIf(!PG_BIN)("categorias no Postgres de verdade", () => {
       categoriesBefore,
     );
     expect(run(`select space_id from public.space_members where user_id = '${old.owner}';`)).toBe(target.space);
+  });
+
+  // 20261031133000: padrão de cada tipo e categoria vazia só se sobrar vaga.
+  it("troca: nenhuma padrão no espaço novo + categoria com 2 tipos -> cada tipo recria a sua (32)", () => {
+    const old = spaceOf("SWI001");
+    const target = spaceOf("SWI002");
+    run(`delete from public.categories where space_id = '${target.space}';`, { as: target.owner });
+    fillTo30(target.space, target.owner);
+    run(`insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Viagens', '✈️', 'ph4');`, {
+      as: old.owner,
+    });
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Cantina I");
+    addItem(old.space, old.owner, "Viagens", "restaurant", "Trattoria I");
+    addItem(old.space, old.owner, "Viagens", "movie", "Filme I");
+
+    switchKeepingItems(old.owner, "SWI002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("32");
+    expect(
+      run(`select string_agg(concat_ws('|', name, item_type, created_by is null), ',' order by name) from public.categories
+           where space_id = '${target.space}' and created_by is null;`),
+    ).toBe("Filme|movie|t,Restaurante|restaurant|t");
+    expect(itemsByCategory(target.space, ["Cantina I", "Trattoria I", "Filme I"])).toBe(
+      "Cantina I>Restaurante,Filme I>Filme,Trattoria I>Restaurante",
+    );
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}' and name = 'Viagens';`)).toBe("0");
+  });
+
+  it("troca: espaço novo com 29 + vazia antes de uma com itens -> a com itens fica com a 30ª vaga", () => {
+    const old = spaceOf("SWJ001");
+    const target = spaceOf("SWJ002");
+    fillTo(target.space, target.owner, 29);
+    run(
+      `insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Aaa', '🅰️', 'ph1');
+       insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Pubs', '🍺', 'ph5');`,
+      { as: old.owner },
+    );
+    expect(
+      run(`select (select position from public.categories where space_id = '${old.space}' and name = 'Aaa')
+                < (select position from public.categories where space_id = '${old.space}' and name = 'Pubs');`),
+    ).toBe("t");
+    addItem(old.space, old.owner, "Pubs", "activity", "Pub J");
+    addItem(old.space, old.owner, "Pubs", "restaurant", "Bar com comida J");
+
+    switchKeepingItems(old.owner, "SWJ002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("30");
+    expect(
+      run(`select concat_ws('|', position, item_type, created_by) from public.categories
+           where space_id = '${target.space}' and name = 'Pubs';`),
+    ).toBe(`30|activity|${old.owner}`);
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}' and name = 'Aaa';`)).toBe("0");
+    expect(itemsByCategory(target.space, ["Pub J", "Bar com comida J"])).toBe("Bar com comida J>Pubs,Pub J>Pubs");
+  });
+
+  it("troca: espaço novo com 28 + uma vazia e uma com itens, novas -> as duas, com itens primeiro (30)", () => {
+    const old = spaceOf("SWK001");
+    const target = spaceOf("SWK002");
+    fillTo(target.space, target.owner, 28);
+    run(
+      `insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Vazia K', '🫙', 'ph1');
+       insert into public.categories (space_id, name, emoji, color) values ('${old.space}', 'Cheia K', '🍺', 'ph5');`,
+      { as: old.owner },
+    );
+    addItem(old.space, old.owner, "Cheia K", "activity", "Pub K");
+
+    switchKeepingItems(old.owner, "SWK002", old.space, target.space);
+
+    expect(run(`select count(*) from public.categories where space_id = '${target.space}';`)).toBe("30");
+    expect(
+      run(`select string_agg(position || '|' || name, ',' order by position) from public.categories
+           where space_id = '${target.space}' and name in ('Vazia K', 'Cheia K');`),
+    ).toBe("29|Cheia K,30|Vazia K");
+    expect(itemsByCategory(target.space, ["Pub K"])).toBe("Pub K>Cheia K");
+  });
+
+  it("rollback de 20261031133000 volta o switch exatamente ao de 20261031130000", () => {
+    // Rollbacks na ordem inversa do deploy: primeiro o do Realtime (PR 2).
+    runFile(REALTIME_ROLLBACK);
+    runFile(PER_TYPE_ROLLBACK);
+    expect(run(SWITCH_DEF)).toBe(switchDefAfterFallback);
   });
 
   it("rollback de 20261031130000 volta exatamente ao esquema de categories", () => {

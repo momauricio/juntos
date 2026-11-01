@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 
 import { useOnline } from "@/components/auth-hooks";
 import { OfflineBanner } from "@/components/auth-ui";
+import { useLivePause } from "@/components/use-live-pause";
 import { ERROR_TEXT, INPUT } from "@/components/ui-classes";
 import { SPACE_NAME_MAX } from "@/lib/display-name";
 import { inviteErrorMessage } from "@/lib/invites";
@@ -21,6 +22,7 @@ export function SpaceNameForm({ name, computedName }: SpaceNameFormProps) {
   const [value, setValue] = useState(name ?? "");
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pauseRef = useLivePause<HTMLFormElement>();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,7 +47,7 @@ export function SpaceNameForm({ name, computedName }: SpaceNameFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form ref={pauseRef} onSubmit={handleSubmit} className="space-y-3">
       <label
         htmlFor="space_name"
         className="block text-sm font-semibold text-ink"

@@ -6,6 +6,8 @@ import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { REALTIME_STUB } from "./helpers/pg";
+
 // items.city (spec-layout-categorias.md §7) num Postgres descartável de
 // verdade. Mesmo harness de tests/categories-db.test.ts; só roda com
 // JUNTOS_PG_BIN apontando para a pasta com initdb/pg_ctl/postgres:
@@ -117,6 +119,8 @@ describe.skipIf(!PG_BIN)("items.city no Postgres de verdade", () => {
       grant usage on schema public, auth to authenticated;
       grant execute on function auth.uid() to authenticated;
     `);
+    // Para 20261031140000_space_realtime, que vem antes da cidade.
+    run(REALTIME_STUB);
 
     // Todas as migrations antes da cidade; um espaço com itens "de antes".
     const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();

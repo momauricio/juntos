@@ -140,7 +140,7 @@ export function CategorySheet({
           aria-labelledby="category_emoji_label"
           className="flex gap-1.5"
         >
-          {EMOJI_SUGGESTIONS.map((option, index) => {
+          {EMOJI_SUGGESTIONS.map((option) => {
             const on = !otherOpen && emoji === option;
             return (
               <button

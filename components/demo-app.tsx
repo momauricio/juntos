@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { STATUS_LABELS } from "@/lib/labels";
 import {
@@ -13,7 +13,9 @@ import {
 import { addedByLabel } from "@/lib/relative-time";
 import { ratingSavedMessage } from "@/lib/demo/after-rating";
 import {
+  CATEGORY_SHEET_COPY,
   categoryItems,
+  categorySampleText,
   categoryScoreAverage,
   categoryTitle,
   LIST_COPY,
@@ -22,26 +24,43 @@ import {
   type ItemSort,
 } from "@/lib/categories";
 import { countByStatus } from "@/lib/item-categories";
-import type { ItemStatus, ItemType, ItemView } from "@/lib/types";
+import type { Category, ItemStatus, ItemView } from "@/lib/types";
 import {
   addItem,
+  clearDemoCategories,
+  countDemoCategoryItems,
+  createDemoCategory,
   createTrip,
+  deleteDemoCategory,
   demoCategories,
   demoItemImages,
   itemsWithRatings,
+  loadDemoCategories,
   loadItemView,
   loadState,
   memberName,
+  moveDemoCategories,
+  reconcileItemCategories,
   sampleState,
+  saveDemoCategories,
   saveItemView,
   saveState,
+  setItemCategory,
+  updateDemoCategory,
   upsertRating,
   type DemoSpace,
   type DemoState,
   type DemoUser,
 } from "@/lib/demo/store";
 import { memberTone } from "@/components/avatar";
+import { CategoryField } from "@/components/category-field";
 import { CategoryHome, type HomeTarget } from "@/components/category-home";
+import {
+  CategoryOptionsButton,
+  type CategoryApi,
+  type ManagedCategory,
+} from "@/components/category-manager";
+import { Toast, useToast } from "@/components/toast";
 import { DemoHub } from "@/components/demo-hub";
 import { StatusTabs } from "@/components/item-filters";
 import { ItemsScreen } from "@/components/items-screen";
@@ -52,6 +71,7 @@ import {
   heroSubtitle,
   ItemHero,
   CoupleScoreCard,
+  EditDisclosure,
   ratingChips,
 } from "@/components/item-visuals";
 import { SpaceHeader, TopNav } from "@/components/space-header";
@@ -71,8 +91,9 @@ import { ScoreInput } from "@/components/rating-form";
 
 type Screen =
   | { name: "hub" }
-  | { name: "ideas" }
-  | { name: "idea-wizard"; type?: ItemType; from?: ListScreen }
+  // reorder: abre no modo de ordem ("Mudar ordem" no "···" da categoria).
+  | { name: "ideas"; reorder?: boolean }
+  | { name: "idea-wizard"; categoryId?: string; from?: ListScreen }
   | { name: "category"; categoryId: string; sort?: ItemSort }
   | { name: "recent" }
   | { name: "detail"; itemId: string; from: ListScreen }
@@ -97,10 +118,28 @@ export function DemoApp() {
   const [statusFilter, setStatusFilter] = useState<ItemStatus>("want");
   // Grade/Compacta de quem usa a demo (C11), no localStorage da demo.
   const [itemView, setItemView] = useState<ItemView>("grid");
+  // Categorias da sessão (C16): as 8 padrão + o que o casal mudou nesta aba.
+  const [categories, setCategories] = useState<Category[]>([]);
+  // Toast de categoria que sobrevive à troca de tela (apagar de dentro dela).
+  const [categoryToast, showCategoryToast] = useToast();
+  // O mais recente para as ações assíncronas da folha/menu.
+  const latest = useRef<{ state: DemoState | null; categories: Category[] }>({
+    state: null,
+    categories: [],
+  });
+  useEffect(() => {
+    latest.current = { state, categories };
+  });
 
   useEffect(() => {
     // localStorage só existe no cliente; o primeiro render é o do servidor.
-    setState(loadState());
+    const loaded = loadState();
+    const sessionCategories = loadDemoCategories(loaded.space.id);
+    setCategories(sessionCategories);
+    setState({
+      ...loaded,
+      space: reconcileItemCategories(loaded.space, sessionCategories),
+    });
     setItemView(loadItemView());
   }, []);
 
@@ -109,11 +148,53 @@ export function DemoApp() {
     saveState(next);
   }
 
-  // Categorias padrão derivadas dos tipos, em memória (C16).
-  const categories = useMemo(
-    () => (state ? demoCategories(state.space.id) : []),
-    [state],
-  );
+  function persistCategories(next: Category[]) {
+    setCategories(next);
+    saveDemoCategories(next);
+  }
+
+  // Mesmas regras do app, sem banco (lib/demo/store.ts).
+  const categoryApi: CategoryApi = {
+    create: async (input) => {
+      const current = latest.current.state;
+      if (!current) return { ok: false, error: "" };
+      const result = createDemoCategory(latest.current.categories, input, {
+        spaceId: current.space.id,
+        userId: current.user.id,
+      });
+      if (!result.ok) return result;
+      persistCategories(result.categories);
+      return { ok: true, id: result.category.id };
+    },
+    update: async (id, input) => {
+      const result = updateDemoCategory(latest.current.categories, id, input);
+      if (!result.ok) return result;
+      persistCategories(result.categories);
+      return { ok: true, id };
+    },
+    move: async (ids) => {
+      persistCategories(moveDemoCategories(latest.current.categories, ids));
+      return { ok: true };
+    },
+    count: async (id) => {
+      const current = latest.current.state;
+      if (!current) return { ok: false };
+      return { ok: true, ...countDemoCategoryItems(current.space, id) };
+    },
+    remove: async (id) => {
+      const current = latest.current.state;
+      if (!current) return { ok: false, reason: "unknown" };
+      const result = deleteDemoCategory(latest.current.categories, current.space, id);
+      if (!result.ok) return result;
+      persistCategories(result.categories);
+      return { ok: true };
+    },
+  };
+
+  function seeItems(category: ManagedCategory, status: ItemStatus) {
+    setStatusFilter(status);
+    setScreen({ name: "category", categoryId: category.id });
+  }
 
   if (!state) {
     return (
@@ -165,6 +246,7 @@ export function DemoApp() {
 
         {screen.name === "ideas" ? (
           <Home
+            key={screen.reorder ? "reorder" : "home"}
             space={space}
             categories={categories}
             status={statusFilter}
@@ -180,6 +262,12 @@ export function DemoApp() {
             }}
             onNewIdea={() => setScreen({ name: "idea-wizard" })}
             onSettings={() => setScreen({ name: "settings" })}
+            manage={{
+              api: categoryApi,
+              onSeeItems: seeItems,
+              initialReorder: screen.reorder,
+              onReorderEnd: () => setScreen({ name: "ideas" }),
+            }}
           />
         ) : null}
 
@@ -202,9 +290,23 @@ export function DemoApp() {
               screen.name === "category" && setScreen({ ...screen, sort })
             }
             onBack={() => setScreen({ name: "ideas" })}
-            onAdd={(type) =>
-              setScreen({ name: "idea-wizard", type, from: screen })
+            onAdd={(categoryId) =>
+              setScreen({ name: "idea-wizard", categoryId, from: screen })
             }
+            options={(category, preview) => (
+              <CategoryOptionsButton
+                category={category}
+                preview={preview}
+                categories={categories}
+                api={categoryApi}
+                onReorder={() => setScreen({ name: "ideas", reorder: true })}
+                onSeeItems={seeItems}
+                onDeleted={() => {
+                  setScreen({ name: "ideas" });
+                  showCategoryToast(CATEGORY_SHEET_COPY.deleted);
+                }}
+              />
+            )}
             onOpen={(itemId) =>
               setScreen({ name: "detail", itemId, from: screen })
             }
@@ -213,11 +315,16 @@ export function DemoApp() {
 
         {screen.name === "idea-wizard" ? (
           <IdeaWizard
-            initialType={screen.type}
+            categories={categories}
+            initialCategoryId={screen.categoryId}
             onCancel={() => setScreen(screen.from ?? { name: "hub" })}
-            onSave={(input) => {
+            onSave={({ category, title, url }) => {
+              // O type do item novo sai da categoria (C4: as do casal são 'activity').
               const nextSpace = addItem(space, {
-                ...input,
+                type: category.item_type,
+                categoryId: category.id,
+                title,
+                url,
                 createdBy: user.id,
               });
               persist({ user, space: nextSpace });
@@ -234,6 +341,10 @@ export function DemoApp() {
             categories={categories}
             user={user}
             onBack={() => setScreen(screen.from)}
+            onMoveCategory={(categoryId) => {
+              persist({ user, space: setItemCategory(space, screen.itemId, categoryId) });
+              setMessage("Ideia salva neste aparelho.");
+            }}
             onRate={(payload) => {
               try {
                 if (payload.score != null) assertScore(payload.score);
@@ -327,13 +438,17 @@ export function DemoApp() {
             user={user}
             onBack={() => setScreen({ name: "hub" })}
             onReset={() => {
-              persist(sampleState());
+              const sample = sampleState();
+              clearDemoCategories();
+              persistCategories(demoCategories(sample.space.id));
+              persist(sample);
               setScreen({ name: "hub" });
               setMessage("Dados de exemplo restaurados.");
             }}
           />
         ) : null}
       </main>
+      {categoryToast ? <Toast check title={categoryToast} /> : null}
     </div>
   );
 }
@@ -346,14 +461,16 @@ function Home({
   onOpen,
   onNewIdea,
   onSettings,
+  manage,
 }: {
   space: DemoSpace;
-  categories: ReturnType<typeof demoCategories>;
+  categories: Category[];
   status: ItemStatus;
   onStatusChange: (status: ItemStatus) => void;
   onOpen: (target: HomeTarget) => void;
   onNewIdea: () => void;
   onSettings: () => void;
+  manage: NonNullable<Parameters<typeof CategoryHome>[0]["manage"]>;
 }) {
   return (
     <div className="space-y-3.5 pb-20">
@@ -380,6 +497,7 @@ function Home({
         memberNames={memberNamesOf(space)}
         memberOrder={space.members.map((member) => member.id)}
         onOpen={onOpen}
+        manage={manage}
       />
 
       <button type="button" className={FAB} onClick={onNewIdea}>
@@ -405,10 +523,11 @@ function DemoItemsScreen({
   onBack,
   onAdd,
   onOpen,
+  options,
 }: {
   space: DemoSpace;
   user: DemoUser;
-  categories: ReturnType<typeof demoCategories>;
+  categories: Category[];
   status: ItemStatus;
   // null = recentes.
   categoryId: string | null;
@@ -417,8 +536,10 @@ function DemoItemsScreen({
   onViewChange: (view: ItemView) => void;
   onSortChange: (sort: ItemSort) => void;
   onBack: () => void;
-  onAdd: (type: ItemType) => void;
+  onAdd: (categoryId?: string) => void;
   onOpen: (itemId: string) => void;
+  // "···" da categoria (menu 55).
+  options: (category: Category, preview: { count: number; sample: string }) => React.ReactNode;
 }) {
   const all = itemsWithRatings(space);
   const category = categoryId
@@ -456,9 +577,22 @@ function DemoItemsScreen({
           category
             ? {
                 name: category.name,
-                onClick: () => onAdd(category.item_type),
+                onClick: () => onAdd(category.id),
                 tile: status === "want",
               }
+            : null
+        }
+        options={
+          category
+            ? options(category, {
+                count: items.length,
+                sample: categorySampleText(
+                  categoryItems(all, category, status)
+                    .slice(0, 2)
+                    .map((item) => item.title),
+                  items.length,
+                ),
+              })
             : null
         }
         items={items}
@@ -470,7 +604,7 @@ function DemoItemsScreen({
         imagesById={demoItemImages(items)}
         onOpen={onOpen}
       />
-      <button type="button" className={FAB} onClick={() => onAdd(category?.item_type ?? "restaurant")}>
+      <button type="button" className={FAB} onClick={() => onAdd(category?.id)}>
         <span aria-hidden="true">＋</span>
         Nova ideia
       </button>
@@ -490,13 +624,16 @@ function Detail({
   categories,
   user,
   onBack,
+  onMoveCategory,
   onRate,
 }: {
   space: DemoSpace;
   itemId: string;
-  categories: ReturnType<typeof demoCategories>;
+  categories: Category[];
   user: DemoUser;
   onBack: () => void;
+  // "✎ Editar" → campo "Categoria": muda só category_id.
+  onMoveCategory: (categoryId: string) => void;
   onRate: (payload: {
     food?: number | null;
     service?: number | null;
@@ -513,6 +650,9 @@ function Detail({
   const [score, setScore] = useState(scoreInputValue(rating?.score));
   const [formOpen, setFormOpen] = useState(!rating);
   const [scoreError, setScoreError] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<string | null>(
+    space.items.find((i) => i.id === itemId)?.category_id ?? null,
+  );
 
   function rate(read: () => Parameters<typeof onRate>[0]) {
     try {
@@ -655,6 +795,32 @@ function Detail({
           {formOpen ? "Depois" : "✎ Editar minha nota"}
         </button>
       ) : null}
+
+      {/* Como o ✎ Editar do app: aqui, só o campo "Categoria" (C16). */}
+      <EditDisclosure>
+        <form
+          className={`${CARD} space-y-4`}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (categoryId && categoryId !== item.category_id) onMoveCategory(categoryId);
+          }}
+        >
+          <CategoryField
+            name="demo_category_id"
+            categories={categories}
+            value={categoryId}
+            onChange={setCategoryId}
+            legendClassName="mb-1.5 text-sm font-semibold text-ink"
+          />
+          <button
+            type="submit"
+            disabled={!categoryId || categoryId === item.category_id}
+            className={BTN_PRIMARY}
+          >
+            Salvar alterações
+          </button>
+        </form>
+      </EditDisclosure>
     </div>
   );
 }

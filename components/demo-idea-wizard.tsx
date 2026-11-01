@@ -3,29 +3,33 @@
 import { useState, type JSX } from "react";
 
 import { WizardShell } from "@/components/demo-wizard-shell";
-import { TYPE_EMOJI, TYPE_HINTS, TYPE_LABELS } from "@/lib/labels";
-import type { ItemType } from "@/lib/types";
+import { sortCategories } from "@/lib/categories";
+import { typeHint } from "@/lib/labels";
+import type { Category } from "@/lib/types";
 
-const ITEM_TYPES = Object.keys(TYPE_LABELS) as ItemType[];
 const STEP_COUNT = 3;
 
 export function IdeaWizard({
-  initialType = null,
+  categories,
+  initialCategoryId = null,
   onCancel,
   onSave,
 }: {
-  // "+ Adicionar em {nome}": o tipo da categoria já vem marcado.
-  initialType?: ItemType | null;
+  // Categorias da sessão, na ordem do casal (C7).
+  categories: Category[];
+  // "+ Adicionar em {nome}": a categoria já vem marcada.
+  initialCategoryId?: string | null;
   onCancel: () => void;
-  onSave: (input: { type: ItemType; title: string; url?: string }) => void;
+  onSave: (input: { category: Category; title: string; url?: string }) => void;
 }): JSX.Element {
   const [step, setStep] = useState(0);
-  const [type, setType] = useState<ItemType | null>(initialType);
+  const [categoryId, setCategoryId] = useState<string | null>(initialCategoryId);
+  const category = categories.find((candidate) => candidate.id === categoryId) ?? null;
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
 
   const nextDisabled =
-    (step === 0 && type == null) || (step === 1 && !title.trim());
+    (step === 0 && category == null) || (step === 1 && !title.trim());
 
   function back() {
     if (step === 0) {
@@ -41,9 +45,9 @@ export function IdeaWizard({
       setStep((current) => current + 1);
       return;
     }
-    if (!type) return;
+    if (!category) return;
     onSave({
-      type,
+      category,
       title: title.trim(),
       url: url.trim() || undefined,
     });
@@ -62,7 +66,7 @@ export function IdeaWizard({
       nextLabel={step === STEP_COUNT - 1 ? "Salvar" : "Continuar"}
       nextDisabled={nextDisabled}
       bare={typeStep}
-      heading={typeStep ? "Que tipo de ideia?" : undefined}
+      heading={typeStep ? "Qual categoria?" : undefined}
       subtitle={
         typeStep
           ? "Toque no card inteiro para escolher. Depois vocês filtram fácil."
@@ -70,12 +74,14 @@ export function IdeaWizard({
       }
     >
       {step === 0 ? (
-        <div className="space-y-3" role="group" aria-label="Tipo da ideia">
-          {ITEM_TYPES.map((value) => {
-            const selected = type === value;
+        <div className="space-y-3" role="group" aria-label="Categoria">
+          {sortCategories(categories).map((option) => {
+            const selected = categoryId === option.id;
+            // Dica só nas padrão (vêm de um tipo); nas do casal, só o nome.
+            const hint = option.created_by === null ? typeHint(option.item_type) : "";
             return (
               <button
-                key={value}
+                key={option.id}
                 type="button"
                 aria-pressed={selected}
                 className={`w-full rounded-[1.75rem] p-5 text-left transition-transform active:scale-[0.99] ${
@@ -83,19 +89,21 @@ export function IdeaWizard({
                     ? "border-2 border-[var(--terracotta)] bg-accent-soft text-[var(--ink-on-surface)] shadow-lg shadow-black/15"
                     : "border border-transparent bg-surface text-[var(--ink-on-surface)] shadow-lg shadow-black/15"
                 }`}
-                onClick={() => setType(value)}
+                onClick={() => setCategoryId(option.id)}
               >
                 <span
                   className={`block font-serif text-2xl leading-tight ${
                     selected ? "text-[var(--terracotta)]" : "text-accent-strong"
                   }`}
                 >
-                  <span aria-hidden="true">{TYPE_EMOJI[value]} </span>
-                  {TYPE_LABELS[value]}
+                  <span aria-hidden="true">{option.emoji} </span>
+                  {option.name}
                 </span>
-                <span className="mt-2 block text-sm leading-6 text-accent-strong/70">
-                  {TYPE_HINTS[value]}
-                </span>
+                {hint ? (
+                  <span className="mt-2 block text-sm leading-6 text-accent-strong/70">
+                    {hint}
+                  </span>
+                ) : null}
               </button>
             );
           })}

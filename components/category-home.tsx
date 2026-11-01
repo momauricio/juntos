@@ -566,7 +566,6 @@ function ReorderGrid({
   useLayoutEffect(() => {
     if (drag.current) syncOffset();
     // Depois que a ordem mudou no meio do arrastar.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localOrder]);
 
   function save(next: string[]) {

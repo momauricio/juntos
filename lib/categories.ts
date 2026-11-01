@@ -1,4 +1,8 @@
-import type { Category, CategoryColor, ItemType } from "@/lib/types";
+import { parseTypeParam } from "@/lib/item-categories";
+import { coupleScore } from "@/lib/ratings";
+import type { Category, CategoryColor, Item, ItemStatus, ItemType } from "@/lib/types";
+
+type RatingValues = Parameters<typeof coupleScore>[0][number];
 
 // Regras puras das categorias do casal (spec-layout-categorias.md, C1–C4 e C7).
 // O banco garante as mesmas regras (supabase/migrations/20261031120000_categories.sql);
@@ -141,4 +145,213 @@ export function categoryErrorCode(
   }
   if (message.includes("category_other_space")) return "other_space";
   return "unknown";
+}
+
+// ---------------------------------------------------------------------------
+// Início por categorias (telas 50/51): quadrados, recentes, média e links.
+// Tudo puro, sobre os itens já carregados (nenhuma consulta nova).
+
+export const HOME_COPY = {
+  searchPlaceholder: (total: number) => `Buscar nos ${total} lugares e ideias`,
+  searchLabel: "Buscar",
+  searchClear: "Limpar busca",
+  searchEmpty: (text: string) => `Nada com “${text}”.`,
+  recentEmoji: "🕒",
+  recentTitle: "Adicionados recentemente",
+  recentEmpty: "Nada ainda",
+  emptySample: "nada ainda",
+  newCategoryTitle: "Nova categoria",
+  newCategoryHint: "Pubs, Viagem, o que vocês quiserem",
+  scoreAverage: (count: number) =>
+    count === 1 ? "média de 1 nota" : `média de ${count} notas`,
+} as const;
+
+// Selo de status na linha da busca (as duas abas juntas).
+export const STATUS_BADGES: Record<ItemStatus, string> = {
+  want: "💛 Queremos",
+  done: "✓ Já fizemos",
+};
+
+// Quantos itens a lista de recentes mostra e quantos nomes vão no quadrado (C8).
+export const RECENT_LIMIT = 10;
+export const RECENT_TILE_NAMES = 3;
+// Nomes de amostra no quadrado da categoria (C5).
+export const CATEGORY_SAMPLE_SIZE = 2;
+
+type TabItem = Pick<Item, "id" | "title" | "status" | "category_id" | "created_at">;
+
+// Mais novo primeiro (created_at desc); empate pelo id, para os dois verem igual.
+function newestFirst(a: Pick<Item, "id" | "created_at">, b: Pick<Item, "id" | "created_at">) {
+  if (a.created_at !== b.created_at) return a.created_at < b.created_at ? 1 : -1;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+export type CategoryTileData<C> = {
+  category: C;
+  // Itens da categoria com o status da aba (C5).
+  count: number;
+  // Títulos dos mais novos (no máximo 2), para a amostra.
+  sample: string[];
+};
+
+// Um quadrado por categoria, na ordem do casal (C7), todas nas duas abas (C6).
+export function categoryTiles<
+  C extends Pick<Category, "id" | "position" | "created_at">,
+  I extends TabItem,
+>(categories: readonly C[], items: readonly I[], status: ItemStatus): CategoryTileData<C>[] {
+  const byCategory = new Map<string, I[]>();
+  for (const item of items) {
+    if (item.status !== status) continue;
+    const list = byCategory.get(item.category_id);
+    if (list) list.push(item);
+    else byCategory.set(item.category_id, [item]);
+  }
+
+  return sortCategories(categories).map((category) => {
+    const list = (byCategory.get(category.id) ?? []).sort(newestFirst);
+    return {
+      category,
+      count: list.length,
+      sample: list.slice(0, CATEGORY_SAMPLE_SIZE).map((item) => item.title),
+    };
+  });
+}
+
+// "{1}", "{1}, {2}" ou "{1}, {2}, +{n−2}"; com 0, "nada ainda".
+export function categorySampleText(sample: readonly string[], count: number): string {
+  if (count <= 0 || sample.length === 0) return HOME_COPY.emptySample;
+  const names = sample.slice(0, CATEGORY_SAMPLE_SIZE).join(", ");
+  const rest = count - Math.min(sample.length, CATEGORY_SAMPLE_SIZE);
+  return rest > 0 ? `${names}, +${rest}` : names;
+}
+
+// Os 10 mais novos da aba, de todas as categorias (C8).
+export function recentItems<I extends Pick<Item, "id" | "status" | "created_at">>(
+  items: readonly I[],
+  status: ItemStatus,
+  limit: number = RECENT_LIMIT,
+): I[] {
+  return items
+    .filter((item) => item.status === status)
+    .sort(newestFirst)
+    .slice(0, limit);
+}
+
+// Texto do quadrado de recentes: os 3 primeiros nomes, ou "Nada ainda".
+export function recentTileText(recent: readonly Pick<Item, "title">[]): string {
+  if (recent.length === 0) return HOME_COPY.recentEmpty;
+  return recent
+    .slice(0, RECENT_TILE_NAMES)
+    .map((item) => item.title)
+    .join(", ");
+}
+
+// A média só aparece em Restaurante (item_type) na aba Já fizemos (C13).
+export function showsScoreAverage(
+  category: Pick<Category, "item_type">,
+  status: ItemStatus,
+): boolean {
+  return category.item_type === "restaurant" && status === "done";
+}
+
+export type ScoreAverage = { value: number; count: number };
+
+type RatedItem = { ratings: readonly RatingValues[] | null };
+
+// Média das notas do casal (coupleScore por item) dos itens com nota,
+// 1 casa com meio para cima. Sem nenhum item com nota → null (sem selo).
+export function categoryScoreAverage(items: readonly RatedItem[]): ScoreAverage | null {
+  // Em décimos inteiros: 9,0 e 8,0 → (90 + 80) / 2 = 85 → 8,5.
+  const tenths: number[] = [];
+  for (const item of items) {
+    const score = coupleScore([...(item.ratings ?? [])]);
+    if (score != null) tenths.push(Math.round(score * 10));
+  }
+  if (tenths.length === 0) return null;
+
+  const sum = tenths.reduce((total, value) => total + value, 0);
+  // Math.round sobe o meio (x,x5 → para cima) com números positivos.
+  return { value: Math.round(sum / tenths.length) / 10, count: tenths.length };
+}
+
+// Faixas do selo .bd: verde 9–10, azul 8–8,9, laranja 7–7,9, vermelho < 7.
+export type ScoreBand = "green" | "blue" | "orange" | "red";
+
+export function scoreBand(value: number): ScoreBand {
+  const tenths = Math.round(value * 10);
+  if (tenths >= 90) return "green";
+  if (tenths >= 80) return "blue";
+  if (tenths >= 70) return "orange";
+  return "red";
+}
+
+export const SCORE_BAND_COLORS: Record<ScoreBand, string> = {
+  green: "#4f8a5b",
+  blue: "#3f6ea8",
+  orange: "#c47a1e",
+  red: "#b83b4b",
+};
+
+// Melhor nota (C10, para o PR 5): nota desc, empate pelo mais recente;
+// sem nota no fim, por mais recentes.
+export function sortByScore<I extends Pick<Item, "id" | "created_at">>(
+  items: readonly I[],
+  scoreOf: (item: I) => number | null,
+): I[] {
+  const scored = items.map((item) => ({ item, score: scoreOf(item) }));
+  return scored
+    .sort((a, b) => {
+      if (a.score == null || b.score == null) {
+        if (a.score != null) return -1;
+        if (b.score != null) return 1;
+      } else if (a.score !== b.score) {
+        return b.score - a.score;
+      }
+      return newestFirst(a.item, b.item);
+    })
+    .map(({ item }) => item);
+}
+
+function statusQuery(status: ItemStatus | null | undefined) {
+  return status ? `?status=${status}` : "";
+}
+
+export function categoryHref(categoryId: string, status?: ItemStatus | null) {
+  return `/categorias/${encodeURIComponent(categoryId)}${statusQuery(status)}`;
+}
+
+export function recentHref(status: ItemStatus) {
+  return `/recentes${statusQuery(status)}`;
+}
+
+// Categoria padrão de um tipo: a de menor position com aquele item_type.
+export function defaultCategoryForType<
+  C extends Pick<Category, "item_type" | "position" | "created_at">,
+>(categories: readonly C[], type: ItemType): C | null {
+  return sortCategories(categories).find((category) => category.item_type === type) ?? null;
+}
+
+// Links antigos /?type=… (C15). Sem ?type= → null (fica no início).
+// Um tipo só → a categoria padrão dele; grupo com mais de um tipo (comer,
+// passeios, viagens), tipo desconhecido ou categoria apagada → o início.
+// O ?status= (want|done) é preservado.
+export function legacyTypeRedirect<
+  C extends Pick<Category, "id" | "item_type" | "position" | "created_at">,
+>(
+  typeParam: string | string[] | undefined,
+  statusParam: string | string[] | undefined,
+  categories: readonly C[],
+): string | null {
+  const param = Array.isArray(typeParam) ? typeParam[0] : typeParam;
+  if (param === undefined) return null;
+
+  const rawStatus = Array.isArray(statusParam) ? statusParam[0] : statusParam;
+  const status = rawStatus === "want" || rawStatus === "done" ? rawStatus : null;
+  const { types } = parseTypeParam(param);
+
+  if (types && types.length === 1) {
+    const category = defaultCategoryForType(categories, types[0]);
+    if (category) return categoryHref(category.id, status);
+  }
+  return `/${statusQuery(status)}`;
 }

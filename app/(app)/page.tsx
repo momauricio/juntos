@@ -2,19 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Avatar, initial, memberTone } from "@/components/avatar";
-import { TypeFilterFooter, UrlItemFilters } from "@/components/item-filters";
-import { ItemList, type ItemWithRatings } from "@/components/item-list";
+import { CategoryHome } from "@/components/category-home";
+import { UrlStatusTabs } from "@/components/item-filters";
+import type { ItemWithRatings } from "@/components/item-list";
 import { SavedToast } from "@/components/saved-toast";
+import { SpaceHeader } from "@/components/space-header";
 import { FAB } from "@/components/ui-classes";
 import { WelcomeToast } from "@/components/welcome-toast";
 import { parseSavedStatus } from "@/lib/capture-link";
+import { legacyTypeRedirect } from "@/lib/categories";
+import { listCategories } from "@/lib/categories-data";
 import { spaceDisplayName } from "@/lib/invites";
-import {
-  countByStatus,
-  parseTypeParam,
-  typeFilterSummary,
-} from "@/lib/item-categories";
+import { countByStatus } from "@/lib/item-categories";
 import { typeLabel } from "@/lib/labels";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { loadMySpace } from "@/lib/space";
@@ -56,7 +55,6 @@ function parseStatus(
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
-  const typeFilter = parseTypeParam(params.type);
   const saved = parseSavedStatus(params.salvo);
   const selectedStatus = parseStatus(params.status, saved);
 
@@ -75,34 +73,42 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     redirect("/onboarding");
   }
 
-  let query = supabase
-    .from("items")
-    .select("*, ratings(*)")
-    .eq("space_id", space.id)
-    .order("created_at", { ascending: false });
+  // Itens e categorias juntos (uma consulta a mais que antes).
+  const [itemsResult, categoriesResult] = await Promise.all([
+    supabase
+      .from("items")
+      .select("*, ratings(*)")
+      .eq("space_id", space.id)
+      .order("created_at", { ascending: false }),
+    listCategories(supabase, space.id),
+  ]);
 
-  if (typeFilter.types) {
-    query = query.in("type", typeFilter.types);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
+  if (itemsResult.error || !categoriesResult.ok) {
     throw new Error("Não foi possível carregar a lista.");
   }
 
-  // O status é filtrado aqui (e não na consulta) para as abas mostrarem a contagem.
-  const typeItems = (data ?? []) as ItemWithRatings[];
-  const items = typeItems.filter((item) => item.status === selectedStatus);
-  const counts = countByStatus(typeItems);
-  // Item recém-salvo (?salvo=want&novo=<id>): destaque na lista e linha do toast.
+  const categories = categoriesResult.categories;
+
+  // Links antigos /?type=… vão para a categoria padrão do tipo (C15).
+  const legacyTarget = legacyTypeRedirect(params.type, params.status, categories);
+  if (legacyTarget) {
+    redirect(legacyTarget);
+  }
+
+  // O status é filtrado na tela (e não na consulta) para as abas e a busca.
+  const items = (itemsResult.data ?? []) as ItemWithRatings[];
+  const counts = countByStatus(items);
+  // Item recém-salvo (?salvo=want&novo=<id>): linha do toast.
   const newItemId = saved === "want" ? firstParam(params.novo) : undefined;
   const newItem = newItemId
-    ? typeItems.find((item) => item.id === newItemId)
+    ? items.find((item) => item.id === newItemId)
+    : undefined;
+  const newItemCategory = newItem
+    ? categories.find((category) => category.id === newItem.category_id)
     : undefined;
   const memberDisplayNames = space.members.map((member) => member.displayName);
   const isWaiting = space.members.length < 2;
-  // Nomes de quem divide o espaço: autoria das ideias e iniciais de quem deu nota.
+  // Nomes de quem divide o espaço: bolinha com a inicial de quem adicionou.
   const memberNames: Record<string, string> = Object.fromEntries(
     space.members.map((member) => [member.userId, member.displayName]),
   );
@@ -110,29 +116,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   return (
     <main className="px-5 pb-28 pt-1">
       <section className="mx-auto w-full max-w-lg space-y-3.5">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cream/60">
-              Juntos
-            </p>
-            <h1 className="mt-1 text-[28px] font-medium leading-tight text-cream">
-              {spaceDisplayName(space.name, memberDisplayNames)}
-            </h1>
-          </div>
-          <div aria-hidden="true" className="flex shrink-0 -space-x-2">
-            {memberDisplayNames.map((name, index) => (
-              <Avatar
-                key={index}
-                label={initial(name)}
-                size="md"
-                tone={memberTone(index)}
-              />
-            ))}
-            {isWaiting ? (
-              <Avatar label="?" size="md" dashed className="bg-background" />
-            ) : null}
-          </div>
-        </div>
+        <SpaceHeader
+          name={spaceDisplayName(space.name, memberDisplayNames)}
+          memberNames={memberDisplayNames}
+          waiting={isWaiting}
+        />
 
         {isWaiting ? (
           <p className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-accent/50 bg-accent/[0.18] px-3 py-2.5">
@@ -148,29 +136,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </p>
         ) : null}
 
-        <UrlItemFilters
-          typeChip={typeFilter.chip}
-          status={selectedStatus}
-          counts={counts}
-        />
+        <UrlStatusTabs status={selectedStatus} counts={counts} />
 
-        <ItemList
+        <CategoryHome
+          categories={categories}
           items={items}
+          status={selectedStatus}
           memberNames={memberNames}
           memberOrder={space.members.map((member) => member.userId)}
-          highlightId={newItem?.id}
         />
-
-        {typeFilter.chip && typeFilter.chip !== "all" ? (
-          <TypeFilterFooter
-            summary={typeFilterSummary(
-              typeFilter.chip,
-              counts[selectedStatus],
-              selectedStatus,
-            )}
-            href={`/?status=${selectedStatus}`}
-          />
-        ) : null}
       </section>
 
       <Link
@@ -186,7 +160,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <SavedToast
           status={saved}
           description={
-            newItem ? `${newItem.title} · ${typeLabel(newItem.type)}` : undefined
+            newItem
+              ? `${newItem.title} · ${newItemCategory?.name ?? typeLabel(newItem.type)}`
+              : undefined
           }
         />
       ) : null}

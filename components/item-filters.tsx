@@ -23,7 +23,7 @@ export function StatusTabs({ status, onStatusChange, counts }: StatusTabsProps) 
     <div
       role="group"
       aria-label="Status"
-      className="grid grid-cols-2 rounded-2xl bg-cream/10 p-1"
+      className="grid grid-cols-2 rounded-2xl bg-cream/10 p-1 lg:max-w-xl"
     >
       {STATUS_TABS.map((itemStatus) => {
         const active = status === itemStatus;

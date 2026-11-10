@@ -154,7 +154,7 @@ function SearchField({
   const id = useId();
 
   return (
-    <div className="flex h-11 items-center gap-2.5 rounded-[14px] border border-cream/[0.14] bg-cream/10 px-3.5 focus-within:border-cream/40">
+    <div className="flex h-11 items-center gap-2.5 rounded-[14px] border border-cream/[0.14] bg-cream/10 px-3.5 focus-within:border-cream/40 lg:max-w-xl">
       <label htmlFor={id} className="text-[17px] leading-none">
         <span aria-hidden="true">🔍</span>
         <span className="sr-only">{HOME_COPY.searchLabel}</span>
@@ -420,7 +420,7 @@ function CategoryGrid({
   const menuHandlers = useTileMenuHandlers(menu);
 
   return (
-    <ul className="grid grid-cols-2 gap-2.5">
+    <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-3.5 lg:grid-cols-4 xl:grid-cols-5">
       {/* "Adicionados recentemente" não tem menu. */}
       <li>
         <RecentTile items={items} status={status} onOpen={onOpen} />
@@ -659,7 +659,7 @@ function ReorderGrid({
 
   return (
     <div ref={rootRef} className="space-y-3.5">
-      <div className="sticky top-2 z-20 flex h-12 items-center justify-between gap-3 rounded-[14px] bg-cream pl-3.5 pr-1.5 text-ink shadow-[0_10px_24px_rgba(0,0,0,0.3)]">
+      <div className="sticky top-2 z-20 flex h-12 items-center justify-between gap-3 rounded-[14px] bg-cream pl-3.5 pr-1.5 text-ink shadow-[0_10px_24px_rgba(0,0,0,0.3)] lg:max-w-xl">
         <p className="text-[15px] font-semibold">{CATEGORY_MENU_COPY.reorderBar}</p>
         <button
           ref={doneRef}
@@ -671,7 +671,7 @@ function ReorderGrid({
         </button>
       </div>
 
-      <ul className="grid grid-cols-2 gap-2.5">
+      <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-3.5 lg:grid-cols-4 xl:grid-cols-5">
         {/* Recentes ficam sempre primeiro: no modo de ordem, só de fundo. */}
         <li inert className="opacity-40">
           <RecentTile items={items} status={status} />

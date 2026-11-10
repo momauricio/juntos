@@ -81,7 +81,7 @@ export function ItemList({
   });
 
   return view === "grid" ? (
-    <ul className="grid grid-cols-2 gap-3">
+    <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-3.5 lg:grid-cols-4 xl:grid-cols-5">
       {cards}
       {addTile ? (
         <li>
@@ -101,7 +101,7 @@ export function ItemList({
       ) : null}
     </ul>
   ) : (
-    <ul className="overflow-hidden rounded-[22px] bg-surface text-ink shadow-[0_10px_24px_rgba(0,0,0,0.18)] [&>li:first-child>*]:border-t-0">
+    <ul className="overflow-hidden rounded-[22px] bg-surface text-ink shadow-[0_10px_24px_rgba(0,0,0,0.18)] [&>li:first-child>*]:border-t-0 lg:max-w-3xl">
       {cards}
     </ul>
   );

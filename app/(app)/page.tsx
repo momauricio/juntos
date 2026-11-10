@@ -123,7 +123,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   return (
     <main className="px-5 pb-28 pt-1">
-      <section className="mx-auto w-full max-w-lg space-y-3.5">
+      <section className="mx-auto w-full max-w-lg space-y-3.5 md:max-w-3xl lg:max-w-6xl">
         <SpaceHeader
           name={spaceDisplayName(space.name, memberDisplayNames)}
           memberNames={memberDisplayNames}

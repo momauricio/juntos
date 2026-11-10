@@ -23,13 +23,15 @@ export const FIELD_LABEL = "block space-y-1.5 text-sm font-semibold text-ink";
 export const BACK_LINK =
   "inline-flex min-h-11 items-center gap-1.5 text-[15px] text-cream/70 transition hover:text-cream";
 
-// Botão flutuante "＋ Colar link" (canto inferior direito, alinhado à coluna max-w-lg).
+// Botão flutuante "＋ Colar link" (canto inferior direito, alinhado à coluna max-w-lg;
+// a partir de md, à borda direita do container largo: max-w-3xl / max-w-6xl).
 export const FAB =
-  "fixed bottom-[max(2rem,env(safe-area-inset-bottom))] right-5 z-30 flex h-[52px] items-center gap-2.5 rounded-2xl bg-accent px-[22px] text-base font-semibold text-accent-contrast shadow-[0_10px_24px_rgba(196,92,62,0.35)] transition hover:brightness-110 sm:right-[max(1.25rem,calc(50%_-_16rem_+_1.25rem))]";
+  "fixed bottom-[max(2rem,env(safe-area-inset-bottom))] right-5 z-30 flex h-[52px] items-center gap-2.5 rounded-2xl bg-accent px-[22px] text-base font-semibold text-accent-contrast shadow-[0_10px_24px_rgba(196,92,62,0.35)] transition hover:brightness-110 sm:right-[max(1.25rem,calc(50%_-_16rem_+_1.25rem))] md:right-[max(1.25rem,calc(50%_-_24rem_+_1.25rem))] lg:right-[max(2.5rem,calc(50%_-_36rem_+_1.25rem))]";
 
 // Telas de entrada/onboarding (mockups 01–07): coluna estreita, botões de 52px.
+// No desktop (lg) o bloco fica centralizado na altura da janela.
 export const SCREEN =
-  "mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-8 pt-6 text-foreground";
+  "mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-8 pt-6 text-foreground lg:justify-center lg:py-12";
 
 export const EYEBROW =
   "text-xs font-semibold uppercase tracking-[0.24em] text-cream/60";

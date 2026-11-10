@@ -58,7 +58,7 @@ export function TopNav({
   return (
     <nav
       aria-label="Navegação principal"
-      className="mx-auto flex w-full max-w-lg items-center justify-end gap-1 text-[13px] font-semibold text-cream/60"
+      className="mx-auto flex w-full max-w-lg items-center justify-end gap-1 text-[13px] font-semibold text-cream/60 md:max-w-3xl lg:max-w-6xl"
     >
       <Pressable {...list} className={NAV_TEXT}>
         Lista

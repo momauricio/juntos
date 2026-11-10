@@ -73,7 +73,7 @@ export default async function RecentPage({ searchParams }: RecentPageProps) {
 
   return (
     <main className="px-5 pb-28 pt-1">
-      <section className="mx-auto w-full max-w-lg">
+      <section className="mx-auto w-full max-w-lg md:max-w-3xl lg:max-w-6xl">
         <ItemsScreen
           backLabel={STATUS_LABELS[status]}
           back={{ href: `/?status=${status}` }}

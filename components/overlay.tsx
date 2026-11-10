@@ -100,6 +100,7 @@ export function useModalFocus(
 }
 
 // Folha de baixo (mockups 54, 55b, 55c): fundo escurecido, alça, foco preso.
+// A partir de md vira modal centralizado (sem alça, cantos nos 4 lados).
 export function Sheet({
   title,
   onClose,
@@ -127,9 +128,9 @@ export function Sheet({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[calc(100dvh-24px)] w-full max-w-lg overflow-y-auto rounded-t-[28px] bg-[#f3ebe3] px-5 pb-[max(28px,env(safe-area-inset-bottom))] pt-2.5 text-ink shadow-[0_-14px_40px_rgba(0,0,0,0.4)] outline-none"
+        className="fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[calc(100dvh-24px)] w-full max-w-lg overflow-y-auto rounded-t-[28px] bg-[#f3ebe3] px-5 pb-[max(28px,env(safe-area-inset-bottom))] pt-2.5 text-ink shadow-[0_-14px_40px_rgba(0,0,0,0.4)] outline-none md:inset-0 md:m-auto md:h-fit md:max-h-[calc(100dvh-4rem)] md:max-w-[540px] md:rounded-[28px] md:px-7 md:pb-7 md:pt-6 md:shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
       >
-        <div aria-hidden="true" className="mx-auto mb-3 h-[5px] w-10 rounded-full bg-ink/20" />
+        <div aria-hidden="true" className="mx-auto mb-3 h-[5px] w-10 rounded-full bg-ink/20 md:hidden" />
         {title(titleId)}
         {children}
       </div>

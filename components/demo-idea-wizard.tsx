@@ -74,7 +74,7 @@ export function IdeaWizard({
       }
     >
       {step === 0 ? (
-        <div className="space-y-3" role="group" aria-label="Categoria">
+        <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0" role="group" aria-label="Categoria">
           {sortCategories(categories).map((option) => {
             const selected = categoryId === option.id;
             // Dica só nas padrão (vêm de um tipo); nas do casal, só o nome.

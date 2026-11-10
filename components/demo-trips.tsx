@@ -40,7 +40,7 @@ export function TripsHome({
   if (space.trips.length === 0) {
     return (
       <div className="space-y-4">
-        <button type="button" className="text-sm text-cream/70" onClick={onBack}>
+        <button type="button" className="text-sm text-cream/70 md:transition md:hover:text-cream" onClick={onBack}>
           ← Voltar
         </button>
         <div className="flex items-center justify-between">
@@ -53,7 +53,7 @@ export function TripsHome({
             + Nova
           </button>
         </div>
-        <p className="rounded-xl bg-surface-muted px-4 py-8 text-center text-sm text-accent-strong/70">
+        <p className="rounded-xl bg-surface-muted px-4 py-8 text-center text-sm text-accent-strong/70 md:flex md:min-h-56 md:items-center md:justify-center md:rounded-[28px] md:text-base">
           Nenhuma viagem ainda
         </p>
       </div>
@@ -62,7 +62,7 @@ export function TripsHome({
 
   return (
     <div className="space-y-4">
-      <button type="button" className="text-sm text-cream/70" onClick={onBack}>
+      <button type="button" className="text-sm text-cream/70 md:transition md:hover:text-cream" onClick={onBack}>
         ← Voltar
       </button>
       <div className="flex items-center justify-between">
@@ -127,7 +127,7 @@ export function TripDetail({
 
   return (
     <div className="space-y-4">
-      <button type="button" className="text-sm text-cream/70" onClick={onBack}>
+      <button type="button" className="text-sm text-cream/70 md:transition md:hover:text-cream" onClick={onBack}>
         ← Viagens
       </button>
       <div>

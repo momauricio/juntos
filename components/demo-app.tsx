@@ -458,6 +458,8 @@ export function DemoApp() {
 function mainWidth(name: Screen["name"]) {
   if (name === "ideas" || name === "category" || name === "recent") return "md:w-full";
   if (name === "hub") return "md:mx-auto md:w-full md:max-w-4xl";
+  // Wizard de ideia: em lg as opções viram 2 colunas, numa coluna de ~760px.
+  if (name === "idea-wizard") return "md:mx-auto md:w-full md:max-w-[44.5rem] lg:max-w-[50rem] lg:pt-8";
   return "md:mx-auto md:w-full md:max-w-[44.5rem] lg:pt-8";
 }
 

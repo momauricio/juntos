@@ -16,7 +16,7 @@ export function DemoHub({
   onSettings: () => void;
 }): JSX.Element {
   return (
-    <div className="space-y-8 py-4">
+    <div className="space-y-8 py-4 lg:pt-10">
       <section className="space-y-3">
         <p className="text-sm font-medium uppercase tracking-[0.28em] text-cream/60">
           Juntos · vitrine
@@ -31,10 +31,10 @@ export function DemoHub({
         </div>
       </section>
 
-      <section className="space-y-3" aria-label="Escolher o que criar">
+      <section className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0" aria-label="Escolher o que criar">
         <button
           type="button"
-          className="hub-card-enter w-full rounded-[2rem] bg-surface p-6 text-left text-[var(--ink-on-surface)] shadow-xl shadow-black/20 transition-transform active:scale-[0.99]"
+          className="hub-card-enter w-full rounded-[2rem] bg-surface p-6 text-left text-[var(--ink-on-surface)] shadow-xl shadow-black/20 transition-transform active:scale-[0.99] hover:-translate-y-0.5"
           onClick={onIdea}
         >
           <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--terracotta)]">
@@ -51,7 +51,7 @@ export function DemoHub({
 
         <button
           type="button"
-          className="hub-card-enter w-full rounded-[2rem] bg-surface-muted p-6 text-left text-[var(--ink-on-surface)] shadow-xl shadow-black/15 transition-transform active:scale-[0.99]"
+          className="hub-card-enter w-full rounded-[2rem] bg-surface-muted p-6 text-left text-[var(--ink-on-surface)] shadow-xl shadow-black/15 transition-transform active:scale-[0.99] hover:-translate-y-0.5"
           onClick={onTrip}
         >
           <span className="flex items-center justify-between gap-3">
@@ -74,21 +74,21 @@ export function DemoHub({
       <div className="space-y-3 pb-4">
         <button
           type="button"
-          className="w-full text-center text-sm font-semibold text-cream underline decoration-cream/40 underline-offset-4"
+          className="w-full text-center text-sm font-semibold text-cream underline decoration-cream/40 underline-offset-4 md:mx-auto md:block md:w-auto md:hover:decoration-cream"
           onClick={onSeeIdeas}
         >
           Ver ideias registradas
         </button>
         <button
           type="button"
-          className="w-full text-center text-sm font-semibold text-cream underline decoration-cream/40 underline-offset-4"
+          className="w-full text-center text-sm font-semibold text-cream underline decoration-cream/40 underline-offset-4 md:mx-auto md:block md:w-auto md:hover:decoration-cream"
           onClick={onSeeTrips}
         >
           Ver viagens registradas
         </button>
         <button
           type="button"
-          className="w-full text-center text-sm text-cream/70 underline decoration-cream/30 underline-offset-4"
+          className="w-full text-center text-sm text-cream/70 underline decoration-cream/30 underline-offset-4 md:mx-auto md:block md:w-auto md:hover:text-cream"
           onClick={onSettings}
         >
           Ajustes

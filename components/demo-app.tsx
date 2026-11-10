@@ -198,7 +198,7 @@ export function DemoApp() {
 
   if (!state) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
+      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col md:max-w-3xl lg:max-w-6xl">
         <DemoShowcaseBanner />
         <main className="flex flex-1 items-center justify-center px-4">
           <p className="text-sm text-cream/70">Carregando Juntos…</p>
@@ -211,10 +211,10 @@ export function DemoApp() {
   const user = state.user;
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col">
+    <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col md:max-w-3xl lg:max-w-6xl">
       <DemoShowcaseBanner />
       {message ? (
-        <div role="status" className="mx-4 mt-4 rounded-[18px] bg-cream px-3.5 py-3 text-[15px] font-semibold text-ink shadow-[0_14px_30px_rgba(0,0,0,0.35)]">
+        <div role="status" className="mx-4 mt-4 rounded-[18px] md:mx-auto md:w-full md:max-w-md bg-cream px-3.5 py-3 text-[15px] font-semibold text-ink shadow-[0_14px_30px_rgba(0,0,0,0.35)]">
           <div className="flex items-center justify-between gap-3">
             <span>{message}</span>
             {messageAction && messageAction.forMessage === message ? (
@@ -233,7 +233,7 @@ export function DemoApp() {
         </div>
       ) : null}
 
-      <main className="flex-1 px-5 pb-10 pt-4">
+      <main className={`flex-1 px-5 pb-10 pt-4 ${mainWidth(screen.name)}`}>
         {screen.name === "hub" ? (
           <DemoHub
             onIdea={() => setScreen({ name: "idea-wizard" })}
@@ -451,6 +451,14 @@ export function DemoApp() {
       {categoryToast ? <Toast check title={categoryToast} /> : null}
     </div>
   );
+}
+
+// Largura da tela a partir de md: listas usam o container largo inteiro; o
+// hub fica médio (2 cartões lado a lado em lg) e o resto vira coluna de leitura.
+function mainWidth(name: Screen["name"]) {
+  if (name === "ideas" || name === "category" || name === "recent") return "md:w-full";
+  if (name === "hub") return "md:mx-auto md:w-full md:max-w-4xl";
+  return "md:mx-auto md:w-full md:max-w-[44.5rem] lg:pt-8";
 }
 
 function Home({

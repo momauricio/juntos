@@ -30,7 +30,7 @@ export function DemoShowcaseBanner({
     <div
       role="region"
       aria-label="Vitrine do Juntos"
-      className="sticky top-0 z-20 border-b border-border bg-surface px-4 py-3 text-[var(--ink-on-surface)] shadow-md shadow-black/10"
+      className="sticky top-0 z-20 border-b border-border bg-surface px-4 py-3 text-[var(--ink-on-surface)] shadow-md shadow-black/10 lg:rounded-b-2xl lg:px-5"
     >
       <div className="flex items-center gap-3">
         <p className="flex-1 text-sm leading-5 text-accent-strong/80">

@@ -106,6 +106,19 @@ button:disabled {
   }
 }
 
+/* Barra do topo (Lista / + / Ajustes) acompanha a coluna das telas de leitura
+   (item, edição, nova ideia, ajustes: max-w-2xl) e de colar link (max-w-md
+   com px-5 dentro). Início, categoria e recentes seguem no container largo.
+   Só a partir de md; no celular a barra continua igual. */
+@media (min-width: 48rem) {
+  body:has([data-coluna="leitura"]) nav[data-topnav] {
+    max-width: 42rem;
+  }
+  body:has([data-coluna="estreita"]) nav[data-topnav] {
+    max-width: 25.5rem;
+  }
+}
+
 h1,
 h2,
 .font-serif {

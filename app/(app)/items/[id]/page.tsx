@@ -410,7 +410,7 @@ export default async function ItemPage({
           )}
         />
       ) : null}
-      <section className="mx-auto w-full max-w-lg space-y-3.5 md:max-w-2xl lg:pt-4">
+      <section data-coluna="leitura" className="mx-auto w-full max-w-lg space-y-3.5 md:max-w-2xl lg:pt-4">
         {item.status === "done" ? (
           <Link href="/?status=done" className={BACK_LINK}>
             ← {STATUS_LABELS.done}

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ColarPage() {
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col px-5 pb-24 pt-2 lg:pt-10">
+    <main data-coluna="estreita" className="mx-auto flex w-full max-w-md flex-col px-5 pb-24 pt-2 lg:pt-10">
       <BackLink href="/" />
       <h1 className={`${TITLE} mt-2.5`}>
         Colar link

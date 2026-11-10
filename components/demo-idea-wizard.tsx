@@ -84,10 +84,10 @@ export function IdeaWizard({
                 key={option.id}
                 type="button"
                 aria-pressed={selected}
-                className={`w-full rounded-[1.75rem] p-5 text-left transition-transform active:scale-[0.99] ${
+                className={`w-full rounded-[1.75rem] p-5 text-left transition-transform active:scale-[0.99] md:transition md:hover:shadow-xl md:hover:shadow-black/25 ${
                   selected
                     ? "border-2 border-[var(--terracotta)] bg-accent-soft text-[var(--ink-on-surface)] shadow-lg shadow-black/15"
-                    : "border border-transparent bg-surface text-[var(--ink-on-surface)] shadow-lg shadow-black/15"
+                    : "border border-transparent bg-surface text-[var(--ink-on-surface)] shadow-lg shadow-black/15 md:hover:border-[var(--terracotta)]/40 md:hover:brightness-[1.03]"
                 }`}
                 onClick={() => setCategoryId(option.id)}
               >

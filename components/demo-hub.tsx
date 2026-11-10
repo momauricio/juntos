@@ -34,7 +34,7 @@ export function DemoHub({
       <section className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0" aria-label="Escolher o que criar">
         <button
           type="button"
-          className="hub-card-enter w-full rounded-[2rem] bg-surface p-6 text-left text-[var(--ink-on-surface)] shadow-xl shadow-black/20 transition-transform active:scale-[0.99] hover:-translate-y-0.5"
+          className="hub-card-enter w-full rounded-[2rem] bg-surface p-6 text-left text-[var(--ink-on-surface)] shadow-xl shadow-black/20 transition-transform active:scale-[0.99] hover:-translate-y-0.5 md:transition md:hover:shadow-2xl md:hover:shadow-black/30 md:hover:brightness-[1.04]"
           onClick={onIdea}
         >
           <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--terracotta)]">
@@ -51,7 +51,7 @@ export function DemoHub({
 
         <button
           type="button"
-          className="hub-card-enter w-full rounded-[2rem] bg-surface-muted p-6 text-left text-[var(--ink-on-surface)] shadow-xl shadow-black/15 transition-transform active:scale-[0.99] hover:-translate-y-0.5"
+          className="hub-card-enter w-full rounded-[2rem] bg-surface-muted p-6 text-left text-[var(--ink-on-surface)] shadow-xl shadow-black/15 transition-transform active:scale-[0.99] hover:-translate-y-0.5 md:transition md:hover:shadow-2xl md:hover:shadow-black/30 md:hover:brightness-[1.04]"
           onClick={onTrip}
         >
           <span className="flex items-center justify-between gap-3">

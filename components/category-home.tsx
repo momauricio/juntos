@@ -25,6 +25,7 @@ import {
 import { formatDayMonth, Pressable, ScoreBadge } from "@/components/item-visuals";
 import { ItemList, type ItemWithRatings } from "@/components/item-list";
 import { AnchoredMenu } from "@/components/overlay";
+import { HOVER_LIFT } from "@/components/ui-classes";
 import { holdWhileOpen } from "@/lib/live-pause";
 import {
   CATEGORY_MENU_COPY,
@@ -80,7 +81,7 @@ type CategoryHomeProps = {
   manage?: HomeManage;
 };
 
-const TILE = `${TILE_BASE} transition hover:-translate-y-0.5`;
+const TILE = `${TILE_BASE} transition hover:-translate-y-0.5 ${HOVER_LIFT}`;
 // Segurar o quadrado não pode abrir a prévia do link nem selecionar texto.
 const NO_CALLOUT = "select-none [-webkit-touch-callout:none]";
 const LONG_PRESS_MS = 500;
@@ -466,7 +467,7 @@ function CategoryGrid({
           <button
             type="button"
             onClick={(event) => onNewCategory(event.currentTarget)}
-            className="flex aspect-square w-full flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-cream/35 p-3.5 text-center text-cream transition hover:border-cream/60"
+            className="flex aspect-square w-full flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-cream/35 p-3.5 text-center text-cream transition hover:border-cream/60 md:hover:bg-cream/[0.06]"
           >
             <span aria-hidden="true" className="text-[40px] font-light leading-none">
               ＋

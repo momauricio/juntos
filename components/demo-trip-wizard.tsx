@@ -209,7 +209,7 @@ export function TripWizard({
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className="h-10 rounded-xl bg-surface-muted px-3 text-sm font-medium disabled:opacity-40"
+                    className="h-10 rounded-xl bg-surface-muted px-3 text-sm font-medium disabled:opacity-40 md:transition md:enabled:hover:brightness-95"
                     onClick={() =>
                       setDestinations((current) =>
                         moveDestination(current, index, -1),
@@ -222,7 +222,7 @@ export function TripWizard({
                   </button>
                   <button
                     type="button"
-                    className="h-10 rounded-xl bg-surface-muted px-3 text-sm font-medium disabled:opacity-40"
+                    className="h-10 rounded-xl bg-surface-muted px-3 text-sm font-medium disabled:opacity-40 md:transition md:enabled:hover:brightness-95"
                     onClick={() =>
                       setDestinations((current) =>
                         moveDestination(current, index, 1),
@@ -248,7 +248,7 @@ export function TripWizard({
           </div>
           <button
             type="button"
-            className="h-12 w-full rounded-xl bg-accent-soft font-medium text-accent-strong"
+            className="h-12 w-full rounded-xl bg-accent-soft font-medium text-accent-strong md:transition md:hover:brightness-95"
             onClick={() =>
               setDestinations((current) => [...current, blankDestination()])
             }

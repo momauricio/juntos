@@ -88,7 +88,7 @@ export function ItemList({
           <Pressable
             href={addTile.href}
             onClick={addTile.onClick}
-            className="flex aspect-square w-full flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-cream/30 p-4 text-center text-cream/75 transition hover:border-cream/55 hover:text-cream"
+            className="flex aspect-square w-full flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-cream/30 p-4 text-center text-cream/75 transition hover:border-cream/55 hover:text-cream md:hover:bg-cream/[0.06]"
           >
             <span aria-hidden="true" className="text-[34px] font-light leading-none">
               ＋

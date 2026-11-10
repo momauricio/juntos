@@ -4,10 +4,15 @@ export const BTN_PRIMARY =
   "flex h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-accent px-5 text-base font-semibold text-accent-contrast shadow-[0_10px_24px_rgba(196,92,62,0.35)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60";
 
 export const BTN_SOFT =
-  "flex h-[46px] w-full items-center justify-center gap-2.5 rounded-2xl bg-accent-soft px-5 text-base font-semibold text-ink transition hover:brightness-95";
+  "flex h-[46px] w-full items-center justify-center gap-2.5 rounded-2xl bg-accent-soft px-5 text-base font-semibold text-ink transition hover:brightness-95 md:hover:shadow-[0_6px_16px_rgba(0,0,0,0.18)]";
 
 export const BTN_OUTLINE =
-  "flex h-[46px] w-full items-center justify-center rounded-2xl border border-cream/30 px-5 text-base font-semibold text-cream transition hover:bg-cream/10";
+  "flex h-[46px] w-full items-center justify-center rounded-2xl border border-cream/30 px-5 text-base font-semibold text-cream transition hover:bg-cream/10 md:hover:border-cream/50";
+
+// Hover sutil (desktop/tablet com ponteiro): brilho + sombra mais funda.
+// md:hover: só existe em telas ≥ md e dentro de @media (hover:hover) — nada muda no celular.
+export const HOVER_LIFT =
+  "md:hover:brightness-[1.07] md:hover:shadow-[0_16px_34px_rgba(0,0,0,0.34)]";
 
 export const CARD =
   "rounded-[28px] bg-surface p-[18px] text-ink shadow-[0_18px_40px_rgba(0,0,0,0.22)]";
@@ -47,10 +52,10 @@ export const BTN_WHITE =
   "flex h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-surface px-5 text-base font-semibold text-ink transition hover:bg-cream disabled:cursor-not-allowed disabled:opacity-60";
 
 export const BTN_SOFT_LG =
-  "flex h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-accent-soft px-5 text-base font-semibold text-ink transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60";
+  "flex h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-accent-soft px-5 text-base font-semibold text-ink transition hover:brightness-95 md:hover:shadow-[0_6px_16px_rgba(0,0,0,0.18)] disabled:cursor-not-allowed disabled:opacity-60";
 
 export const BTN_OUTLINE_LG =
-  "flex h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl border border-cream/30 px-5 text-base font-semibold text-cream transition hover:bg-cream/10 disabled:cursor-not-allowed disabled:opacity-60";
+  "flex h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl border border-cream/30 px-5 text-base font-semibold text-cream transition hover:bg-cream/10 md:hover:border-cream/50 disabled:cursor-not-allowed disabled:opacity-60";
 
 // Link sublinhado do rodapé ("Só quero dar uma olhada", "Pular por enquanto"…).
 export const TEXT_LINK =

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { DOMAttributes, ReactNode } from "react";
 
 import { Avatar, initial } from "@/components/avatar";
-import { BTN_OUTLINE, CARD } from "@/components/ui-classes";
+import { BTN_OUTLINE, CARD, HOVER_LIFT } from "@/components/ui-classes";
 import { originalLink } from "@/lib/capture-link";
 import { GRID_COPY, SCORE_BAND_COLORS, scoreBand } from "@/lib/categories";
 import {
@@ -189,7 +189,7 @@ export function ItemCompactRow({
     <Pressable
       href={href}
       onClick={onClick}
-      className="flex min-h-11 w-full items-center gap-2.5 border-t border-ink/[0.08] px-3 py-2 text-left text-ink transition hover:bg-ink/[0.03]"
+      className="flex min-h-11 w-full items-center gap-2.5 border-t border-ink/[0.08] px-3 py-2 text-left text-ink transition hover:bg-ink/[0.03] md:hover:bg-ink/[0.06]"
     >
       <span
         aria-hidden="true"
@@ -245,7 +245,7 @@ export function ItemGridTile({
     <Pressable
       href={href}
       onClick={onClick}
-      className={`relative block aspect-square w-full overflow-hidden rounded-[22px] text-left shadow-[0_10px_24px_rgba(0,0,0,0.25)] transition hover:-translate-y-0.5 ${
+      className={`relative block aspect-square w-full overflow-hidden rounded-[22px] text-left shadow-[0_10px_24px_rgba(0,0,0,0.25)] transition hover:-translate-y-0.5 ${HOVER_LIFT} ${
         image ? "bg-cover bg-center" : category.color
       }`}
     >

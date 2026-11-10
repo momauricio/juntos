@@ -47,7 +47,7 @@ export function TripsHome({
           <h1 className="font-serif text-2xl text-cream">Viagens</h1>
           <button
             type="button"
-            className="h-11 rounded-xl bg-accent px-4 text-sm font-medium text-accent-contrast"
+            className="h-11 rounded-xl bg-accent px-4 text-sm font-medium text-accent-contrast md:transition md:hover:brightness-110"
             onClick={onNew}
           >
             + Nova
@@ -69,7 +69,7 @@ export function TripsHome({
         <h1 className="font-serif text-2xl text-cream">Viagens</h1>
         <button
           type="button"
-          className="h-11 rounded-xl bg-accent px-4 text-sm font-medium text-accent-contrast"
+          className="h-11 rounded-xl bg-accent px-4 text-sm font-medium text-accent-contrast md:transition md:hover:brightness-110"
           onClick={onNew}
         >
           + Nova
@@ -84,7 +84,7 @@ export function TripsHome({
               <button
                 type="button"
                 onClick={() => onOpen(trip.id)}
-                className="w-full rounded-2xl bg-surface px-4 py-3 text-left shadow-sm shadow-accent-strong/5"
+                className="w-full rounded-2xl bg-surface px-4 py-3 text-left shadow-sm shadow-accent-strong/5 md:transition md:hover:shadow-lg md:hover:shadow-black/20 md:hover:brightness-[1.03]"
               >
                 <p className="font-medium text-accent-strong">{trip.title}</p>
                 <p className="mt-1 text-xs text-accent-strong/65">

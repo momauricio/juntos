@@ -68,7 +68,7 @@ export function WizardShell({
         <button
           type="button"
           onClick={onBack}
-          className="h-12 flex-1 rounded-2xl border border-white/25 text-sm font-medium text-cream"
+          className="h-12 flex-1 rounded-2xl border border-white/25 text-sm font-medium text-cream md:transition md:hover:border-white/50 md:hover:bg-cream/10"
         >
           {backLabel}
         </button>
@@ -76,7 +76,7 @@ export function WizardShell({
           type="button"
           onClick={onNext}
           disabled={nextDisabled}
-          className="h-12 flex-1 rounded-2xl bg-[var(--terracotta)] text-sm font-semibold text-accent-contrast disabled:opacity-40"
+          className="h-12 flex-1 rounded-2xl bg-[var(--terracotta)] text-sm font-semibold text-accent-contrast disabled:opacity-40 md:transition md:enabled:hover:brightness-110"
         >
           {nextLabel}
         </button>

@@ -72,7 +72,7 @@ export default async function SettingsPage() {
 
   return (
     <main className="px-5 pb-24 pt-2 sm:pb-12">
-      <section className="mx-auto w-full max-w-lg space-y-6">
+      <section className="mx-auto w-full max-w-lg space-y-6 md:max-w-2xl lg:pt-4">
         <div className="space-y-2.5">
           <p className={EYEBROW_ACCENT}>Ajustes</p>
           <h1 className={TITLE}>Seu espaço</h1>

@@ -96,7 +96,7 @@ export default async function WelcomePage({ searchParams }: WelcomePageProps) {
         </p>
       </section>
 
-      <div className="mt-auto flex flex-col gap-[18px] pb-2 pt-10">
+      <div className="mt-auto flex flex-col gap-[18px] pb-2 pt-10 lg:mt-0">
         <Link href={startHref} className={BTN_PRIMARY}>
           Começar
         </Link>

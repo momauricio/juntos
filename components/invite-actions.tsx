@@ -86,7 +86,7 @@ export function InviteSignInActions({ code }: { code: string }) {
   }
 
   return (
-    <div className="mt-auto space-y-3 pt-8">
+    <div className="mt-auto space-y-3 pt-8 lg:mt-0">
       {!online ? <OfflineBanner /> : null}
       <button
         type="button"
@@ -164,7 +164,7 @@ export function InviteJoinActions(props: RedeemProps) {
   }
 
   return (
-    <div className="mt-auto space-y-3 pt-8">
+    <div className="mt-auto space-y-3 pt-8 lg:mt-0">
       {!online ? <OfflineBanner /> : null}
       <button
         type="button"
@@ -203,7 +203,7 @@ export function InviteSwitchActions(props: RedeemProps) {
   }
 
   return (
-    <div className="mt-auto space-y-3 pt-8">
+    <div className="mt-auto space-y-3 pt-8 lg:mt-0">
       {!online ? <OfflineBanner /> : null}
       <button
         type="button"

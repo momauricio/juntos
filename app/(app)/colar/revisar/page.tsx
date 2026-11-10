@@ -49,7 +49,7 @@ export default async function ColarRevisarPage({
   const categories = await loadSpaceCategories(COLAR_PATH);
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col px-5 pb-24 pt-2">
+    <main className="mx-auto flex w-full max-w-md flex-col px-5 pb-24 pt-2 lg:pt-10">
       <PlaceReviewCard
         url={url}
         backHref={COLAR_PATH}

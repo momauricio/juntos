@@ -206,9 +206,10 @@ export function viewToast(partnerName: string | null | undefined): {
     : { title: VIEW_TOAST_TITLE };
 }
 
-// profiles.item_view → visualização; qualquer outra coisa vira Grade (padrão).
+// profiles.item_view → visualização; qualquer outra coisa vira Compacta
+// (padrão, C15 — cards menores que a Grade, mais itens visíveis por tela).
 export function parseItemView(value: unknown): ItemView {
-  return value === "compact" ? "compact" : "grid";
+  return value === "grid" ? "grid" : "compact";
 }
 
 // "🏨 Hospedagem" (título da tela da categoria, sem a contagem).

@@ -239,12 +239,12 @@ describe("getItemView", () => {
     });
   });
 
-  it("sem perfil, valor estranho ou erro: Grade", async () => {
-    expect(await getItemView(fakeClient([{ data: null }]).supabase, "u")).toBe("grid");
-    expect(await getItemView(fakeClient([{ data: { item_view: "x" } }]).supabase, "u")).toBe("grid");
+  it("sem perfil, valor estranho ou erro: Compacta (C15, padrão)", async () => {
+    expect(await getItemView(fakeClient([{ data: null }]).supabase, "u")).toBe("compact");
+    expect(await getItemView(fakeClient([{ data: { item_view: "x" } }]).supabase, "u")).toBe("compact");
     expect(
       await getItemView(fakeClient([{ error: { message: "boom" } }]).supabase, "u"),
-    ).toBe("grid");
+    ).toBe("compact");
   });
 });
 

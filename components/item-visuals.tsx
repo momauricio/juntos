@@ -170,7 +170,10 @@ export type ItemCardProps = {
   onClick?: () => void;
 };
 
-// Linha da Compacta (mockups 42/53): ícone da categoria, nome · cidade, selo, bolinha.
+// Card da Compacta (C15): ícone da categoria, nome · cidade, selo, bolinha —
+// cada item é seu próprio card (fundo, sombra, cantos), não uma linha de lista
+// com divisor. Mais baixo que a Grade (sem foto/bloco de cor cheio) mas ainda
+// "card", pra caber muito mais itens na tela sem virar uma lista pelada.
 export function ItemCompactRow({
   item,
   category,
@@ -189,11 +192,11 @@ export function ItemCompactRow({
     <Pressable
       href={href}
       onClick={onClick}
-      className="flex min-h-11 w-full items-center gap-2.5 border-t border-ink/[0.08] px-3 py-2 text-left text-ink transition hover:bg-ink/[0.03] md:hover:bg-ink/[0.06]"
+      className={`flex min-h-11 w-full items-center gap-3 rounded-[14px] bg-surface px-3 py-2.5 text-left text-ink shadow-[0_3px_8px_rgba(0,0,0,0.14)] transition md:hover:-translate-y-0.5 ${HOVER_LIFT}`}
     >
       <span
         aria-hidden="true"
-        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] text-[15px] ${category.color}`}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] text-[17px] ${category.color}`}
       >
         {category.emoji}
       </span>

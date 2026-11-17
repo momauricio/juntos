@@ -117,7 +117,7 @@ export function DemoApp() {
   const [messageAction, setMessageAction] = useState<MessageAction | null>(null);
   const [statusFilter, setStatusFilter] = useState<ItemStatus>("want");
   // Grade/Compacta de quem usa a demo (C11), no localStorage da demo.
-  const [itemView, setItemView] = useState<ItemView>("grid");
+  const [itemView, setItemView] = useState<ItemView>("compact");
   // Categorias da sessão (C16): as 8 padrão + o que o casal mudou nesta aba.
   const [categories, setCategories] = useState<Category[]>([]);
   // Toast de categoria que sobrevive à troca de tela (apagar de dentro dela).

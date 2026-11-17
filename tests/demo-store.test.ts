@@ -420,8 +420,8 @@ describe("telas 52/53 na demo", () => {
     expect(demoItemImages([{ id: "item_pousada_vale_verde", url: null }])).toEqual({});
   });
 
-  it("Grade/Compacta fica no localStorage da demo (padrão Grade)", () => {
-    expect(loadItemView()).toBe("grid");
+  it("Grade/Compacta fica no localStorage da demo (padrão Compacta, C15)", () => {
+    expect(loadItemView()).toBe("compact");
     const store = new Map<string, string>();
     vi.stubGlobal("window", {
       localStorage: {
@@ -429,11 +429,11 @@ describe("telas 52/53 na demo", () => {
         setItem: (key: string, value: string) => store.set(key, value),
       },
     });
-    expect(loadItemView()).toBe("grid");
-    saveItemView("compact");
     expect(loadItemView()).toBe("compact");
-    store.set("juntos-demo-item-view", "estranho");
+    saveItemView("grid");
     expect(loadItemView()).toBe("grid");
+    store.set("juntos-demo-item-view", "estranho");
+    expect(loadItemView()).toBe("compact");
   });
 });
 

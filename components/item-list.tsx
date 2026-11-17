@@ -101,9 +101,7 @@ export function ItemList({
       ) : null}
     </ul>
   ) : (
-    <ul className="overflow-hidden rounded-[22px] bg-surface text-ink shadow-[0_10px_24px_rgba(0,0,0,0.18)] [&>li:first-child>*]:border-t-0 lg:max-w-3xl">
-      {cards}
-    </ul>
+    <ul className="flex flex-col gap-2 lg:max-w-3xl">{cards}</ul>
   );
 }
 

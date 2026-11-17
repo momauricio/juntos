@@ -177,7 +177,7 @@ export async function getItemView(
     .eq("id", userId)
     .maybeSingle();
 
-  if (error) return "grid";
+  if (error) return "compact";
   return parseItemView((data as { item_view?: unknown } | null)?.item_view);
 }
 

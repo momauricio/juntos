@@ -20,6 +20,7 @@ import {
 } from "@/lib/categories";
 import { getCategory, getItemView, listCategories } from "@/lib/categories-data";
 import { STATUS_LABELS } from "@/lib/labels";
+import { getAuthUser } from "@/lib/session";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
 import type { ItemStatus } from "@/lib/types";
@@ -50,9 +51,7 @@ export default async function CategoryPage({
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const status = parseStatus(query.status);
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect(signInPathWithNext(categoryHref(id, status)));

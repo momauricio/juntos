@@ -13,6 +13,7 @@ import {
 } from "@/components/ui-classes";
 import { signInPathWithNext } from "@/lib/auth-callback";
 import { spaceDisplayName } from "@/lib/invites";
+import { getAuthUser } from "@/lib/session";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
 
@@ -35,9 +36,7 @@ async function logout() {
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect(signInPathWithNext("/settings"));

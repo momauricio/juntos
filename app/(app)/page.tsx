@@ -22,7 +22,8 @@ import { spaceDisplayName } from "@/lib/invites";
 import { countByStatus } from "@/lib/item-categories";
 import { typeLabel } from "@/lib/labels";
 import { signInPathWithNext } from "@/lib/auth-callback";
-import { loadMySpace } from "@/lib/space";
+import { getAuthUser, getMySpaceId } from "@/lib/session";
+import { loadSpaceDetails } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
 import type { ItemStatus } from "@/lib/types";
 
@@ -66,29 +67,30 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const saved = parseSavedStatus(params.salvo);
   const selectedStatus = parseStatus(params.status, saved);
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect(signInPathWithNext(null));
   }
 
-  const space = await loadMySpace(supabase, user.id);
+  const spaceId = await getMySpaceId(user.id);
 
-  if (!space) {
+  if (!spaceId) {
     redirect("/onboarding");
   }
 
-  // Itens e categorias juntos (uma consulta a mais que antes).
-  const [itemsResult, categoriesResult] = await Promise.all([
+  const supabase = await createClient();
+
+  // Nome/membros do espaço, itens e categorias em paralelo — nenhum dos três
+  // depende dos outros (só do spaceId, já resolvido acima).
+  const [space, itemsResult, categoriesResult] = await Promise.all([
+    loadSpaceDetails(supabase, spaceId),
     supabase
       .from("items")
       .select("*, ratings(*)")
-      .eq("space_id", space.id)
+      .eq("space_id", spaceId)
       .order("created_at", { ascending: false }),
-    listCategories(supabase, space.id),
+    listCategories(supabase, spaceId),
   ]);
 
   if (itemsResult.error || !categoriesResult.ok) {

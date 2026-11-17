@@ -1,4 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
+import { getMySpaceId } from "@/lib/session";
 import type { SpaceRole } from "@/lib/types";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -17,34 +18,34 @@ export type MySpace = {
 };
 
 // Espaço de quem está logado, com os nomes das pessoas. null = sem espaço.
+// O space_id vem de getMySpaceId (cache() por requisição): se o layout já
+// resolveu o espaço nesta mesma renderização, não gera consulta de novo.
 export async function loadMySpace(
   supabase: SupabaseServerClient,
   userId: string,
 ): Promise<MySpace | null> {
-  const { data: membership, error: membershipError } = await supabase
-    .from("space_members")
-    .select("space_id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const spaceId = await getMySpaceId(userId);
 
-  if (membershipError) {
-    throw new Error("Não foi possível carregar o espaço.");
-  }
-
-  if (!membership) {
+  if (!spaceId) {
     return null;
   }
 
+  return loadSpaceDetails(supabase, spaceId);
+}
+
+// Nome e membros de um espaço já identificado (sem repetir a busca do
+// space_id). Chamar direto quando o chamador for buscar itens/categorias em
+// paralelo — assim essa consulta não bloqueia as outras (ver app/(app)/page.tsx).
+export async function loadSpaceDetails(
+  supabase: SupabaseServerClient,
+  spaceId: string,
+): Promise<MySpace> {
   const [spaceResult, membersResult] = await Promise.all([
-    supabase
-      .from("spaces")
-      .select("id,name")
-      .eq("id", membership.space_id)
-      .maybeSingle(),
+    supabase.from("spaces").select("id,name").eq("id", spaceId).maybeSingle(),
     supabase
       .from("space_members")
       .select("user_id,role,joined_at")
-      .eq("space_id", membership.space_id)
+      .eq("space_id", spaceId)
       .order("joined_at", { ascending: true }),
   ]);
 

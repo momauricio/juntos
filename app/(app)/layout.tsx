@@ -3,35 +3,31 @@ import { redirect } from "next/navigation";
 import { TopNav } from "@/components/space-header";
 import { SpaceLive } from "@/components/space-live";
 import { signInPathWithNext } from "@/lib/auth-callback";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser, getMySpaceId } from "@/lib/session";
 
 export default async function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getAuthUser/getMySpaceId usam cache() por requisição: a page (e
+  // generateMetadata) desta mesma navegação reaproveitam o resultado em vez
+  // de repetir a verificação de auth e a consulta a space_members.
+  const user = await getAuthUser();
 
   if (!user) {
     redirect(signInPathWithNext(null));
   }
 
-  const { data: membership } = await supabase
-    .from("space_members")
-    .select("space_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const spaceId = await getMySpaceId(user.id);
 
-  if (!membership) {
+  if (!spaceId) {
     redirect("/onboarding");
   }
 
   return (
     <div className="min-h-dvh text-foreground">
-      <SpaceLive spaceId={membership.space_id} />
+      <SpaceLive spaceId={spaceId} />
       {/* Navegação discreta, integrada ao gradiente (mockups 06/08/09 não têm barra) */}
       <header className="px-5 pt-2">
         <TopNav

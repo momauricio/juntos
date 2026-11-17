@@ -10,6 +10,7 @@ import { signInPathWithNext } from "@/lib/auth-callback";
 import { HOME_COPY, LIST_COPY, RECENT_LIMIT } from "@/lib/categories";
 import { getItemView, listCategories } from "@/lib/categories-data";
 import { STATUS_LABELS } from "@/lib/labels";
+import { getAuthUser } from "@/lib/session";
 import { loadMySpace } from "@/lib/space";
 import { createClient } from "@/lib/supabase/server";
 import type { ItemStatus } from "@/lib/types";
@@ -32,9 +33,7 @@ function parseStatus(value: string | string[] | undefined): ItemStatus {
 export default async function RecentPage({ searchParams }: RecentPageProps) {
   const status = parseStatus((await searchParams).status);
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect(signInPathWithNext(`/recentes?status=${status}`));

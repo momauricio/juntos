@@ -46,6 +46,7 @@ import {
   UNKNOWN_AUTHOR_NAME,
 } from "@/lib/relative-time";
 import { signInPathWithNext } from "@/lib/auth-callback";
+import { getAuthUser, getMySpaceId } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Item, Rating } from "@/lib/types";
 
@@ -97,31 +98,40 @@ export default async function ItemPage({
   // Quem gravou antes de mim enquanto eu editava (?mexeu=id, ver updateItem).
   const conflictParam = (await searchParams)[EDIT_CONFLICT_PARAM];
   const conflictWith = isUuid(conflictParam) ? conflictParam : null;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     redirect(signInPathWithNext(`/items/${id}`));
   }
 
-  const { data: membership } = await supabase
-    .from("space_members")
-    .select("space_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const spaceId = await getMySpaceId(user.id);
 
-  if (!membership) {
+  if (!spaceId) {
     redirect("/onboarding");
   }
 
-  const { data, error } = await supabase
-    .from("items")
-    .select("*, ratings(*)")
-    .eq("id", id)
-    .eq("space_id", membership.space_id)
-    .maybeSingle();
+  const supabase = await createClient();
+
+  // Item (+ratings), membros e categorias não dependem uns dos outros — só
+  // do spaceId, já resolvido acima — então saem juntos em vez de em série.
+  const [itemResult, membersResult, categoriesResult] = await Promise.all([
+    supabase
+      .from("items")
+      .select("*, ratings(*)")
+      .eq("id", id)
+      .eq("space_id", spaceId)
+      .maybeSingle(),
+    supabase
+      .from("space_members")
+      .select("user_id")
+      .eq("space_id", spaceId)
+      .order("joined_at", { ascending: true }),
+    // Categorias do espaço: a do item no topo do detalhe (emoji, nome e cor)
+    // e todas no campo "Categoria" do ✎ Editar.
+    listCategories(supabase, spaceId),
+  ]);
+
+  const { data, error } = itemResult;
 
   if (error) {
     throw new Error("Não foi possível carregar a ideia.");
@@ -134,19 +144,12 @@ export default async function ItemPage({
   const item = data as Item;
   const ratings = (data as Item & { ratings: Rating[] | null }).ratings ?? [];
 
-  const { data: memberRows, error: membersError } = await supabase
-    .from("space_members")
-    .select("user_id")
-    .eq("space_id", membership.space_id)
-    .order("joined_at", { ascending: true });
+  const { data: memberRows, error: membersError } = membersResult;
 
   if (membersError) {
     throw new Error("Não foi possível carregar os membros.");
   }
 
-  // Categorias do espaço: a do item no topo do detalhe (emoji, nome e cor) e
-  // todas no campo "Categoria" do ✎ Editar.
-  const categoriesResult = await listCategories(supabase, membership.space_id);
   const categories = categoriesResult.ok ? categoriesResult.categories : [];
   const category: Pick<Category, "name" | "emoji" | "color"> | null =
     findCategory(categories, item.category_id);

@@ -24,7 +24,7 @@ type Action = { href?: string; onClick?: () => void };
 // O toast da troca some em 3 s (C11).
 const VIEW_TOAST_MS = 3000;
 
-const VIEWS: ItemView[] = ["grid", "compact"];
+const VIEWS: ItemView[] = ["compact", "grid"];
 const SORTS: ItemSort[] = ["score", "recent"];
 const SORT_LABELS: Record<ItemSort, string> = {
   score: LIST_COPY.sortScore,

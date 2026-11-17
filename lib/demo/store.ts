@@ -472,11 +472,11 @@ export function demoItemImages(
 }
 
 export function loadItemView(): ItemView {
-  if (typeof window === "undefined") return "grid";
+  if (typeof window === "undefined") return "compact";
   try {
     return parseItemView(window.localStorage.getItem(ITEM_VIEW_STORAGE_KEY));
   } catch {
-    return "grid";
+    return "compact";
   }
 }
 

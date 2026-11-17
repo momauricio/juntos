@@ -508,13 +508,13 @@ describe("categoryItems (C10)", () => {
 });
 
 describe("parseItemView (C11)", () => {
-  it("compact é Compacta; o resto (inclusive vazio) é Grade", () => {
-    expect(parseItemView("compact")).toBe("compact");
+  it("grid é Grade; o resto (inclusive vazio) é Compacta (C15, padrão)", () => {
     expect(parseItemView("grid")).toBe("grid");
-    expect(parseItemView(null)).toBe("grid");
-    expect(parseItemView(undefined)).toBe("grid");
-    expect(parseItemView("list")).toBe("grid");
-    expect(parseItemView(1)).toBe("grid");
+    expect(parseItemView("compact")).toBe("compact");
+    expect(parseItemView(null)).toBe("compact");
+    expect(parseItemView(undefined)).toBe("compact");
+    expect(parseItemView("list")).toBe("compact");
+    expect(parseItemView(1)).toBe("compact");
   });
 });
 
